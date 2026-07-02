@@ -30,7 +30,7 @@ reference/poseidon16.py   plain-Python reference (validates the same vectors;
                           the wallet-side building block).
 reference/round_constants.json   28 x 16 round constants (transcribed from leanVM).
 reference/gen_poseidon_sol.py    generates src/Poseidon16.sol (Yul core, unrolled MDS).
-reference/export_vectors.patch   the vector exporter, as a patch vs leanVM 12e6151.
+(vectors regenerate via ../prover: cargo run --release --bin export-vectors).
 ```
 
 ## Run
@@ -42,10 +42,8 @@ forge test
 # Python vs the same vectors:
 python3 reference/poseidon16.py
 
-# regenerate the vectors from leanVM itself:
-#   git clone https://github.com/leanEthereum/leanVM && cd leanVM && git checkout 12e6151
-#   git apply /path/to/reference/export_vectors.patch
-#   cargo test -p koala-bear --release export_poseidon16_vectors -- --nocapture
+# regenerate the vectors from leanVM itself (see ../prover):
+#   cd ../prover && cargo run --release --bin export-vectors > ../contracts/vectors/poseidon16_vectors.json
 ```
 
 ## Measured

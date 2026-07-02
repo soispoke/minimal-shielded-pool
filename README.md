@@ -73,6 +73,11 @@ pool/
 devnet/
   README.md            how the pool maps onto EIP-8141 / 8250 / 8272, and the test plan
   flow.md              one private transfer traced field-by-field through the stack
+prover/
+  src/                 pool-prover: prove-spend / verify-spend / export-vectors
+                       binaries against leanVM pinned as a git dependency; the
+                       circuit is extracted from circuits/spend.py, never
+                       duplicated (Sepolia milestone 2; see prover/README.md)
 contracts/
   src/Poseidon16.sol   leanVM's hash (classic Poseidon over KoalaBear) in Solidity,
                        differentially tested against vectors exported from leanVM
@@ -96,9 +101,9 @@ python3 circuits/spend.py
 # the on-chain hash vs vectors exported from leanVM (needs Foundry):
 cd contracts && forge test && python3 reference/poseidon16.py
 
-# prove and verify real spends on your machine (see circuits/README.md):
-#   clone leanVM @ 12e6151, git apply circuits/pool_circuits.patch,
-#   cargo test --release -p lean_prover pool_spend_circuits -- --nocapture
+# prove and verify real spends on your machine (leanVM fetched automatically):
+cd prover && cargo run --release --bin prove-spend -- --demo 20
+# (or the in-leanVM form: apply circuits/pool_circuits.patch, see circuits/README.md)
 ```
 
 ## Measured (Apple M5 Max, WHIR rate 1/2)
