@@ -96,7 +96,7 @@ place.
 The three EIPs supply envelope machinery only; two ingredients come from the
 devnet itself.
 
-1. **A leanVM proof verifier.** Verifying a WHIR/Poseidon2-over-KoalaBear
+1. **A leanVM proof verifier.** Verifying a WHIR/Poseidon-over-KoalaBear
    STARK in EVM bytecode is not realistic (no matching precompiles exist, and
    even a 256-byte Groth16 verify costs ~205k gas via precompiles), so the
    devnet must ship a leanVM-verify precompile or verify `VERIFY`-frame proofs

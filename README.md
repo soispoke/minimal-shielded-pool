@@ -14,10 +14,10 @@ them to each proof. See [devnet/](devnet/README.md).
 
 ## What it is
 
-- **Post-quantum**: the only cryptography is hashing (Poseidon2 over KoalaBear,
-  via leanVM). No elliptic curves anywhere. Ownership is knowledge of a hash
-  preimage, membership is a Merkle proof, and the whole spend is one leanVM
-  STARK, all quantum-resistant. (Honest caveat: leanVM's hash security is
+- **Post-quantum**: the only cryptography is hashing (leanVM's Poseidon16,
+  classic Poseidon over KoalaBear). No elliptic curves anywhere. Ownership is
+  knowledge of a hash preimage, membership is a Merkle proof, and the whole
+  spend is one leanVM STARK, all quantum-resistant. (Honest caveat: leanVM's hash security is
   ~124-bit classical / ~62-bit quantum today, so "PQ" is directional, not yet
   128-bit; and the circuit is unaudited.)
 - **Minimal**: fixed-denomination notes mean there is no value field, hence no
@@ -63,7 +63,7 @@ circuits/
   README.md            reproduce the proving numbers
 pool/
   note.py              note, commitment, nullifier, and the spend relation (matches
-                       the circuit; SHA-256 stands in for Poseidon2 so it runs in Python)
+                       the circuit; SHA-256 stands in for Poseidon so it runs in Python)
   pool.py              the immutable contract: Merkle tree + recent-roots ring + nullifier set
   demo.py              end-to-end: shield -> transfer -> withdraw, with double-spend,
                        forged-root, and duplicate-output front-run all handled
@@ -73,6 +73,10 @@ pool/
 devnet/
   README.md            how the pool maps onto EIP-8141 / 8250 / 8272, and the test plan
   flow.md              one private transfer traced field-by-field through the stack
+contracts/
+  src/Poseidon16.sol   leanVM's hash (classic Poseidon over KoalaBear) in Solidity,
+                       differentially tested against vectors exported from leanVM
+                       itself (Sepolia milestone 1; see contracts/README.md)
 docs/                  figures used by the explainer
 ```
 
@@ -88,6 +92,9 @@ python3 pool/envelope.py
 
 # check the circuit source matches the harness:
 python3 circuits/spend.py
+
+# the on-chain hash vs vectors exported from leanVM (needs Foundry):
+cd contracts && forge test && python3 reference/poseidon16.py
 
 # prove and verify real spends on your machine (see circuits/README.md):
 #   clone leanVM @ 12e6151, git apply circuits/pool_circuits.patch,

@@ -130,8 +130,9 @@ makes the pool's later frame revert would burn the spent note, so the contract
 keeps that frame revert-free (a duplicate append is a no-op).
 
 The reference pool uses SHA-256 as a stand-in so it runs in plain Python; the
-real proof uses Poseidon2, and only the circuit half is the actual security
-artifact.
+real proof uses leanVM's Poseidon16 (classic Poseidon over KoalaBear, now also
+reimplemented on-chain in [contracts/](contracts/README.md)), and only the
+circuit half is the actual security artifact.
 
 ## Run it
 

@@ -1,10 +1,11 @@
 """Note, commitment, nullifier, and the spend relation for the PQ shielded pool.
 
 This module is field-for-field identical to the leanVM spend circuit
-(`circuits/spend.py`), with one substitution: the circuit hashes with Poseidon2
-over KoalaBear (the post-quantum, STARK-friendly hash), while this reference
-model uses SHA-256 as a stand-in so the whole protocol runs in plain Python. On
-a real devnet both sides use Poseidon2; only the hash primitive differs, not the
+(`circuits/spend.py`), with one substitution: the circuit hashes with
+leanVM's Poseidon16 (classic Poseidon over KoalaBear, the post-quantum,
+STARK-friendly hash; see contracts/), while this reference model uses SHA-256
+as a stand-in so the whole protocol runs in plain Python. On a real devnet both
+sides use Poseidon16; only the hash primitive differs, not the
 structure, the domain tags, or the relation.
 
 A note is a fixed-denomination coin. It has no value field on purpose: fixed
