@@ -25,8 +25,7 @@ them to each proof. See [devnet/](devnet/README.md).
   footgun in a 31-bit field, deleted by design. The contract is a Merkle tree
   plus a handful of envelope binding checks; the spent set and the recent-roots
   window live in the protocol (EIP-8250 / EIP-8272).
-- **Immutable and permissionless**: no owner, no upgrade path, no allowlist, no
-  freezing, no viewing keys, no compliance backdoor.
+- **Immutable and permissionless**: no owner, no upgrade path
 
 ## What a spend proves
 
