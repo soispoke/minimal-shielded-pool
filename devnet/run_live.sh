@@ -45,11 +45,13 @@ T4=$(FOUNDRY_PROFILE=libsmall forge create --root $BN --rpc-url "$RPC" --private
   src/PoseidonT4.sol:PoseidonT4 | deployed)
 echo "    poseidonT4=$T4"
 echo "==> ShieldedPool (join-split; links both Poseidon halves, creates its own NonceManager)"
+# the contract path must precede the variadic --constructor-args, or forge
+# create swallows it as another constructor argument.
 POOL=$(forge create --root $BN --rpc-url "$RPC" --private-key "$DEPLOYER_PK" $GAS --gas-limit 16700000 --broadcast \
+  src/ShieldedPool.sol:ShieldedPool \
   --libraries "src/PoseidonT3.sol:PoseidonT3:$T3" \
   --libraries "src/PoseidonT4.sol:PoseidonT4:$T4" \
-  --constructor-args "$POOL_SENDER" "$ROOTS" "$VERIFIER" \
-  src/ShieldedPool.sol:ShieldedPool | deployed)
+  --constructor-args "$POOL_SENDER" "$ROOTS" "$VERIFIER" | deployed)
 # NonceManager is CREATE(pool, nonce=1); computed, since eth_call is unusable here
 NONCES=$(cast compute-address "$POOL" --nonce 1 | awk '{print $NF}')
 echo "    pool=$POOL  nonces=$NONCES"

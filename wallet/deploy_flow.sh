@@ -114,9 +114,9 @@ EXPECT=$(python3 -c "import json;f=json.load(open('$FIX'));print(int(f['shield_v
 [ "$POOL_BAL" = "$EXPECT" ] || { echo "pool balance $POOL_BAL != expected $EXPECT (fees not paid?)"; exit 1; }
 echo "    pool balance == the one unspent change note; both fees left to the sender"
 
-python3 - "$CHAINID" "$POOL" "$ROOTS" "$VERIFIER" "$NONCES" "$POSEIDON" "$POOL_SENDER" "$DEPLOY_BLOCK" <<'PY'
+python3 - "$CHAINID" "$POOL" "$ROOTS" "$VERIFIER" "$NONCES" "$T3" "$T4" "$POOL_SENDER" "$DEPLOY_BLOCK" <<'PY'
 import json, sys
-k = ["chainId","pool","roots","verifier","nonces","poseidon","poolSender","deploymentBlock"]
+k = ["chainId","pool","roots","verifier","nonces","poseidonT3","poseidonT4","poolSender","deploymentBlock"]
 json.dump(dict(zip(k, sys.argv[1:])), open("deploy_config.json","w"), indent=1)
 PY
 echo "==> flow complete; wrote $CONFIG"
