@@ -60,7 +60,8 @@ tooling/               npm deps, circuit compile and trusted-setup script
 wallet/                witness builder, proof generation, and end-to-end scripts
 devnet/
   ProofPaymaster.yul   proof, key-set, root-reference, and frame binding
-  EnvelopeProbe.yul   stateless envelope reader used by settlement
+  EnvelopeProbe.yul    stateless envelope reader used by settlement
+  pool_frametx.py      assembles, simulates, and submits the frame transactions
   REVIEW.md            live-run evidence and protocol caveats
 ```
 
@@ -76,6 +77,11 @@ cd ../wallet && ./smoke.sh           # generate real proofs, verify offchain, ru
 committed `Groth16Verifier.sol`. Re-running `setup.sh` re-randomises the
 ceremony and invalidates the committed fixtures; run `wallet/gen_smoke.py` (or
 `./smoke.sh`) afterward to regenerate them.
+
+The wallet is fixture-driven, not a key store: every spend it will ever make
+is pre-proven at generation time, and with `--random` the change note's key
+exists only in memory and is discarded at exit. Do not shield real value with
+it.
 
 ## Measured
 
@@ -105,10 +111,14 @@ two-dimensional gas accounting raises these figures; see
 - **Amounts are public.** Shield and withdraw amounts and fees are visible
   onchain; only internal transfer amounts are hidden, and equal deposit and
   withdrawal amounts are linkable.
+- **Post-approval reverts burn notes.** The protocol consumes the two
+  nullifiers at payment approval, so a spend whose settle frame then reverts
+  or runs out of gas leaves them spent with no outputs inserted. The tooling
+  refuses to send a spend that does not simulate cleanly and never down-sizes
+  its settle-frame gas; the one structural case left is a full tree.
 - **Finite tree.** Depth 20 admits 1,048,576 commitments. There is no silent
-  epoch rollover because old epoch roots would age out and strand notes. Once
-  full, a newly approved spend with fresh outputs would revert after protocol
-  nonce consumption. This disposable testbed must be retired before capacity.
+  epoch rollover because old epoch roots would age out and strand notes. This
+  disposable testbed must be retired before capacity.
 - **Frame-native only.** Spends require the Hegotá EIP-8141/8250/8272 opcode
   surface and deliberately revert when called as ordinary EVM transactions.
 - **Unaudited research code.**
