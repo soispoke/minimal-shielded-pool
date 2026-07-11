@@ -1171,6 +1171,87 @@ per-deploy budget as a separate data contract read back with EXTCODECOPY.
 Dropping the `isLeaf` duplicate-commitment guard (two fresh SSTOREs, ~44k
 per spend) would trade depositor protection for gas and stays.
 
+## Cross-pool gas survey (2026-07-11): Tornado, Privacy Pools, Railgun
+
+A source-level read of tornado-core, tornado-nova, tornado-trees,
+0xbow's privacy-pools-core (zk-kit LeanIMT), Railgun-Privacy/contract, and
+poseidon-solidity, looking for techniques this pool could adopt. Headline:
+on everything those systems store onchain, this pool is already ahead,
+because protocol state replaced the expensive parts. They pay a ~22k SSTORE
+per nullifier (all three) where EIP-8250 keyed nonces cost the pool nothing;
+they maintain root ring buffers with linear `isKnownRoot` scans (30, 100,
+and 64 slots) where the EIP-8272 predeploy holds the window; Railgun loads
+verifying keys from storage (~63k per verify) where the committed snarkjs
+verifier keeps them in code; and Tornado classic's external MiMC costs
+~50.9k per tree level against our 29k Poseidon. What remains is four real
+techniques, none free:
+
+- **LeanIMT (Privacy Pools, zk-kit): the biggest available lever, and a
+  statement change.** A node with only a left child equals that child, so
+  there is no zeros table and an insert hashes only where the index bit is
+  1: popcount(index) hashes, average depth/2, with depth = ceil(log2(size))
+  growing as the pool fills. At devnet-realistic sizes that is ~5 hashes per
+  insert at 2^10 leaves and ~10 at 2^20, against our fixed 20-21, cutting
+  settle-side tree hashing 50-75%. It composes with the EIP-8272 path (the
+  root stays a bare 32 bytes; the salt could even encode tree size, which
+  the LeanIMT root natively lacks), keeps arity separation (our tagged
+  3-input leaves vs 2-input nodes), and with maxDepth 32 it retires the
+  TreeFull burn condition. Costs: the circuit's Merkle template becomes
+  zero-sentinel/muxed (same constraint count; 0xbow's extra `actualDepth`
+  public signal is vestigial and we would not copy it), so circuit,
+  ceremony, and fixtures all regenerate. The natural v3-statement item.
+- **keccak-compressed binding publics (Nova's extDataHash, Railgun's
+  boundParamsHash, 0xbow's context).** Fields the circuit never
+  arithmetizes over are folded into one public signal checked onchain:
+  `require(extDataHash == keccak256(abi.encode(fields)) % p)`, with only a
+  dummy square constraint in-circuit. This sidesteps the reason the earlier
+  Poseidon-compressed claim was dropped (the compressor runs onchain where
+  keccak is near-free, not in-circuit). Honest arithmetic for OUR
+  statement: nf1, nf2, outCm1, outCm2, root, and domain must stay direct
+  (circuit outputs, membership, and nullifier derivation), so the fold
+  reaches ctx and the publicAmount/fee pair (merged in-circuit into one
+  conserved total, split onchain, Nova-style): 9 publics to 8, or 7 with
+  domain folded into the verification key, saving 6-12k per verify. The
+  stronger reason to do it is not gas: the extData struct would finally
+  bind `feeRecipient` (and the withdraw recipient) in-proof, closing the
+  documented "fee recipient is envelope-bound, not proof-bound" caveat.
+  Same regeneration cost as any statement change; worth bundling with
+  LeanIMT if v3 happens.
+- **Paired leaf insertion (Nova `_insert(leaf1, leaf2)`, Railgun
+  `insertLeaves`).** Nova hashes a spend's two outputs as one level-0
+  sibling pair and walks up once: exactly `depth` hashes per spend, which
+  for us means 20 instead of ~22 (~58k). But Nova gets the guarantee from
+  a structural invariant, nextIndex is always even because every operation
+  including deposits is a 2-output join-split. Our 1-leaf shield breaks
+  that parity; without it the paired insert averages 21 hashes and is
+  worse than the current shared-root-recompute at unlucky indices
+  (Railgun's own batch algorithm measures k + depth - 1 average, its wins
+  coming from cross-transaction batching, k = 2m outputs per block, which
+  the single-operator devnet pool does not have). Verdict: adopt only if
+  shield ever becomes a join-split; not worth reshaping the deposit path
+  for ~58k.
+- **poseidon-solidity (used by Privacy Pools): 21.1k per T3 hash, but
+  23.5KB of runtime.** Its extra edge over our 29.3k comes from full
+  unrolling with inline constants, which is exactly what the hegota deploy
+  budget (~10.7KB) forbids; its T4 (14.2KB) does not fit either. Its
+  remaining techniques (lazy reduction, x^5 via squared squares, scratch
+  memory) are already in our generator as of this pass. A middle form,
+  T4-style shared round functions with constants as arguments applied to
+  T3, should land near 24-25k per hash inside ~9-10KB; that ~4-5k per hash
+  (~100k per spend) is the one implementation-only follow-up left on the
+  table.
+
+Also checked and consciously not adopted: Railgun's frontier
+pre-initialization (it shifts ~17k per slot from first users to the
+deployer but costs more at deploy than it ever returns; our constructor
+already reasons this), Tornado's hardcoded zeros ladder and mappings over
+arrays (we have the ladder; the mapping delta is tens of gas), Nova's
+16-input consolidation circuit (a second vkey for a fragmentation problem
+the testbed does not have), and tornado-trees' SNARK-verified 256-leaf
+batch updates with a single sha256-bound public input (the endgame if tree
+hashing ever dominates at scale, but it defers spendability behind a
+roller and adds a second circuit).
+
 ## Bottom line
 
 The devnet implements the three EIPs cleanly and the pool ran on it end to
