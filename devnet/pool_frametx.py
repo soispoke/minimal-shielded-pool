@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Build and submit the minimal pool's ethrex v23 Hegotá FrameTxs.
 
-This tool targets the EIP-8141/8250/8272 dialect deployed on chain 8141, not
-the newer EIP-8141 draft wire format.
+This tool targets the EIP-8141/8250/8272 dialect of the upgraded chain 8141: EIP-8250
+at f3079a09e8 and EIP-8272 at 824cbc0b0e.
 
 Spends use one exact grammar:
 
-  VERIFY(pool, proof, execution+payment) -> SENDER(pool, settle(Spend))
+  VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment) -> SENDER(pool, settle(Spend))
 
-The pool is sender and payer. EIP-8250 keys are the two proof nullifiers. The
-sole secp256k1 signature comes from the fresh authorizer selected by the proof,
-so it binds the complete transaction, including proof bytes, gas, fees and the
-exact EIP-8272 reference. The reference slot is read from EIP-7843
+The leading frame is EIP-8272's canonical recent-root verifier: the predeploy checks the
+`(source_id, slot, root)` tuple in its data and reverts otherwise. The pool is sender and
+payer. EIP-8250 keys are the two proof nullifiers. The sole secp256k1 signature comes from
+the fresh authorizer selected by the proof, so it binds the complete transaction, including
+proof bytes, gas, fees and the exact tuple. The tuple's slot is read from EIP-7843
 `slotNumber`; timestamp derivation is intentionally unsupported.
 
 Usage (append --dry-run to simulate without submitting):
@@ -35,6 +36,7 @@ from eth_keys import keys
 
 from frametx import Frame, FrameSig, FrameTx
 from gas_profile import (
+    RECENT_ROOT_FRAME_GAS,
     SETTLE_FRAME_GAS,
     SETTLE_FRAME_STATE_GAS,
     VERIFY_FRAME_GAS,
@@ -119,14 +121,14 @@ def _keccak(b):
     return keccak(b)
 
 
-def recent_root_ref(url, cfg, e):
-    """Encode and locally verify the exact EIP-8272 reference.
+def recent_root_tuple(url, cfg, e):
+    """Pack and locally verify the exact EIP-8272 tuple the verifier frame carries:
+    `source_id(32) || uint64_be(slot) || root(32)`.
 
     The slot is the consensus `slotNumber` returned by EIP-7843. It is never
     reconstructed from timestamps. The epoch selects the pool's deterministic
     EIP-8272 source while the nullifier domain remains stable across epochs.
     """
-    from frametx import rlp_bytes, rlp_int, rlp_list
     slot = int(e["root_slot"])
     epoch = int(e["epoch"])
     pool = int(cfg["pool"], 16)
@@ -157,11 +159,11 @@ def recent_root_ref(url, cfg, e):
             f"against an empty tree cannot spend into a pool that already has leaves; regenerate "
             f"against a fresh deployment), or the wrong epoch/slot was supplied. Either would be "
             f"rejected as FrameTxRecentRootNotCommitted.")
-    return rlp_list([rlp_bytes(source_id), rlp_int(slot), rlp_bytes(root)])
+    return source_id + slot.to_bytes(8, "big") + root
 
 
 def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_verify=None,
-                   recent_root_refs=None, dry_run=False, sender_override=None,
+                   recent_root=None, dry_run=False, sender_override=None,
                    max_fee_override=None, max_priority_override=None,
                    settle_gas_override=None, save_raw=None, frame0_data=b""):
     signer = int.from_bytes(pk.public_key.to_canonical_address(), "big")
@@ -181,7 +183,11 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
 
     def build(sender_gas=SETTLE_FRAME_GAS):
         if proof_verify:
+            # EIP-8272: the canonical recent-root verifier frame leads; the proof
+            # frame follows and reads the proven tuple back with FRAMEDATALOAD.
             frames = [
+                Frame(mode=1, flags=0x00, target=int(RECENT_ROOT_ADDRESS, 16), value=0,
+                      data=recent_root, **_limits(RECENT_ROOT_FRAME_GAS, 0)),
                 Frame(mode=1, flags=0x03, target=sender, value=0, data=frame0_data,
                       **_limits(VERIFY_FRAME_GAS, VERIFY_FRAME_STATE_GAS)),
             ]
@@ -201,8 +207,7 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
             chain_id=chain_id, nonce_keys=nonce_keys, nonce_seq=nonce_seq, sender=sender,
             frames=frames,
             signatures=[FrameSig(FrameSig.SECP256K1, signer, b"", b"")],
-            max_priority_fee=max_priority, max_fee=max_fee,
-            recent_root_refs=recent_root_refs)
+            max_priority_fee=max_priority, max_fee=max_fee)
         s = pk.sign_msg_hash(tx.sig_hash())
         # EIP-8141 encodes the bare recovery id, 0 or 1. The legacy EVM
         # convention 27/28 is statically invalid for frame signatures.
@@ -395,9 +400,9 @@ def main():
             sender_override = pool
 
     def spend_setup(op_name):
-        """Protocol nonces, validation data, and recent-root reference for a
+        """Protocol nonces, validation data, and recent-root tuple for a
         settle-only spend. The proof-selected one-time signer authorizes the
-        complete immutable two-frame transaction.
+        complete immutable three-frame transaction.
 
         `--spend-key KEY` reads the spend entry from fix[KEY] instead of
         fix[op_name] (the nonce-race fixture carries two transfers, `transfer`
@@ -414,7 +419,7 @@ def main():
         protocol_nonces = sorted([int(e["nf1"], 16), int(e["nf2"], 16)])  # strictly increasing
         slot = root_slot_override if root_slot_override is not None else cfg[f"_slot_{op_name}"]
         e["root_slot"] = str(slot)
-        refs = [recent_root_ref(url, cfg, e)]
+        refs = recent_root_tuple(url, cfg, e)
         auth_pk = keys.PrivateKey(bytes.fromhex(e["authorizer_private_key"].removeprefix("0x")))
         if auth_pk.public_key.to_checksum_address().lower() != e["authorizer"].lower():
             raise SystemExit("fixture authorizer private key does not match the proof public")
