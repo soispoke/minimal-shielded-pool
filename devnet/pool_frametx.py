@@ -24,9 +24,17 @@ Spend signing keys come from the fixture's proof-bound
 `authorizer_private_key`. `--root-slot N` supplies the consensus slot in which
 `publishEpochRoot(epoch)` committed the root. Negative-vector flags include
 `--flip-proof`, `--nonce-keys`, `--settle-gas`, and `--sender`.
+
+`--no-wait` returns after submission instead of waiting for the receipt, which is
+how a second spend gets submitted while the first is still pending. `--wait-width S`
+holds an additional pending spend for up to S seconds until ethrex's MATCHA ledger says
+it fits: the simulation reports `matchaCharge` and `matchaAdmissible`, the wallet polls
+`ethrex_matchaWidth` (see `wait_for_matcha`), and the refusal on send is the fallback
+(see `send_raw`).
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -82,6 +90,48 @@ def simulate(url, raw):
             return None
         raise SystemExit(f"  simulate RPC error: {r['error']}")
     return r["result"]
+
+
+def matcha_width(url, sender):
+    """This node's MATCHA ledger for `sender` via ethrex_matchaWidth, or None when the
+    endpoint does not expose it (-32601)."""
+    req = urllib.request.Request(
+        url, headers={"content-type": "application/json"},
+        data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "ethrex_matchaWidth",
+                         "params": ["0x" + sender.to_bytes(20, "big").hex()]}).encode())
+    r = json.loads(urllib.request.urlopen(req, timeout=20).read())
+    if "error" in r:
+        if r["error"].get("code") == -32601:
+            return None
+        raise SystemExit(f"  ethrex_matchaWidth error: {r['error']}")
+    return r["result"]
+
+
+def wait_for_matcha(url, sender, sim, wait_width):
+    """Hold a spend the simulation says admission would refuse until the ledger says
+    otherwise, for up to `wait_width` seconds.
+
+    `matchaAdmissible` false means the sender has a spend pending and cannot pay
+    `matchaCharge` for another. It clears when that spend mines (pendingFrameTxs drops
+    to zero and the next one is the free baseline) or when finality credits width. Polls
+    ethrex_matchaWidth every two seconds rather than re-simulating, since the ledger is
+    what changes. Returns without sending when the deadline passes; the refusal path in
+    `send_raw` remains the authority for the race between this look and the send."""
+    charge = int(sim["matchaCharge"], 16)
+    print(f"  MATCHA: charge {charge:,} width; admission would refuse now: {sim.get('matchaRefusal')}")
+    if wait_width <= 0:
+        raise SystemExit("  MATCHA: not sending; pass --wait-width S to hold the spend until it fits")
+    deadline = time.monotonic() + wait_width
+    while time.monotonic() < deadline:
+        time.sleep(2)
+        view = matcha_width(url, sender)
+        if view is None:
+            return  # no ledger endpoint after all; let send_raw ride out the refusal
+        width, pending = int(view["width"], 16), view["pendingFrameTxs"]
+        if pending == 0 or width >= charge:
+            print(f"  MATCHA: fits now (width {width:,}, pending {pending}); sending")
+            return
+    raise SystemExit(f"  MATCHA: still does not fit after {wait_width}s; not sending")
 
 
 def cast_calldata(sig, *args):
@@ -184,10 +234,48 @@ def recent_root_tuple(url, cfg, e):
     return source_id + slot.to_bytes(8, "big") + root
 
 
+MATCHA_WIDTH_REFUSAL = re.compile(r"sender has (\d+) MATCHA width, needs (\d+)")
+
+
+def send_raw(url, raw, wait_width=0):
+    """Submit a raw frame transaction, riding out a MATCHA width refusal.
+
+    ethrex admits a sender's first pending frame transaction for free and charges every
+    additional one against width the sender earned from the gas its own frame
+    transactions used in finalized blocks (MATCHA, ethrex `docs/matcha.md`). The pool
+    qualifies structurally for several pending spends (contract sender, nullifier keyed
+    nonces, a prefix that reads no pool storage), so width is the only thing between
+    it and a second spend in flight: a pool whose spends have not finalized yet is
+    refused, not queued. With `wait_width` seconds the refusal is retried every two
+    seconds; it clears when the pending spend mines, which frees the free baseline
+    slot, or when finality credits width. Returns `(txhash, refusals)`."""
+    deadline = time.monotonic() + wait_width
+    refusals = 0
+    while True:
+        try:
+            return rpc(url, "eth_sendRawTransaction", [raw]), refusals
+        except RuntimeError as exc:
+            m = MATCHA_WIDTH_REFUSAL.search(str(exc))
+            if not m:
+                raise
+            have, need = int(m.group(1)), int(m.group(2))
+            if refusals == 0:
+                print(f"  MATCHA: refused as an additional pending frame tx from this sender: "
+                      f"width {have:,}, needs {need:,}")
+            refusals += 1
+            if time.monotonic() >= deadline:
+                raise SystemExit(
+                    f"  MATCHA: still refused after {wait_width}s (width {have:,}, needs "
+                    f"{need:,}); not sending. Wait for the pool's pending spend to mine, or "
+                    "for its earlier spends to finalize and earn width, then retry.")
+            time.sleep(2)
+
+
 def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_verify=None,
                    recent_root=None, dry_run=False, sender_override=None,
                    max_fee_override=None, max_priority_override=None,
-                   settle_gas_override=None, save_raw=None, frame0_data=b""):
+                   settle_gas_override=None, save_raw=None, frame0_data=b"",
+                   wait_width=0, wait_receipt=True):
     signer = int.from_bytes(pk.public_key.to_canonical_address(), "big")
     sender = sender_override if sender_override is not None else signer
     chain_id = int(rpc(url, "eth_chainId", []), 16)
@@ -288,6 +376,10 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         # burns the notes (nullifiers consumed, outputs never inserted). For
         # spends the generous default stays; the payer's worst case is
         # prepaying more gas, refunded on success.
+        if sim.get("matchaAdmissible") is False:
+            wait_for_matcha(url, sender, sim, wait_width)
+        elif sim.get("matchaCharge"):
+            print(f"  MATCHA: charge {int(sim['matchaCharge'], 16):,} width, admissible now")
         used = hexint((sim.get("frames") or [{}])[-1].get("gasUsed"))
         if used is not None and not protocol_nonces:
             sized = used + used // 4  # measured + 25% for state-gas variance at a later block
@@ -322,8 +414,12 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
 
     print(f"  frame tx: sender=0x{sender:040x} signer={signer_address} nonce_keys={nonce_keys} "
           f"raw_len={len(tx.raw())} max_cost={tx.max_cost()} sig_hash={tx.sig_hash().hex()[:18]}...")
-    txhash = rpc(url, "eth_sendRawTransaction", [raw])
+    txhash, refusals = send_raw(url, raw, wait_width)
+    if refusals:
+        print(f"  MATCHA: admitted after {refusals} refusal(s)")
     print("  submitted:", txhash)
+    if not wait_receipt:
+        return {"transactionHash": txhash}
     for _ in range(30):
         rcpt = rpc(url, "eth_getTransactionReceipt", [txhash])
         if rcpt:
@@ -369,6 +465,13 @@ def main():
     spend_key_override = None
     root_slot_override = None
     flip_proof = "--flip-proof" in sys.argv
+    wait_receipt = "--no-wait" not in sys.argv
+    wait_width = 0
+    if "--wait-width" in sys.argv:
+        i = sys.argv.index("--wait-width")
+        if i + 1 >= len(sys.argv):
+            raise SystemExit("--wait-width requires a number of seconds")
+        wait_width = int(sys.argv[i + 1], 0)
     if "--note" in sys.argv:
         i = sys.argv.index("--note")
         if i + 1 >= len(sys.argv):
@@ -460,7 +563,8 @@ def main():
             value, inner = int(fix["shield_value"]), fix["inner_a"]
         calldata = cast_calldata("shield(bytes32)", inner)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
-        build_and_send(url, pk, pool, value, calldata, dry_run=dry)
+        build_and_send(url, pk, pool, value, calldata, dry_run=dry,
+                       wait_width=wait_width, wait_receipt=wait_receipt)
     elif op == "transfer":
         e, protocol_nonces, verify, refs, auth_pk = spend_setup("transfer")
         if nonce_keys_override is not None:
@@ -471,7 +575,8 @@ def main():
                        dry_run=dry, sender_override=sender_override,
                        max_fee_override=max_fee_override, max_priority_override=max_priority_override,
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
-                       frame0_data=proof_bytes(e))
+                       frame0_data=proof_bytes(e),
+                       wait_width=wait_width, wait_receipt=wait_receipt)
     elif op == "withdraw":
         e, protocol_nonces, verify, refs, auth_pk = spend_setup("withdraw")
         if nonce_keys_override is not None:
@@ -482,7 +587,8 @@ def main():
                        dry_run=dry, sender_override=sender_override,
                        max_fee_override=max_fee_override, max_priority_override=max_priority_override,
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
-                       frame0_data=proof_bytes(e))
+                       frame0_data=proof_bytes(e),
+                       wait_width=wait_width, wait_receipt=wait_receipt)
     else:
         raise SystemExit(f"unknown op {op}")
 
