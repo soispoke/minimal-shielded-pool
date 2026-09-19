@@ -32,12 +32,12 @@
     "build/spend_js/spend.wasm": "4935c11e3be2309af2b6bf6fa9821eaaaf41ffd481716483d0f28b73ed363a2b",
     "circuits/spend.circom": "3d100fbf47852a50ee7fc5bf4fa2e8735e072f2c96533b9cb028168ccb6a78ea",
     "contracts/src/Groth16Verifier.sol": "9667eab74b1efdd0a6cc5c419e6dbe4b7cb78ad29b5ed8ecf3b3d40886b286ac",
-    "contracts/src/ShieldedPoolLogic.sol": "7c05d484877146222ff1250e625ecb1d819c7aa409091a1affc41443f762cd5b",
-    "devnet/ShieldedPoolDispatcher.yul": "76a992ec44236fede8842602fc4596cfce2f5c756eba7b83e9e14459054c79eb",
-    "devnet/build/shielded_pool_dispatcher_init.hex": "51f2bd0aba29cc5930b29396d78e7721856981344f8c76d0bb0c9dc3db36f5cf",
+    "contracts/src/ShieldedPoolLogic.sol": "0b943a55ba28195fdfdd85d1b49b4e520ccecdf6ac55d5edbe737c51924f1969",
+    "devnet/ShieldedPoolDispatcher.yul": "03eb0c585f63aa18ae5aebe54cd3b5881a245ff6f0360141137102732ec887fc",
+    "devnet/build/shielded_pool_dispatcher_init.hex": "915b383c0407b09e87c1542fae28d0a0c59b09347a979d30b7c006e33f6a58ae",
     "devnet/frametx.py": "7b59186456e52c9956028cc1ccded61a7ae08684382c8b4f478416cd31bb17c7",
-    "devnet/gas_profile.py": "6c08a105153dea85e3f111e4415cf2f53b43f471e0b87994bdf87d87e507ba19",
-    "devnet/pool_frametx.py": "477df5b8e5b253709b0a1e80c3566014cf3473860faf80a024a654974a660359",
-    "tooling/check_gas_profile.py": "f1bdf58b96e58a98c5959dbb959e0041bb87099b71a2a50e3f9af8e340cebaef"
+    "devnet/gas_profile.py": "eb9fda5e16e9d38097b5617c2ad14ce482cec68cb4082eecdcc76c36b901e8f8",
+    "devnet/pool_frametx.py": "e31ee2f3524885e75928a873e23be8ae2fc32c0004bc96fd8ce68faeffbabfe3",
+    "tooling/check_gas_profile.py": "0d289f85ff0979c3fb9eb952755f7f54bd14315d1bbb4c8725742c17fb24a2e6"
   }
 }

@@ -6,7 +6,13 @@ at f3079a09e8 and EIP-8272 at 824cbc0b0e.
 
 Spends use one exact grammar:
 
-  VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment) -> SENDER(pool, settle(Spend))
+  VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment)
+    -> SENDER(pool, settle(Spend))
+    -> SENDER(pool, claimWithdrawal(recipient))
+    -> SENDER(wild_target, wild_data)   # value 0; target 0 / empty data is a no-op
+
+Internal transfers pass recipient=0, so claimWithdrawal is a no-op. A
+reverting wild call burns the note (keys already consumed at approval).
 
 The leading frame is EIP-8272's canonical recent-root verifier: the predeploy checks the
 `(source_id, slot, root)` tuple in its data and reverts otherwise. The pool is sender and
@@ -36,11 +42,15 @@ from eth_keys import keys
 
 from frametx import Frame, FrameSig, FrameTx
 from gas_profile import (
+    CLAIM_FRAME_GAS,
+    CLAIM_FRAME_STATE_GAS,
     RECENT_ROOT_FRAME_GAS,
     SETTLE_FRAME_GAS,
     SETTLE_FRAME_STATE_GAS,
     VERIFY_FRAME_GAS,
     VERIFY_FRAME_STATE_GAS,
+    WILD_FRAME_GAS,
+    WILD_FRAME_STATE_GAS,
 )
 
 
@@ -184,10 +194,24 @@ def recent_root_tuple(url, cfg, e):
     return source_id + slot.to_bytes(8, "big") + root
 
 
+def claim_frame(pool, recipient):
+    """Frame 3: claimWithdrawal. recipient=0 is a no-op on the pool."""
+    data = cast_calldata("claimWithdrawal(address)", hex(recipient))
+    return Frame(mode=2, flags=0, target=pool, value=0, data=data,
+                 **_limits(CLAIM_FRAME_GAS, CLAIM_FRAME_STATE_GAS))
+
+
+def wild_frame(target=0, data=b""):
+    """Frame 4: one SENDER call, value 0. target 0 / empty data is a no-op."""
+    return Frame(mode=2, flags=0, target=target, value=0, data=data,
+                 **_limits(WILD_FRAME_GAS, WILD_FRAME_STATE_GAS))
+
+
 def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_verify=None,
                    recent_root=None, dry_run=False, sender_override=None,
                    max_fee_override=None, max_priority_override=None,
-                   settle_gas_override=None, save_raw=None, frame0_data=b""):
+                   settle_gas_override=None, save_raw=None, frame0_data=b"",
+                   recipient=0, wild_target=0, wild_data=b""):
     signer = int.from_bytes(pk.public_key.to_canonical_address(), "big")
     sender = sender_override if sender_override is not None else signer
     chain_id = int(rpc(url, "eth_chainId", []), 16)
@@ -225,6 +249,9 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         # spend below that immutable cap.
         frames.append(Frame(mode=2, flags=0, target=pool, value=value, data=calldata,
                             **_limits(sender_gas, SETTLE_FRAME_STATE_GAS)))
+        if proof_verify:
+            frames.append(claim_frame(pool, recipient))
+            frames.append(wild_frame(wild_target, wild_data))
         tx = FrameTx(
             chain_id=chain_id, nonce_keys=nonce_keys, nonce_seq=nonce_seq, sender=sender,
             frames=frames,
@@ -424,7 +451,7 @@ def main():
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a
         settle-only spend. The proof-selected one-time signer authorizes the
-        complete immutable three-frame transaction.
+        complete immutable five-frame transaction.
 
         `--spend-key KEY` reads the spend entry from fix[KEY] instead of
         fix[op_name] (the nonce-race fixture carries two transfers, `transfer`
@@ -471,7 +498,8 @@ def main():
                        dry_run=dry, sender_override=sender_override,
                        max_fee_override=max_fee_override, max_priority_override=max_priority_override,
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
-                       frame0_data=proof_bytes(e))
+                       frame0_data=proof_bytes(e),
+                       recipient=int(e["recipient"], 16))
     elif op == "withdraw":
         e, protocol_nonces, verify, refs, auth_pk = spend_setup("withdraw")
         if nonce_keys_override is not None:
@@ -482,7 +510,8 @@ def main():
                        dry_run=dry, sender_override=sender_override,
                        max_fee_override=max_fee_override, max_priority_override=max_priority_override,
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
-                       frame0_data=proof_bytes(e))
+                       frame0_data=proof_bytes(e),
+                       recipient=int(e["recipient"], 16))
     else:
         raise SystemExit(f"unknown op {op}")
 
