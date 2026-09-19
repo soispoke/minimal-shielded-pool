@@ -20,7 +20,7 @@ The circuit enforces membership for positive inputs, value conservation,
 outputs, two position-specific zero-value sinks, a nonzero `uint160`
 authorizer, and the transfer/withdrawal recipient shape.
 
-Each spend has exactly three frames:
+Each spend has exactly five frames:
 
 1. `VERIFY(0x…8272, tuple)`, EIP-8272's canonical recent-root verifier. The
    protocol runs `RECENT_ROOT_CODE` over the 72-byte tuple before any pool code
@@ -28,6 +28,18 @@ Each spend has exactly three frames:
 2. `VERIFY(pool, proof)`, which verifies the proof and exact envelope, then
    approves execution and payment.
 3. `SENDER(pool, settle(Spend))`, which performs bounded internal settlement.
+4. `SENDER(pool, ensureAndClaim(deployFrameAcct, owner, salt, recipient))`.
+   `deployFrameAcct == false` skips CREATE2. `recipient == 0` is a no-op so
+   internal transfers share this grammar. `deployFrameAcct` CREATE2s through
+   the pool's immutable `FRAME_ACCOUNT_FACTORY` (idempotent if code exists).
+5. `SENDER(recipient, executeBatch(calls, signature))`. Empty `calls` means
+   no extra calls — the recipient just receives the withdrawal. Nonempty
+   `calls` only run if that account has code that will execute them (a
+   `FrameAccount`, another smart account, or an EOA that previously delegated
+   to such an implementation). A `FrameAccount` ignores pool privilege: the
+   owner must ECDSA-sign the batch (including empty calls), so a later pool
+   spend cannot drive someone else's account. Gas still comes from the pool
+   as sender/payer.
 
 The proof chooses a fresh secp256k1 authorizer. Its sole EIP-8141 empty-message
 signature covers the canonical hash of the complete transaction, including
@@ -54,6 +66,8 @@ call that reads only the active or finalized root stored by the pool.
 circuits/spend.circom
 contracts/src/Groth16Verifier.sol
 contracts/src/ShieldedPoolLogic.sol
+contracts/src/FrameAccount.sol
+contracts/src/FrameAccountFactory.sol
 contracts/src/PoseidonT3.sol
 contracts/src/PoseidonT4.sol
 devnet/ShieldedPoolDispatcher.yul
