@@ -24,6 +24,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "devnet"))
 
 from gas_profile import (  # noqa: E402
+    CLAIM_FRAME_GAS,
+    CLAIM_FRAME_STATE_GAS,
+    POOL_PROFILE,
+    RECIPIENT_FRAME_MAX_DATA,
+    RECIPIENT_FRAME_MAX_GAS,
+    RECIPIENT_FRAME_MAX_STATE_GAS,
     HEGOTA_TESTNET_MAX_VERIFY_GAS,
     KEYED_NONCE_FIRST_USE_STATE_GAS,
     MAX_VERIFY_STATE_GAS,
@@ -111,7 +117,7 @@ def main():
     assert extra_over_frozen == 145_840
     assert extra_over_frozen == CONSERVATIVE_VERIFY_STATE_BOUND - pre_pr_12279_saving
 
-    # The dispatcher must enforce the same five limits the wallet emits. Yul
+    # The dispatcher must enforce the same limits the wallet emits. Yul
     # cannot import the Python module, so check its unavoidable literals here.
     dispatcher = (ROOT / "devnet" / "ShieldedPoolDispatcher.yul").read_text()
     dispatcher_pins = (
@@ -120,12 +126,17 @@ def main():
         f"if iszero(eq(frameParam(1, 0x09), {VERIFY_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
         f"if iszero(eq(frameParam(2, 0x01), {SETTLE_FRAME_GAS})) {{ fail(errShape()) }}",
         f"if iszero(eq(frameParam(2, 0x09), {SETTLE_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
+        f"if iszero(eq(frameParam(3, 0x01), {CLAIM_FRAME_GAS})) {{ fail(errShape()) }}",
+        f"if iszero(eq(frameParam(3, 0x09), {CLAIM_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
+        f"if gt(frameParam(3, 0x01), {RECIPIENT_FRAME_MAX_GAS}) {{ fail(errShape()) }}",
+        f"if gt(frameParam(3, 0x09), {RECIPIENT_FRAME_MAX_STATE_GAS}) {{ fail(errShape()) }}",
+        f"if gt(frameParam(3, 0x04), {RECIPIENT_FRAME_MAX_DATA}) {{ fail(errShape()) }}",
     )
     assert all(pin in dispatcher for pin in dispatcher_pins), \
         "dispatcher gas limits differ from devnet/gas_profile.py"
 
-    # Keep the checked-in deployment record aligned as well. The live runner
-    # rewrites these fields from the activation manifest after deployment.
+    # The historical deployment shares these prefix and settlement budgets.
+    # It is not a recipient-pull deployment; the live runner writes a new config.
     cfg = json.loads((ROOT / "devnet" / "deploy_config.json").read_text())
     assert cfg["profile"] == "eip8272-canonical-frame"
     assert cfg["recentRootGas"] == RECENT_ROOT_FRAME_GAS
@@ -154,6 +165,17 @@ def main():
             "conservative_state_bound": CONSERVATIVE_SETTLEMENT_STATE_BOUND,
             "execution_margin": SETTLE_FRAME_GAS - CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND,
             "state_margin": SETTLE_FRAME_STATE_GAS - CONSERVATIVE_SETTLEMENT_STATE_BOUND,
+        },
+        "withdrawal_tail": {
+            "pool_profile": POOL_PROFILE,
+            "claim_execution": CLAIM_FRAME_GAS,
+            "claim_state": CLAIM_FRAME_STATE_GAS,
+            "recipient_execution_cap": RECIPIENT_FRAME_MAX_GAS,
+            "recipient_state_cap": RECIPIENT_FRAME_MAX_STATE_GAS,
+            "recipient_data_cap": RECIPIENT_FRAME_MAX_DATA,
+            "claim_declared_gas_added": CLAIM_FRAME_GAS + CLAIM_FRAME_STATE_GAS,
+            "recipient_declared_gas_added_at_caps": RECIPIENT_FRAME_MAX_GAS + RECIPIENT_FRAME_MAX_STATE_GAS,
+            "native_integrated_measurement": None,
         },
         "declared_total": {
             "frozen_single_dimension": declared_single,

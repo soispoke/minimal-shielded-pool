@@ -24,7 +24,13 @@
     "settle_frame_gas": 1400000,
     "settle_frame_state_gas": 550000,
     "conservative_settle_bound": 1231926,
-    "conservative_settle_state_bound": 489600
+    "conservative_settle_state_bound": 489600,
+    "pool_profile": "recipient-pull-v1",
+    "claim_frame_gas": 100000,
+    "claim_frame_state_gas": 183600,
+    "recipient_frame_max_gas": 300000,
+    "recipient_frame_max_state_gas": 500000,
+    "recipient_frame_max_data": 4096
   },
   "artifacts": {
     "build/spend.r1cs": "8b07031680a6d86e9261f64291e398ad9031abb09dcdf3f1d7ca86735847d15e",
@@ -33,11 +39,11 @@
     "circuits/spend.circom": "3d100fbf47852a50ee7fc5bf4fa2e8735e072f2c96533b9cb028168ccb6a78ea",
     "contracts/src/Groth16Verifier.sol": "9667eab74b1efdd0a6cc5c419e6dbe4b7cb78ad29b5ed8ecf3b3d40886b286ac",
     "contracts/src/ShieldedPoolLogic.sol": "7c05d484877146222ff1250e625ecb1d819c7aa409091a1affc41443f762cd5b",
-    "devnet/ShieldedPoolDispatcher.yul": "76a992ec44236fede8842602fc4596cfce2f5c756eba7b83e9e14459054c79eb",
-    "devnet/build/shielded_pool_dispatcher_init.hex": "51f2bd0aba29cc5930b29396d78e7721856981344f8c76d0bb0c9dc3db36f5cf",
+    "devnet/ShieldedPoolDispatcher.yul": "db609dfa90721a5ddb15236dd43aac75b41df63fe32c0666a8766cd3d9914484",
+    "devnet/build/shielded_pool_dispatcher_init.hex": "48bb10d57d8379dcd01118f5ae397eee7b1f2d9fb1f18ca30c1c027887dcf58d",
     "devnet/frametx.py": "7b59186456e52c9956028cc1ccded61a7ae08684382c8b4f478416cd31bb17c7",
-    "devnet/gas_profile.py": "6c08a105153dea85e3f111e4415cf2f53b43f471e0b87994bdf87d87e507ba19",
-    "devnet/pool_frametx.py": "477df5b8e5b253709b0a1e80c3566014cf3473860faf80a024a654974a660359",
-    "tooling/check_gas_profile.py": "f1bdf58b96e58a98c5959dbb959e0041bb87099b71a2a50e3f9af8e340cebaef"
+    "devnet/gas_profile.py": "cf25b05e5a982602e573a457ade9ea131f4883cd358c6573e40d1f578fc0671f",
+    "devnet/pool_frametx.py": "1cecefd842810c98c6d153618ef525f134626a402395362c60844779d563b0db",
+    "tooling/check_gas_profile.py": "25658d30bbb73b02799eabdf5708748bfed6dd32c2c7c77155f8e7c18d3b0846"
   }
 }

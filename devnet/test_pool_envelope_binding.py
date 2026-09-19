@@ -19,6 +19,7 @@ from pool_frametx import (
     cast_calldata,
     proof_bytes,
     spend_args,
+    withdrawal_frame,
 )
 
 HERE = Path(__file__).parent
@@ -29,9 +30,9 @@ def root_tuple(source, slot, root):
     return source + slot.to_bytes(8, "big") + root
 
 
-def build():
+def build(entry_name="transfer", **recipient_options):
     fixture = json.loads(FIXTURE.read_text())
-    entry = copy.deepcopy(fixture["transfer"])
+    entry = copy.deepcopy(fixture[entry_name])
     entry["root_slot"] = "1"
     pool = int(fixture["pool_address"], 16)
     epoch = int(entry["epoch"])
@@ -57,6 +58,9 @@ def build():
         max_priority_fee=1,
         max_fee=10,
     )
+    tail = withdrawal_frame(pool, settle, **recipient_options)
+    if tail is not None:
+        tx.frames.append(tail)
     sig = pk.sign_msg_hash(tx.sig_hash())
     encoded = bytes([sig.v]) + sig.r.to_bytes(32, "big") + sig.s.to_bytes(32, "big")
     tx.signatures[0].signature = encoded

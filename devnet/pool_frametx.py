@@ -4,9 +4,15 @@
 This tool targets the EIP-8141/8250/8272 dialect of the upgraded chain 8141: EIP-8250
 at f3079a09e8 and EIP-8272 at 824cbc0b0e.
 
-Spends use one exact grammar:
+Private transfers use three frames:
 
   VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment) -> SENDER(pool, settle(Spend))
+
+Public withdrawals append DEFAULT(pool, claimWithdrawal(recipient)). With
+`--recipient-call HEX`, the final frame instead calls the settlement recipient
+with the supplied account calldata. That account must authenticate the action
+itself; its authorization belongs in the calldata. Account integration remains
+unvalidated until tested with the actual deployed account and client.
 
 The leading frame is EIP-8272's canonical recent-root verifier: the predeploy checks the
 `(source_id, slot, root)` tuple in its data and reverts otherwise. The pool is sender and
@@ -36,7 +42,13 @@ from eth_keys import keys
 
 from frametx import Frame, FrameSig, FrameTx
 from gas_profile import (
+    CLAIM_FRAME_GAS,
+    CLAIM_FRAME_STATE_GAS,
+    POOL_PROFILE,
     RECENT_ROOT_FRAME_GAS,
+    RECIPIENT_FRAME_MAX_DATA,
+    RECIPIENT_FRAME_MAX_GAS,
+    RECIPIENT_FRAME_MAX_STATE_GAS,
     SETTLE_FRAME_GAS,
     SETTLE_FRAME_STATE_GAS,
     VERIFY_FRAME_GAS,
@@ -121,6 +133,65 @@ def _keccak(b):
     return keccak(b)
 
 
+def withdrawal_frame(pool, settle_calldata, recipient_call=None,
+                     recipient_gas=None, recipient_state_gas=None):
+    """Derive the optional fourth frame from the signed settlement tuple.
+
+    Account calldata is supplied by the caller, including its own authorization.
+    No account type or authority is inferred from the recipient address.
+    """
+    selector = _keccak(f"settle({SPEND_TUPLE})".encode())[:4]
+    if len(settle_calldata) != 4 + 12 * 32 or settle_calldata[:4] != selector:
+        raise ValueError("withdrawal frame requires canonical settle(Spend) calldata")
+    amount = int.from_bytes(settle_calldata[4 + 8 * 32:4 + 9 * 32], "big")
+    recipient = int.from_bytes(settle_calldata[4 + 10 * 32:4 + 11 * 32], "big")
+    if not 0 < pool < 1 << 160 or recipient >= 1 << 160 or amount >= 1 << 128:
+        raise ValueError("invalid pool, recipient, or public amount")
+    if (amount == 0) != (recipient == 0):
+        raise ValueError("public amount and recipient must both be zero or both nonzero")
+    if amount == 0:
+        if any(v is not None for v in (recipient_call, recipient_gas, recipient_state_gas)):
+            raise ValueError("recipient-call options require a public withdrawal")
+        return None
+    if recipient_call is None:
+        if recipient_gas is not None or recipient_state_gas is not None:
+            raise ValueError("recipient gas options require --recipient-call")
+        data = _keccak(b"claimWithdrawal(address)")[:4] + recipient.to_bytes(32, "big")
+        return Frame(0, 0, pool, CLAIM_FRAME_GAS, 0, data,
+                     state_limit=CLAIM_FRAME_STATE_GAS)
+    if not isinstance(recipient_call, bytes) or not 0 < len(recipient_call) <= RECIPIENT_FRAME_MAX_DATA:
+        raise ValueError(f"recipient calldata must contain 1..{RECIPIENT_FRAME_MAX_DATA} bytes")
+    execution = RECIPIENT_FRAME_MAX_GAS if recipient_gas is None else recipient_gas
+    state = RECIPIENT_FRAME_MAX_STATE_GAS if recipient_state_gas is None else recipient_state_gas
+    if not isinstance(execution, int) or not 0 < execution <= RECIPIENT_FRAME_MAX_GAS:
+        raise ValueError(f"recipient execution gas must be 1..{RECIPIENT_FRAME_MAX_GAS}")
+    if not isinstance(state, int) or not 0 < state <= RECIPIENT_FRAME_MAX_STATE_GAS:
+        raise ValueError(f"recipient state gas must be 1..{RECIPIENT_FRAME_MAX_STATE_GAS}")
+    return Frame(0, 0, recipient, execution, 0, recipient_call, state_limit=state)
+
+
+def recipient_options(argv):
+    """Parse explicit account-call options; the settlement supplies the target."""
+    options = {}
+    for flag, name in (("--recipient-call", "recipient_call"),
+                       ("--recipient-gas", "recipient_gas"),
+                       ("--recipient-state-gas", "recipient_state_gas")):
+        if flag not in argv:
+            continue
+        index = argv.index(flag)
+        if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+            raise ValueError(f"{flag} requires a value")
+        value = argv[index + 1]
+        try:
+            options[name] = (bytes.fromhex(value.removeprefix("0x"))
+                             if name == "recipient_call" else int(value, 0))
+        except ValueError:
+            raise ValueError(f"invalid {flag} value") from None
+    if "recipient_call" not in options and options:
+        raise ValueError("recipient gas options require --recipient-call")
+    return options
+
+
 def recent_root_window_error(slot, latest_slot, epoch=0):
     """Why the node would refuse this publication slot, or None if it would accept.
 
@@ -187,7 +258,13 @@ def recent_root_tuple(url, cfg, e):
 def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_verify=None,
                    recent_root=None, dry_run=False, sender_override=None,
                    max_fee_override=None, max_priority_override=None,
-                   settle_gas_override=None, save_raw=None, frame0_data=b""):
+                   settle_gas_override=None, save_raw=None, frame0_data=b"",
+                   recipient_call=None, recipient_gas=None, recipient_state_gas=None):
+    tail = None
+    if proof_verify:
+        tail = withdrawal_frame(pool, calldata, recipient_call, recipient_gas, recipient_state_gas)
+    elif any(v is not None for v in (recipient_call, recipient_gas, recipient_state_gas)):
+        raise ValueError("recipient-call options require a public withdrawal")
     signer = int.from_bytes(pk.public_key.to_canonical_address(), "big")
     sender = sender_override if sender_override is not None else signer
     chain_id = int(rpc(url, "eth_chainId", []), 16)
@@ -225,6 +302,8 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         # spend below that immutable cap.
         frames.append(Frame(mode=2, flags=0, target=pool, value=value, data=calldata,
                             **_limits(sender_gas, SETTLE_FRAME_STATE_GAS)))
+        if tail is not None:
+            frames.append(tail)
         tx = FrameTx(
             chain_id=chain_id, nonce_keys=nonce_keys, nonce_seq=nonce_seq, sender=sender,
             frames=frames,
@@ -312,12 +391,23 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
                     "\n  gen_smoke.py --random or deploy a fresh pool.")
         raise SystemExit(msg)
 
-    # Refuse to send when the SENDER frame reverts in simulation. Validation
+    # Require frame 2 itself to succeed. A failed fourth frame does not undo
+    # settlement, and an aggregate result cannot distinguish these outcomes.
+    if protocol_nonces:
+        outcomes = (eff or {}).get("frames") or []
+        if len(outcomes) <= 2 or outcomes[2].get("succeeded") is not True:
+            raise SystemExit("  simulate: settlement frame 2 did not explicitly succeed; not sending")
+        if len(outcomes) != len(tx.frames) or any(f.get("succeeded") is not True for f in outcomes):
+            raise SystemExit("  simulate: settlement succeeded but another frame failed or lacks an outcome; "
+                             "not sending. A failed withdrawal frame would leave settlement intact.")
+
+    # Refuse any failed or incomplete simulation. Validation
     # should already reject a missing or too-recent EIP-8272 reference; this
     # separate gate protects against any application-level settlement failure.
-    if eff and eff.get("executionStatus") and eff["executionStatus"] != "success":
-        raise SystemExit(f"  simulate: SENDER frame reverts "
-                         f"({eff.get('executionError') or eff['executionStatus']}); not sending "
+    if eff and ((protocol_nonces and eff.get("executionStatus") != "success")
+                or (eff.get("executionStatus") and eff["executionStatus"] != "success")):
+        raise SystemExit(f"  simulate: execution did not succeed "
+                         f"({eff.get('executionError') or eff.get('executionStatus') or 'outcome unavailable'}); not sending "
                          "(if root-not-recent, retry one block later)")
 
     print(f"  frame tx: sender=0x{sender:040x} signer={signer_address} nonce_keys={nonce_keys} "
@@ -330,12 +420,25 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
             status = int(rcpt.get('status', '0x0'), 16)
             print(f"  MINED block={int(rcpt['blockNumber'],16)} type={rcpt.get('type')} "
                   f"status={rcpt.get('status')} gasUsed={int(rcpt.get('gasUsed','0x0'),16)}")
+            if protocol_nonces:
+                outcomes = rcpt.get("frameReceipts") or []
+                settlement_status = outcomes[2].get("status") if len(outcomes) > 2 else None
+                if settlement_status not in ("0x0", "0x1", "0x2"):
+                    raise SystemExit("  settlement outcome unavailable; inspect frame receipts before retrying")
+                if settlement_status != "0x1":
+                    raise SystemExit("  settlement frame did not succeed; nullifiers may have been consumed "
+                                     "without creating outputs. Inspect frame receipts before retrying.")
+                if len(outcomes) != len(tx.frames) or any(f.get("status") not in ("0x0", "0x1", "0x2") for f in outcomes):
+                    raise SystemExit("  settlement succeeded, but a later frame outcome is unknown. Inspect "
+                                     "the pool credit and recipient account before taking any recovery action.")
+                if len(tx.frames) == 4 and outcomes[3].get("status") in ("0x0", "0x2"):
+                    raise SystemExit("  settlement succeeded, but the withdrawal frame failed or was skipped. "
+                                     "The settled withdrawal remains recoverable; inspect the pool credit "
+                                     "and recipient account before retrying the withdrawal.")
+                if any(f.get("status") != "0x1" for f in outcomes):
+                    raise SystemExit("  settlement succeeded, but another frame failed; inspect the full frame receipts")
             if status != 1:
                 msg = f'  tx reverted (status {rcpt.get("status")}); aborting'
-                if protocol_nonces:
-                    msg += ("\n  WARNING: the SENDER frame reverted after payment approval, so the"
-                            "\n  nullifiers were consumed as protocol keyed nonces and the spent"
-                            "\n  notes are burned; the output notes were never inserted.")
                 raise SystemExit(msg)
             return rcpt
         time.sleep(2)
@@ -344,10 +447,20 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
 
 def main():
     url, cfg_path, fix_path, op, priv = sys.argv[1:6]
-    cfg = json.loads(open(cfg_path).read())
-    fix = json.loads(open(fix_path).read())
+    with open(cfg_path) as config_file:
+        cfg = json.load(config_file)
+    with open(fix_path) as fixture_file:
+        fix = json.load(fixture_file)
     pool = int(cfg["pool"], 16)
-    pk = keys.PrivateKey(bytes.fromhex(priv.removeprefix("0x")))
+    if op in ("transfer", "withdraw") and cfg.get("poolProfile") != POOL_PROFILE:
+        raise SystemExit(f"spends require poolProfile={POOL_PROFILE}; use a fresh deployment of this profile")
+    try:
+        recipient = recipient_options(sys.argv[6:])
+    except ValueError as error:
+        raise SystemExit(str(error)) from None
+    if recipient and op != "withdraw":
+        raise SystemExit("recipient-call options require the withdraw operation")
+    pk = keys.PrivateKey(bytes.fromhex(priv.removeprefix("0x"))) if op == "shield" else None
     dry = "--dry-run" in sys.argv
     sender_override = None
     if "--sender" in sys.argv:
@@ -423,8 +536,8 @@ def main():
 
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a
-        settle-only spend. The proof-selected one-time signer authorizes the
-        complete immutable three-frame transaction.
+        spend. The proof-selected one-time signer authorizes all three or four
+        frames, including any recipient-account calldata.
 
         `--spend-key KEY` reads the spend entry from fix[KEY] instead of
         fix[op_name] (the nonce-race fixture carries two transfers, `transfer`
@@ -477,12 +590,16 @@ def main():
         if nonce_keys_override is not None:
             protocol_nonces = nonce_keys_override
         calldata = cast_calldata(f"settle({SPEND_TUPLE})", spend_args(e))
+        try:
+            withdrawal_frame(pool, calldata, **recipient)
+        except ValueError as error:
+            raise SystemExit(str(error)) from None
         print(f"join-split withdraw via frame tx (pool {cfg['pool']} self-pays)")
         build_and_send(url, auth_pk, pool, 0, calldata, protocol_nonces, verify, refs,
                        dry_run=dry, sender_override=sender_override,
                        max_fee_override=max_fee_override, max_priority_override=max_priority_override,
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
-                       frame0_data=proof_bytes(e))
+                       frame0_data=proof_bytes(e), **recipient)
     else:
         raise SystemExit(f"unknown op {op}")
 

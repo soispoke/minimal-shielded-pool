@@ -10,6 +10,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "devnet"))
 
 from gas_profile import (  # noqa: E402
+    CLAIM_FRAME_GAS,
+    CLAIM_FRAME_STATE_GAS,
+    POOL_PROFILE,
+    RECIPIENT_FRAME_MAX_DATA,
+    RECIPIENT_FRAME_MAX_GAS,
+    RECIPIENT_FRAME_MAX_STATE_GAS,
     RECENT_ROOT_FRAME_GAS,
     SETTLE_FRAME_GAS,
     SETTLE_FRAME_STATE_GAS,
@@ -52,6 +58,12 @@ PROFILES = {
     # EIP-8272 at 824cbc0b0e: the recent root travels in a canonical verifier frame that
     # leads the transaction and counts toward the verify budget.
     "eip8272-canonical-frame": {
+        "pool_profile": POOL_PROFILE,
+        "claim_frame_gas": CLAIM_FRAME_GAS,
+        "claim_frame_state_gas": CLAIM_FRAME_STATE_GAS,
+        "recipient_frame_max_gas": RECIPIENT_FRAME_MAX_GAS,
+        "recipient_frame_max_state_gas": RECIPIENT_FRAME_MAX_STATE_GAS,
+        "recipient_frame_max_data": RECIPIENT_FRAME_MAX_DATA,
         "recent_root_frame_gas": RECENT_ROOT_FRAME_GAS,
         "verify_frame_gas": VERIFY_FRAME_GAS,
         "signature_gas": 2_800,
@@ -86,6 +98,14 @@ def main():
     expected = PROFILES.get(profile["wire_profile"])
     if expected is None:
         raise SystemExit(f"unsupported transaction wire profile: {profile['wire_profile']!r}")
+    # A new immutable dispatcher grammar requires its own pool profile even
+    # when the transaction wire format has not changed.
+    if "pool_profile" in expected:
+        for field in ("pool_profile", "claim_frame_gas", "claim_frame_state_gas",
+                      "recipient_frame_max_gas", "recipient_frame_max_state_gas",
+                      "recipient_frame_max_data"):
+            if profile.get(field) != expected[field]:
+                raise SystemExit(f"{field} does not match the immutable dispatcher profile")
     # A profile with a recent-root verifier frame budgets it in the prefix.
     recent_root_gas = profile.get("recent_root_frame_gas", 0)
     if recent_root_gas != expected.get("recent_root_frame_gas", 0):

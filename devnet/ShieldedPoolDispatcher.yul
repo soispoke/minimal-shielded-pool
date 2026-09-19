@@ -152,10 +152,10 @@ object "ShieldedPoolDispatcher" {
             }
 
             function verifyFrameApprove() {
-                // One immutable three-frame, self-paying grammar: the EIP-8272
-                // verifier frame, this proof frame, the settlement.
+                // Experimental profile: three frames for transfers, four for withdrawals.
+                // The tail is never SENDER; claims retain empty outgoing calldata.
                 if iszero(eq(txParam(0x02), address())) { fail(errShape()) }
-                if iszero(eq(txParam(0x09), 3)) { fail(errShape()) }
+                if iszero(eq(txParam(0x09), add(3, iszero(iszero(frameDataLoad(2, 260)))))) { fail(errShape()) }
                 if iszero(eq(txParam(0x0A), 1)) { fail(errShape()) }
                 if iszero(eq(txParam(0x0B), 1)) { fail(errShape()) }
                 if txParam(0x07) { fail(errShape()) }
@@ -211,6 +211,31 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(frameParam(2, 0x04), 388)) { fail(errShape()) }
                 if frameParam(2, 0x08) { fail(errShape()) }
                 if iszero(eq(shr(224, frameDataLoad(2, 0)), 0x921fcac7)) { fail(errShape()) }
+
+                // Tail is outside settlement's failure scope. Fee coverage below
+                // includes both dimensions of its signed gas budget.
+                if frameDataLoad(2, 260) {
+                    if frameParam(3, 0x02) { fail(errShape()) }
+                    if frameParam(3, 0x03) { fail(errShape()) }
+                    if frameParam(3, 0x08) { fail(errShape()) }
+                    switch eq(frameParam(3, 0x00), address())
+                    case 1 {
+                        // Ordinary ETH delivery: one exact permissionless claim.
+                        if iszero(eq(frameParam(3, 0x01), 100000)) { fail(errShape()) }
+                        if iszero(eq(frameParam(3, 0x09), 183600)) { fail(errShape()) }
+                        if iszero(eq(frameParam(3, 0x04), 36)) { fail(errShape()) }
+                        if iszero(eq(shr(224, frameDataLoad(3, 0)), 0xa3066aab)) { fail(errShape()) }
+                        if iszero(eq(frameDataLoad(3, 4), frameDataLoad(2, 324))) { fail(errShape()) }
+                    }
+                    default {
+                        // Existing account owns authentication, settlement-success
+                        // checking, replay protection, claim-self and action rollback.
+                        if iszero(eq(frameParam(3, 0x00), frameDataLoad(2, 324))) { fail(errShape()) }
+                        if gt(frameParam(3, 0x01), 300000) { fail(errShape()) }
+                        if gt(frameParam(3, 0x09), 500000) { fail(errShape()) }
+                        if gt(frameParam(3, 0x04), 4096) { fail(errShape()) }
+                    }
+                }
 
                 // The consumed EIP-8250 key set is exactly the two nullifiers.
                 let nf1 := frameDataLoad(2, 132)

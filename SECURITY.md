@@ -9,7 +9,7 @@ waste could forge arbitrary spends.
 The previously identified implementation blockers are fixed in the active
 code: complete-envelope authorization, positional sinks, pre-insert epoch
 rollover, separate root publication, canonical Groth16 encodings, direct-call
-rejection, exact two-frame self-payment, and EIP-7843 slot handling. Production
+rejection, exact spend framing, and EIP-7843 slot handling. Production
 activation remains blocked on a real ceremony, independent audit, cross-client
 evidence, and fork-specific gas proof.
 
@@ -29,16 +29,16 @@ sponsorship or caller-selected fee recipient.
 The circuit selects a fresh nonzero secp256k1 authorizer. EIP-8141 validates
 its canonical low-s signature over the complete FrameTx hash. The dispatcher
 requires that recovered signer through `SIGPARAM`, one signature, one exact
-three-frame grammar, the complete two-key EIP-8250 nonce set, and the exact
-EIP-8272 tuple proven by the leading recent-root verifier frame. A copied or
+three-frame transfer or four-frame withdrawal grammar, the complete two-key
+EIP-8250 nonce set, and the exact EIP-8272 tuple proven by the leading recent-root verifier frame. A copied or
 rerandomized proof cannot be rewrapped without the one-time private key.
 
 Payment approval consumes the EIP-8250 keys before SENDER settlement. Safety
 therefore requires settlement to be total for every proof-valid admitted
-transaction under the pinned fork gas profile. The implementation removes
-optional post-approval calls. Its required Poseidon operations use fixed-code
-static calls to two immutable, deployment-verified libraries. The 2M SENDER
-constant must be re-proved before every gas repricing fork.
+transaction under the pinned fork gas profile. Settlement contains no
+recipient calls. Its required Poseidon operations use fixed-code
+static calls to two immutable, deployment-verified libraries. The settlement
+budgets must be re-proved before every gas repricing fork.
 
 The active tree rolls before any non-sink insertion when the current epoch
 lacks capacity. Final roots remain authenticated by pool state. EIP-8272 source
@@ -62,6 +62,44 @@ The Solidity implementation rejects direct state-changing calls. The immutable
 dispatcher owns funds and storage. Deployment verifies the verifier,
 dispatcher, logic, and both Poseidon runtimes before the pool is used.
 
+## Recipient account requirements
+
+The withdrawal frame is separate from settlement and must use `DEFAULT`, zero
+value, and zero flags. It can call the exact pool claim or the proof-bound
+recipient within explicit gas and calldata limits. It cannot add a `SENDER`
+call or join settlement in an atomic batch. Tail failure leaves the settled
+credit intact; it is not a failed settlement or a lost withdrawal.
+
+The recipient authenticates its own request and binds it to the account,
+chain, pool, specific settlement, action, value, and replay protection. The
+test account signs the full settlement tuple, including its nullifiers, and
+consumes its nonce before making external calls. It claims accumulated credit
+but spends only the authorized value.
+
+Before acting, the account checks the immediate caller is `address(0xaa)`, the
+transaction sender is the trusted pool, the current frame index is 3, its
+target is the account, and `FRAMEPARAM(2, 0x05) == 1`. Indices are zero-based.
+The trusted dispatcher enforces the rest of the frame grammar. Without the
+settlement-success check, a failed withdrawal could be followed by an action
+funded from old credit. Nested calls inherit introspection, so frame context
+alone does not establish authority or prevent reentry.
+
+The account propagates claim or action failure so both roll back together.
+The pool claim continues to send empty calldata. Adding arbitrary calldata to
+that payment would let a note owner invoke recipient code with the pool as
+the caller.
+
+The account signature in calldata signs a separate request digest. It cannot
+sign the complete FrameTx hash containing those same signature bytes. The
+pool's existing outer signature binds the finished transaction, including the
+account request and its authorization.
+
+The dispatcher does not certify recipient code. An empty address or a fallback
+that accepts calldata may report success without claiming. Wallets must select
+a supported account explicitly; code presence alone is not a compatibility
+check. The account's ordinary recovery path must remain able to claim credit
+if the fourth frame fails.
+
 ## Assumptions and remaining gates
 
 - Groth16 soundness, BN254 pairing security, Poseidon collision resistance,
@@ -79,6 +117,8 @@ dispatcher, logic, and both Poseidon runtimes before the pool is used.
   execution gas and 550,000 state gas, replacing the single 2,000,000-gas budget
   that predates EIP-8037's second dimension. Unsupported repricing forks require
   a new immutable profile.
+- Native execution of the full four-frame transaction with the actual
+  dispatcher, proof, and chosen recipient account, including both gas bounds.
 - Independent circuit, Solidity, Yul, wallet, and deployment review.
 
 EIP-8369 remains an open Informational proposal. Its current `2^20` per-IL

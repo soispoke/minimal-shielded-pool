@@ -20,7 +20,7 @@ The circuit enforces membership for positive inputs, value conservation,
 outputs, two position-specific zero-value sinks, a nonzero `uint160`
 authorizer, and the transfer/withdrawal recipient shape.
 
-Each spend has exactly three frames:
+Private transfers have three frames. Withdrawals add a fourth:
 
 1. `VERIFY(0x…8272, tuple)`, EIP-8272's canonical recent-root verifier. The
    protocol runs `RECENT_ROOT_CODE` over the 72-byte tuple before any pool code
@@ -28,6 +28,9 @@ Each spend has exactly three frames:
 2. `VERIFY(pool, proof)`, which verifies the proof and exact envelope, then
    approves execution and payment.
 3. `SENDER(pool, settle(Spend))`, which performs bounded internal settlement.
+4. For withdrawals, `DEFAULT(pool, claimWithdrawal(recipient))` pays the ETH
+   to the recipient. A supported smart account can instead receive one
+   `DEFAULT` call that claims its credit and performs an authorized action.
 
 The proof chooses a fresh secp256k1 authorizer. Its sole EIP-8141 empty-message
 signature covers the canonical hash of the complete transaction, including
@@ -47,6 +50,36 @@ Merkle epoch before inserting outputs when capacity is insufficient. The two
 zero sinks consume no capacity, so an exit remains possible at a full tree.
 Withdrawals are pull credits. Root publication is a separate permissionless
 call that reads only the active or finalized root stored by the pool.
+
+## Withdraw and act
+
+The fourth frame normally calls the existing pool claim. An account that
+supports this flow can instead authenticate a request, check that settlement
+succeeded, claim its own credit, and make a call such as a swap. The claim and
+action share one call, so an action failure restores the credit. Settlement
+remains complete and the credit can be claimed later.
+
+The account must check its own authorization. The note owner's signature does
+not authorize actions on someone else's account. It must also bind the request
+to this withdrawal and check the pool sender, frame target, entry-point caller,
+and successful settlement. See [the account requirements](SECURITY.md#recipient-account-requirements).
+
+The builder accepts account calldata through `--recipient-call 0x…`. The account
+owner's authorization must already be included in that calldata. The target
+comes from the proof-bound recipient. `--recipient-gas` and
+`--recipient-state-gas` set the two budgets, capped at 300,000 and 500,000;
+calldata is capped at 4,096 bytes. A plain ETH claim uses 100,000 execution gas
+and 183,600 state gas. The private fee covers the complete transaction.
+
+This path requires a compatible existing account. It does not deploy an
+account or install an EOA's first delegation. The pool's storage and claim
+method are unchanged, and arbitrary actions never run as the pool.
+
+The local tests cover dispatcher checks and an authenticated account fixture.
+The full transaction with the actual dispatcher, proof, and selected account
+still needs a native client test before merge, including both gas dimensions.
+The limits above are candidate budgets for that test. A successful recipient
+call alone does not prove that the account claimed its credit.
 
 ## Active implementation
 
@@ -81,6 +114,12 @@ keys, and leads with a `30,000`-gas recent-root verifier frame that counts
 toward the public mempool's verify budget. The gas schedule is recorded in the
 testbed activation manifest, wire profile `eip8272-canonical-frame`.
 
+The pool profile is `recipient-pull-v1` and requires a fresh immutable
+dispatcher deployment. The checked-in `devnet/deploy_config.json` records an
+older three-frame deployment; it is not a deployment of this profile. The
+builder rejects that config for new spends. `run_live_dispatcher.sh` writes
+the new profile identifier when it deploys the candidate.
+
 This profile targets the chain 8141 testnet's next re-genesis, which moves the
 node to those revisions; the chain launched on September 3 runs the older
 EIP-8250 gas rule and the envelope-field form of EIP-8272 and cannot decode
@@ -101,6 +140,8 @@ python3 -m pip install --requirement requirements.txt
 
 python3 devnet/frametx.py
 python3 devnet/test_pool_envelope_binding.py
+python3 devnet/test_recipient_pull_binding.py
+python3 devnet/test_withdrawal_frames.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
 python3 wallet/wallet.py
@@ -108,6 +149,7 @@ python3 reference/poseidon_bn254.py
 
 forge fmt --root contracts --check
 forge lint --root contracts --deny warnings
+python3 devnet/recipient_pull_probe.py
 forge test --root contracts --force -vv
 ```
 
@@ -124,11 +166,16 @@ provenance. In particular, circom2 0.2.23 does not reproduce the committed
 0.2.8 R1CS or WASM byte for byte, so a compiler upgrade belongs to a new
 reviewed artifact set rather than routine dependency maintenance.
 
+The envelope tests execute the dispatcher with test substitutes for FrameTx
+introspection and approval. The recipient tests use the real settlement logic
+and a test-only account with a modeled frame context. These tests do not make
+Forge a FrameTx client or establish native state-gas bounds.
+
 ## Compatibility
 
 | Dependency | Status |
 |---|---|
-| Ethrex v23 Hegotá FrameTx ABI | Implemented, and the whole lifecycle mined on a devnet at these pins |
+| Ethrex v23 Hegotá FrameTx ABI | The earlier three-frame lifecycle was mined on a devnet at these pins; the new fourth frame still needs an integrated run |
 | Current EIP-8141 wire format | Implemented by the active encoder and tested on a private three-node devnet |
 | EIP-8141 published 100k public mempool budget | Not compatible: the two validation frames and the signature need 352.8k execution gas |
 | EIP-8250 keyed nonces | The pool follows PR 12279: two fresh keys cost `195,840` state gas in the proof frame |

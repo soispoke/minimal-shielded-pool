@@ -11,9 +11,18 @@ verify budget.
 # dispatcher like every other budget: unpinned, it is the pool's money.
 RECENT_ROOT_FRAME_GAS = 30_000
 RECENT_ROOT_TUPLE_BYTES = 72
+POOL_PROFILE = "recipient-pull-v1"
 VERIFY_FRAME_GAS = 320_000
 SETTLE_FRAME_GAS = 1_400_000
 SETTLE_FRAME_STATE_GAS = 550_000
+
+# Public withdrawals end with one bounded DEFAULT frame. The ordinary claim
+# uses exact budgets; an explicitly supplied recipient-account call uses caps.
+CLAIM_FRAME_GAS = 100_000
+CLAIM_FRAME_STATE_GAS = 183_600
+RECIPIENT_FRAME_MAX_GAS = 300_000
+RECIPIENT_FRAME_MAX_STATE_GAS = 500_000
+RECIPIENT_FRAME_MAX_DATA = 4_096
 
 STATE_BYTES_PER_STORAGE_SET = 64
 CPSB = 1_530

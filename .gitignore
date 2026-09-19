@@ -12,3 +12,6 @@ wallet/artifacts/
 # The archived profile's initcode is a deployment record, tracked like the live one.
 !devnet/vectors/*/build/
 !devnet/vectors/*/build/shielded_pool_dispatcher_init.hex
+
+# Generated test-only dispatcher with substituted introspection.
+devnet/build/recipient_pull_probe.hex

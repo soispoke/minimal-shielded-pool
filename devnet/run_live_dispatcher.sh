@@ -153,6 +153,7 @@ cfg = dict(zip(keys, sys.argv[1:]))
 # is not talking to, and the resulting settlement failures look like proof errors.
 manifest = json.load(open(os.environ["MANIFEST_PATH"]))["profile"]
 cfg.update({"chainId": manifest["chain_id"], "profile": manifest["wire_profile"],
+            "poolProfile": manifest["pool_profile"],
             "verifyGas": manifest["verify_frame_gas"],
             "settleGas": manifest["settle_frame_gas"],
             "testbedProvingKey": True})
@@ -199,31 +200,23 @@ json.dump(cfg, open("deploy_config.json", "w"), indent=1)
 print(f"    withdraw root slot={sys.argv[1]}")
 PY
 
-  echo "==> withdraw (shielded spend, note -> credit)"
-  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw "$DEPLOYER_PK"
-
-  # A withdraw books a credit; it does not push funds. Until the credit is claimed the
-  # recipient's balance is unchanged and the pool still holds the money, so a run that
-  # stops at the withdraw proves the proof verified and nothing about the payout.
-  # 900k rather than a round 200k: the claim measured 216,740 gas here, and at 200,000 it
-  # runs out mid-payout and reverts having consumed the lot.
-  #
-  # The payout is judged as a balance delta, not as "nonzero afterwards": the fixture's
-  # recipient is a fixed address, so on a chain that has seen one successful run it is
-  # already funded and a reverted claim would otherwise pass.
+  # The fourth frame claims in the same transaction. Measure from before
+  # withdrawal so a separate claim cannot hide a failed payout frame.
   RECIPIENT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["recipient"])' "$SMOKE_OUTPUT")
   PUBLIC_AMOUNT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["withdraw"]["public_amount"])' "$SMOKE_OUTPUT")
   BEFORE=$(cast balance "$RECIPIENT" --rpc-url "$RPC")
-  echo "==> claim (credit -> recipient $RECIPIENT, expecting +$PUBLIC_AMOUNT wei)"
-  claim=$(cast send "$POOL" 'claimWithdrawal(address)' "$RECIPIENT" --rpc-url "$RPC" \
-    --private-key "$DEPLOYER_PK" "${PRICE[@]}" --gas-limit 900000 --json)
-  [[ $(jq -r '.status' <<<"$claim") == "0x1" ]] || {
-    echo "claim reverted: $(jq -r '.transactionHash' <<<"$claim")" >&2; exit 1; }
+  CREDIT_BEFORE=$(cast call "$POOL" 'withdrawalCredit(address)(uint256)' "$RECIPIENT" --rpc-url "$RPC")
+  CREDIT_BEFORE=${CREDIT_BEFORE%% *}
+  echo "==> withdraw and claim (note -> recipient $RECIPIENT)"
+  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw "$DEPLOYER_PK"
   AFTER=$(cast balance "$RECIPIENT" --rpc-url "$RPC")
   # Balances outgrow bash's 64-bit arithmetic after a few ETH, so subtract in python.
   PAID=$(python3 -c 'import sys; print(int(sys.argv[1]) - int(sys.argv[2]))' "$AFTER" "$BEFORE")
-  [[ $PAID == "$PUBLIC_AMOUNT" ]] || {
-    echo "claim paid $PAID wei to the recipient, expected $PUBLIC_AMOUNT" >&2; exit 1; }
+  EXPECTED=$(python3 -c 'import sys; print(int(sys.argv[1]) + int(sys.argv[2]))' "$PUBLIC_AMOUNT" "$CREDIT_BEFORE")
+  [[ $PAID == "$EXPECTED" ]] || {
+    echo "withdrawal paid $PAID wei, expected $EXPECTED; inspect frame 3 and remaining credit" >&2; exit 1; }
+  CREDIT_AFTER=$(cast call "$POOL" 'withdrawalCredit(address)(uint256)' "$RECIPIENT" --rpc-url "$RPC")
+  [[ ${CREDIT_AFTER%% *} == 0 ]] || { echo "withdrawal credit remains after claim" >&2; exit 1; }
   echo "    recipient +$PAID wei ($BEFORE -> $AFTER)"
   echo "==> spends settled"
 fi
