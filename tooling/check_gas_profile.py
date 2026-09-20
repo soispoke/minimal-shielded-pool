@@ -175,7 +175,7 @@ def main():
             "recipient_data_cap": RECIPIENT_FRAME_MAX_DATA,
             "claim_declared_gas_added": CLAIM_FRAME_GAS + CLAIM_FRAME_STATE_GAS,
             "recipient_declared_gas_added_at_caps": RECIPIENT_FRAME_MAX_GAS + RECIPIENT_FRAME_MAX_STATE_GAS,
-            "native_integrated_measurement": None,
+            "native_integration_report": "devnet/native_recipient_pull/results.json",
         },
         "declared_total": {
             "frozen_single_dimension": declared_single,

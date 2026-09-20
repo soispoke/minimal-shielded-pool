@@ -1,0 +1,22 @@
+{
+  "build/spend.r1cs": "8b07031680a6d86e9261f64291e398ad9031abb09dcdf3f1d7ca86735847d15e",
+  "build/spend_final.zkey": "3a2bcbedd704e05cdbabfcc027c3f27a647380da84c83e506c3fdec5913b877a",
+  "build/spend_js/spend.wasm": "4935c11e3be2309af2b6bf6fa9821eaaaf41ffd481716483d0f28b73ed363a2b",
+  "circuits/spend.circom": "3d100fbf47852a50ee7fc5bf4fa2e8735e072f2c96533b9cb028168ccb6a78ea",
+  "contracts/src/Groth16Verifier.sol": "9667eab74b1efdd0a6cc5c419e6dbe4b7cb78ad29b5ed8ecf3b3d40886b286ac",
+  "contracts/src/PoseidonT3.sol": "f353af63ac124e51a37e78dc5278bcb2e93c19e44aa8dd13a4ecb4c54212720b",
+  "contracts/src/PoseidonT4.sol": "2384b8f71a2ed09f3b16c6b0d135bedcd293cb1c862e8a3c893d0ac79eae0960",
+  "contracts/src/ShieldedPoolLogic.sol": "7c05d484877146222ff1250e625ecb1d819c7aa409091a1affc41443f762cd5b",
+  "devnet/ShieldedPoolDispatcher.yul": "db609dfa90721a5ddb15236dd43aac75b41df63fe32c0666a8766cd3d9914484",
+  "devnet/build/shielded_pool_dispatcher_init.hex": "48bb10d57d8379dcd01118f5ae397eee7b1f2d9fb1f18ca30c1c027887dcf58d",
+  "devnet/dispatcher.py": "a503ef9549a752eb015a7c5a33e90df7c5f85235bcc1419d2f397f2f7862f670",
+  "devnet/frametx.py": "7b59186456e52c9956028cc1ccded61a7ae08684382c8b4f478416cd31bb17c7",
+  "devnet/gas_profile.py": "cf25b05e5a982602e573a457ade9ea131f4883cd358c6573e40d1f578fc0671f",
+  "devnet/pool_frametx.py": "1cecefd842810c98c6d153618ef525f134626a402395362c60844779d563b0db",
+  "tooling/check_gas_profile.py": "0b59b85803a2346ab8c96e9e260ec2b86c2b52aace4895dc36e2c8211f278f89",
+  "wallet/gen_smoke.py": "53413068065dd99a247d24b79a8fc522d3b95b181c8c17ddb11d438c913fb113",
+  "wallet/wallet.py": "a92daf44943ba490ac3b0719cbf8e817b259d9a8891373e3b246631bcaf9f770",
+  "devnet/native_recipient_pull/fixtures-contracts/NativeFrameContext.yul": "999a0a1a983441d4cc0ec5ea2d3ff005a623267d815bb4a99c41d6e2e7c5adae",
+  "devnet/native_recipient_pull/fixtures-contracts/TestDai.sol": "639697ca54bc27fa5319de421981fa20a9b87ad00127e21f9348c4c5d7454063",
+  "devnet/native_recipient_pull/fixtures-contracts/RecipientPullNativeAccount.sol": "9a16d33c9293523b9843c2007e62b1a92fc8a271c450035b446b358390a7f4ca"
+}

@@ -1,0 +1,4 @@
+fixtures/proof-work/
+fixtures-contracts/*.json
+fixtures-contracts/*.hex
+__pycache__/

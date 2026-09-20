@@ -1,0 +1,812 @@
+{
+  "client": "ethrex hegota-testnet 247e2dd2",
+  "pool_code_commit": "c87cee3f33c24aee00d216a9f608fdaff804b50b",
+  "chain_id": 8141,
+  "scenario_count": 24,
+  "signed_transaction_executions": 491,
+  "failures": [],
+  "swap_in_wei": 950000000000000000,
+  "local_dai_out_wei": 1876526479449890363422,
+  "cases": [
+    {
+      "name": "private-transfer",
+      "transactions": [
+        {
+          "fixture": "private-transfer.hex",
+          "raw_hash": "0xbf84ac8036469d1264280d86900a8dc88aaf4d6623fd8977d85c4ce4fa0886be",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 1609928,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254726,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 832038,
+              "state_gas": 293760
+            }
+          ],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "ordinary-eth-delivery",
+      "transactions": [
+        {
+          "fixture": "ordinary-eth-delivery.hex",
+          "raw_hash": "0xbf6801e9363279d4ae85f8a3e45c7275205729975a859af76c0c994100be8a82",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 699056,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254970,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 14716,
+              "state_gas": 183600
+            }
+          ],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "eth-to-dai-swap",
+      "transactions": [
+        {
+          "fixture": "eth-to-dai-swap.hex",
+          "raw_hash": "0xf6839edce0632f389a0c77e8038f9a572310807e5e0c15c3a9748565c7b1c816",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 1078817,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 210779,
+              "state_gas": 391680
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "spent-note-replay.hex",
+          "raw_hash": "0xf6839edce0632f389a0c77e8038f9a572310807e5e0c15c3a9748565c7b1c816",
+          "valid": false,
+          "error": "TxValidation(NonceMismatch { expected: 1, actual: 0 })",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "swap-slippage-revert",
+      "transactions": [
+        {
+          "fixture": "swap-slippage-revert.hex",
+          "raw_hash": "0xfae51eb287fe4c8cf14a0e290b678a775212b7975e66256d5da4f64cd82e3ba3",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 688404,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 74114,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "swap-slippage-revert-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "wrong-account-signature",
+      "transactions": [
+        {
+          "fixture": "wrong-account-signature.hex",
+          "raw_hash": "0x1eb63467489149d54728f0315e151fb54515eaf78b90f077769ce4391db56c94",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 632655,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 18377,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "wrong-account-signature-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "tail-execution-exhaustion",
+      "transactions": [
+        {
+          "fixture": "tail-execution-exhaustion.hex",
+          "raw_hash": "0x4a6d0e3627f5864ec699361060156537e1b29c0c3edaecc777ee22eed00381e8",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 634278,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 20000,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "tail-execution-exhaustion-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "tail-state-exhaustion",
+      "transactions": [
+        {
+          "fixture": "tail-state-exhaustion.hex",
+          "raw_hash": "0x9dfaba87d02822e9f2f99d59978effa0d2b290d85f3fa0ee73d393db34e1e09d",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 914278,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 300000,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "tail-state-exhaustion-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "downstream-execution-exhaustion",
+      "transactions": [
+        {
+          "fixture": "downstream-execution-exhaustion.hex",
+          "raw_hash": "0xf5d2a84dabcfbd869d7f90700b319a70914f09aa14cd898f2eb3cb278cd50d08",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 908608,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 296450,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "downstream-execution-exhaustion-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "downstream-state-exhaustion",
+      "transactions": [
+        {
+          "fixture": "downstream-state-exhaustion.hex",
+          "raw_hash": "0x333ae766a1829328591886f63c6f97bc08dd2dc0a2bfb9081df9f7fdb284c5ce",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 908736,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 296450,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "downstream-state-exhaustion-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "swap-at-489600-state-limit",
+      "transactions": [
+        {
+          "fixture": "swap-at-489600-state-limit.hex",
+          "raw_hash": "0xfd58317b89edc5be17fc0baa4e4f7142fb3c64fa0ed4a5a1e993f754feff829b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 1078829,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 210779,
+              "state_gas": 391680
+            }
+          ],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "swap-below-489600-state-limit",
+      "transactions": [
+        {
+          "fixture": "swap-below-489600-state-limit.hex",
+          "raw_hash": "0xc01ed36e089765813e7cf80528d99f9903c75c9685d80ba2e8058e9e3af701bb",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 908002,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 293712,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "swap-below-489600-state-limit-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "account-request-for-another-settlement",
+      "transactions": [
+        {
+          "fixture": "account-request-for-another-settlement.hex",
+          "raw_hash": "0xd0b74c3e2006bd49cd4b6e78860e291caad610cfc3024170b76ac787bd8b3b1e",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 625520,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 11230,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "account-request-for-another-settlement-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "unsupported-eoa-call-leaves-credit",
+      "transactions": [
+        {
+          "fixture": "unsupported-eoa-call-leaves-credit.hex",
+          "raw_hash": "0x3c849466797e3e8c2010a9311fbcab53d569d37972eebac5c3d8fa264675cf4b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 611403,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254937,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 1,
+              "execution_gas": 3000,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "failed-settlement-cannot-spend-old-credit",
+      "transactions": [
+        {
+          "fixture": "failed-settlement-cannot-spend-old-credit.hex",
+          "raw_hash": "0xa3950d73a208931fec4aea77169478d2e697626e7cac4e42aad23532d0296e54",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 614291,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 1,
+              "execution_gas": 25495,
+              "state_gas": 97920
+            },
+            {
+              "status": 0,
+              "execution_gas": 1,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "conflicting-output-settlement.hex",
+          "raw_hash": "0x4016f7db7b982cfc7366c09dbf120be6906cb594581cc5bf95f457a6c28620a4",
+          "valid": true,
+          "error": null,
+          "result": {
+            "Revert": "RevertOpcode"
+          },
+          "gas_spent": 509748,
+          "frames": [
+            {
+              "status": 1,
+              "execution_gas": 5579,
+              "state_gas": 0
+            },
+            {
+              "status": 1,
+              "execution_gas": 254964,
+              "state_gas": 195840
+            },
+            {
+              "status": 0,
+              "execution_gas": 9192,
+              "state_gas": 0
+            },
+            {
+              "status": 0,
+              "execution_gas": 9681,
+              "state_gas": 0
+            }
+          ],
+          "assertion_errors": []
+        },
+        {
+          "fixture": "failed-settlement-cannot-spend-old-credit-recovery.hex",
+          "raw_hash": "0x37cc2734860e1ab7d6e321f123565af1ca06538ae2c5cbfa29b35983e0e5216b",
+          "valid": true,
+          "error": null,
+          "result": "Success",
+          "gas_spent": 54844,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "outer-signature-mutation",
+      "transactions": [
+        {
+          "fixture": "outer-signature-mutation.hex",
+          "raw_hash": "0xcea6e1f26dca9a37dd5d9a97bbfe97aec709a838bfb22436cc61e18048a322dc",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameSignature)",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "invalid-proof",
+      "transactions": [
+        {
+          "fixture": "invalid-proof.hex",
+          "raw_hash": "0x61c943e43b9aae8e938df9c64313a766eadc5401e46e45039332fa856bb3ce51",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1677 bytes of code) failed: RevertOpcode\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "unknown-recent-root",
+      "transactions": [
+        {
+          "fixture": "unknown-recent-root.hex",
+          "raw_hash": "0x82af75e95880bf5e00ca0bb6ea5a56e2fc93e1e417d1d8db3925730ad0cbcda3",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 0 (target 0x0000000000000000000000000000000000008272, 345 bytes of code) failed: RevertOpcode\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "sender-tail",
+      "transactions": [
+        {
+          "fixture": "sender-tail.hex",
+          "raw_hash": "0x10d2c95b1408fa0117590b60ad4fec8d00b758f25c41517783231f71a53e1f80",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1677 bytes of code) failed: RevertOpcode\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "fifth-frame",
+      "transactions": [
+        {
+          "fixture": "fifth-frame.hex",
+          "raw_hash": "0xee678fa0eecd1f93089f413f7405275023b1c6125b2d0a9a5f7f1e3e7a4d8971",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1677 bytes of code) failed: RevertOpcode\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "wrong-recipient-target",
+      "transactions": [
+        {
+          "fixture": "wrong-recipient-target.hex",
+          "raw_hash": "0x51b5646b324ae84e714a0d65336324bac6f19c1ba67db3b174a01d642cdd5541",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1677 bytes of code) failed: RevertOpcode\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "tail-flags",
+      "transactions": [
+        {
+          "fixture": "tail-flags.hex",
+          "raw_hash": "0xf41c7f2dc435925610860b50bcbda315503b8adfd6bbcbf636d348900d7b112f",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransactionFormat(\"Frame 3: atomic batch flag on last frame\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "tail-value",
+      "transactions": [
+        {
+          "fixture": "tail-value.hex",
+          "raw_hash": "0xa1d51a91a52aeac1e94be695df9eadaf25fd87d8215ff5a4d15ead13fe2f4ad5",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransactionFormat(\"Frame 3: non-zero value only allowed in SENDER mode (mode=0, value=1)\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "recipient-execution-over-cap",
+      "transactions": [
+        {
+          "fixture": "recipient-execution-over-cap.hex",
+          "raw_hash": "0x904f09d8b712bf642233ec0a8cdb828290586b15d6efa9ba3e25e9801f9fa05a",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1677 bytes of code) failed: RevertOpcode\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    },
+    {
+      "name": "recipient-state-over-cap",
+      "transactions": [
+        {
+          "fixture": "recipient-state-over-cap.hex",
+          "raw_hash": "0x6250b4f9298f28dcf6d1b6598b6b0092dca4a80be1156933f7f1ac283112df03",
+          "valid": false,
+          "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1677 bytes of code) failed: RevertOpcode\"))",
+          "result": null,
+          "gas_spent": null,
+          "frames": [],
+          "assertion_errors": []
+        }
+      ]
+    }
+  ]
+}

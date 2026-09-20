@@ -1,0 +1,1389 @@
+{
+  "chain_id": 8141,
+  "slot_number": 100,
+  "block_gas_limit": 120000000,
+  "accounts": [
+    {
+      "address": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+      "balance": "1000000000000000000000000"
+    },
+    {
+      "address": "0xe05fcc23807536bee418f142d19fa0d21bb0cff7",
+      "balance": "1000000000000000000"
+    }
+  ],
+  "setup": [
+    {
+      "raw": "deploy-poseidon3.hex",
+      "nonces": {
+        "0xb78d43019965859706222cbfbc750f24da823d29": 1
+      },
+      "slot_number": 82
+    },
+    {
+      "raw": "deploy-poseidon4.hex",
+      "nonces": {
+        "0x5a57d0d0bde5346d02036752863248c3887044a6": 1
+      },
+      "slot_number": 83
+    },
+    {
+      "raw": "deploy-verifier.hex",
+      "nonces": {
+        "0xd08f0d4bbc17f47f09914ecb0991ab0650c5630e": 1
+      },
+      "slot_number": 84
+    },
+    {
+      "raw": "deploy-logic.hex",
+      "nonces": {
+        "0x110907c24fd3188f0471e74fdf8020e6aa182b7f": 1
+      },
+      "slot_number": 85
+    },
+    {
+      "raw": "deploy-pool.hex",
+      "nonces": {
+        "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": 1
+      },
+      "slot_number": 86
+    },
+    {
+      "raw": "deploy-context.hex",
+      "nonces": {
+        "0x913c0d467a4eb6c0dd842187ebd5574395d8868e": 1
+      },
+      "slot_number": 87
+    },
+    {
+      "raw": "deploy-account.hex",
+      "nonces": {
+        "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": 1
+      },
+      "slot_number": 88
+    },
+    {
+      "raw": "deploy-dai.hex",
+      "nonces": {
+        "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": 1
+      },
+      "slot_number": 89
+    },
+    {
+      "raw": "deploy-weth.hex",
+      "nonces": {
+        "0xab642e0a0fce7d249c192eefabf6236ed82f46b4": 1
+      },
+      "slot_number": 90
+    },
+    {
+      "raw": "deploy-factory.hex",
+      "nonces": {
+        "0xb53dcf7987be45c09a1cc5917877540d56fe1c4a": 1
+      },
+      "slot_number": 91
+    },
+    {
+      "raw": "deploy-router.hex",
+      "nonces": {
+        "0xde05074a32ae2139581e13fa6be87386319312e6": 1
+      },
+      "slot_number": 92
+    },
+    {
+      "raw": "deploy-failure.hex",
+      "nonces": {
+        "0xbc362c95b027bef1b3696ad0a0c19ee4bef8c26d": 1
+      },
+      "slot_number": 93
+    },
+    {
+      "raw": "mint-dai.hex",
+      "slot_number": 94
+    },
+    {
+      "raw": "approve-router.hex",
+      "slot_number": 95
+    },
+    {
+      "raw": "add-liquidity.hex",
+      "slot_number": 96
+    },
+    {
+      "raw": "shield-note-0.hex",
+      "storage": {
+        "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+          "21": "1",
+          "22": "2068309089372013920686920731087016642305772601813703159222528880795081539450"
+        }
+      },
+      "slot_number": 97
+    },
+    {
+      "raw": "shield-note-1.hex",
+      "storage": {
+        "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+          "21": "2",
+          "22": "16312525068466711053692469610502430413768793443646118187587301406102706756739"
+        }
+      },
+      "slot_number": 98
+    },
+    {
+      "raw": "shield-note-2.hex",
+      "storage": {
+        "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+          "21": "3",
+          "22": "19805843009644683209537343927092851676371392455832248363635415070244504079470"
+        }
+      },
+      "slot_number": 99
+    },
+    {
+      "raw": "publish-root.hex",
+      "slot_number": 100
+    }
+  ],
+  "cases": [
+    {
+      "name": "private-transfer",
+      "transactions": [
+        {
+          "raw": "private-transfer.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "5",
+              "0x999d26de3473317ead3eeaf34ca78057f1439db67b6953469c3c96ce9caf6bd7": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0x3908625b55fd87db06e14de6dd4ee7f5b28df82ad031575578e9e649be9dee8d": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            293760
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ordinary-eth-delivery",
+      "transactions": [
+        {
+          "raw": "ordinary-eth-delivery.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0x2c49c4834d3f7ecc26057f91408a7fd541fbd7642ba82da9dc72d2983fd132ad": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0x888a9b99cde819fc2fd97b25cdb1eb83bd4da9da5d98b8940da5491a697abf19": "1"
+            }
+          },
+          "balances": {
+            "0x00000000000000000000000000000000cafebabe": "950000000000000000"
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            0,
+            183600
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0x00000000000000000000000000000000cafebabe": "950000000000000000"
+          }
+        }
+      ]
+    },
+    {
+      "name": "eth-to-dai-swap",
+      "transactions": [
+        {
+          "raw": "eth-to-dai-swap.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "1",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "1876526479449890363422"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            0,
+            391680
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        },
+        {
+          "raw": "spent-note-replay.hex",
+          "slot_number": 102,
+          "accepted": false,
+          "error_contains": "NonceMismatch",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "1",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "1876526479449890363422"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap-slippage-revert",
+      "transactions": [
+        {
+          "raw": "swap-slippage-revert.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "swap-slippage-revert-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-account-signature",
+      "transactions": [
+        {
+          "raw": "wrong-account-signature.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "wrong-account-signature-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tail-execution-exhaustion",
+      "transactions": [
+        {
+          "raw": "tail-execution-exhaustion.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "tail-execution-exhaustion-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tail-state-exhaustion",
+      "transactions": [
+        {
+          "raw": "tail-state-exhaustion.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "tail-state-exhaustion-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "downstream-execution-exhaustion",
+      "transactions": [
+        {
+          "raw": "downstream-execution-exhaustion.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "downstream-execution-exhaustion-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "downstream-state-exhaustion",
+      "transactions": [
+        {
+          "raw": "downstream-state-exhaustion.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "downstream-state-exhaustion-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap-at-489600-state-limit",
+      "transactions": [
+        {
+          "raw": "swap-at-489600-state-limit.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "1",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "1876526479449890363422"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            0,
+            391680
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap-below-489600-state-limit",
+      "transactions": [
+        {
+          "raw": "swap-below-489600-state-limit.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "swap-below-489600-state-limit-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "account-request-for-another-settlement",
+      "transactions": [
+        {
+          "raw": "account-request-for-another-settlement.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "account-request-for-another-settlement-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unsupported-eoa-call-leaves-credit",
+      "transactions": [
+        {
+          "raw": "unsupported-eoa-call-leaves-credit.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0x2c49c4834d3f7ecc26057f91408a7fd541fbd7642ba82da9dc72d2983fd132ad": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0x888a9b99cde819fc2fd97b25cdb1eb83bd4da9da5d98b8940da5491a697abf19": "1"
+            }
+          },
+          "balances": {
+            "0x00000000000000000000000000000000cafebabe": "0"
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "failed-settlement-cannot-spend-old-credit",
+      "transactions": [
+        {
+          "raw": "failed-settlement-cannot-spend-old-credit.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            97920,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "conflicting-output-settlement.hex",
+          "slot_number": 101,
+          "statuses": [
+            1,
+            1,
+            0,
+            0
+          ],
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "950000000000000000"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0xc6f78531e0b6228ba857e1871f837766e485f38543abbe7fb199866fdc71d174": "1",
+              "0x313e79b4d42751d6dd8323149b1ac3f144da21aa56785fbe21282e823d36b5ac": "1"
+            }
+          },
+          "frame_state_gas": [
+            0,
+            195840,
+            0,
+            0
+          ],
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "0"
+          },
+          "allowed_changed_accounts": [
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "0x0000000000000000000000000000000000008250",
+            "0x0000000000000000000000000000000000000000"
+          ]
+        },
+        {
+          "raw": "failed-settlement-cannot-spend-old-credit-recovery.hex",
+          "slot_number": 102,
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "1",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "1"
+            }
+          },
+          "balances": {
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          },
+          "balance_delta_before_gas": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": "-950000000000000000",
+            "0xe05fcc23807536bee418f142d19fa0d21bb0cff7": "950000000000000000",
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "outer-signature-mutation",
+      "transactions": [
+        {
+          "raw": "outer-signature-mutation.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "InvalidFrameSignature",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "invalid-proof",
+      "transactions": [
+        {
+          "raw": "invalid-proof.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "VERIFY frame 1",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-recent-root",
+      "transactions": [
+        {
+          "raw": "unknown-recent-root.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "VERIFY frame 0",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "sender-tail",
+      "transactions": [
+        {
+          "raw": "sender-tail.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "VERIFY frame 1",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "fifth-frame",
+      "transactions": [
+        {
+          "raw": "fifth-frame.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "VERIFY frame 1",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-recipient-target",
+      "transactions": [
+        {
+          "raw": "wrong-recipient-target.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "VERIFY frame 1",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "tail-flags",
+      "transactions": [
+        {
+          "raw": "tail-flags.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "atomic batch flag on last frame",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "tail-value",
+      "transactions": [
+        {
+          "raw": "tail-value.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "non-zero value only allowed in SENDER mode",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "recipient-execution-over-cap",
+      "transactions": [
+        {
+          "raw": "recipient-execution-over-cap.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "VERIFY frame 1",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "recipient-state-over-cap",
+      "transactions": [
+        {
+          "raw": "recipient-state-over-cap.hex",
+          "slot_number": 101,
+          "accepted": false,
+          "error_contains": "VERIFY frame 1",
+          "storage": {
+            "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf": {
+              "21": "3",
+              "0xcd36e2293d6eb4410e60958dc04f6957425f4e41e0810554781ea98fe7d7871b": "0"
+            },
+            "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90": {
+              "0": "0",
+              "1": "0"
+            },
+            "0x3981a5b23070a1b29f7e20d6c426aee51494bd60": {
+              "0xb64197f9bfc71d229d519e434eacc9b28686a8a3542f23419e1bc6ba2e15d30a": "0"
+            },
+            "0x0000000000000000000000000000000000008250": {
+              "0x622d87e9a9f896947abc2b7ac663d41e9e5fbe7e91640e62dc9ceb1aebb64fe8": "0",
+              "0xd70682596fbf70d51144981e995219de38d975395a05d72990b4037a654f9970": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

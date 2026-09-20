@@ -40,6 +40,15 @@ recipient calls. Its required Poseidon operations use fixed-code
 static calls to two immutable, deployment-verified libraries. The settlement
 budgets must be re-proved before every gas repricing fork.
 
+Settlement is not yet total for every admitted proof-valid transaction. A
+positive output commitment may already be in the tree, including one that a
+recipient pre-shields after the sender signs. Approval then consumes the input
+nonce keys before settlement rejects the duplicate output, so the promised
+outputs and withdrawal credit are not created. The native suite reproduces
+this existing baseline flaw. It remains a production blocker. The fourth frame
+preserves credit after a successful settlement; it cannot recover a settlement
+that failed.
+
 The active tree rolls before any non-sink insertion when the current epoch
 lacks capacity. Final roots remain authenticated by pool state. EIP-8272 source
 IDs are distinct per epoch, preventing same-slot historical-publication
@@ -100,6 +109,12 @@ a supported account explicitly; code presence alone is not a compatibility
 check. The account's ordinary recovery path must remain able to claim credit
 if the fourth frame fails.
 
+The native integration suite executes the real dispatcher and proof with an
+authenticated test account and a local Uniswap V2 market. It checks successful
+swaps, rollback, credit recovery, independent account authorization, replay,
+and both gas dimensions. This is evidence for that account and action under
+the pinned client; it does not certify arbitrary recipient code.
+
 ## Assumptions and remaining gates
 
 - Groth16 soundness, BN254 pairing security, Poseidon collision resistance,
@@ -117,8 +132,9 @@ if the fourth frame fails.
   execution gas and 550,000 state gas, replacing the single 2,000,000-gas budget
   that predates EIP-8037's second dimension. Unsupported repricing forks require
   a new immutable profile.
-- Native execution of the full four-frame transaction with the actual
-  dispatcher, proof, and chosen recipient account, including both gas bounds.
+- A fix for the duplicate-output race described above, so every admitted
+  proof-valid transaction either settles or fails before its nonce keys are
+  consumed.
 - Independent circuit, Solidity, Yul, wallet, and deployment review.
 
 EIP-8369 remains an open Informational proposal. Its current `2^20` per-IL

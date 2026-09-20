@@ -44,6 +44,6 @@
     "devnet/frametx.py": "7b59186456e52c9956028cc1ccded61a7ae08684382c8b4f478416cd31bb17c7",
     "devnet/gas_profile.py": "cf25b05e5a982602e573a457ade9ea131f4883cd358c6573e40d1f578fc0671f",
     "devnet/pool_frametx.py": "1cecefd842810c98c6d153618ef525f134626a402395362c60844779d563b0db",
-    "tooling/check_gas_profile.py": "25658d30bbb73b02799eabdf5708748bfed6dd32c2c7c77155f8e7c18d3b0846"
+    "tooling/check_gas_profile.py": "0b59b85803a2346ab8c96e9e260ec2b86c2b52aace4895dc36e2c8211f278f89"
   }
 }

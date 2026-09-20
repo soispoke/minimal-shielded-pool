@@ -75,11 +75,13 @@ This path requires a compatible existing account. It does not deploy an
 account or install an EOA's first delegation. The pool's storage and claim
 method are unchanged, and arbitrary actions never run as the pool.
 
-The local tests cover dispatcher checks and an authenticated account fixture.
-The full transaction with the actual dispatcher, proof, and selected account
-still needs a native client test before merge, including both gas dimensions.
-The limits above are candidate budgets for that test. A successful recipient
-call alone does not prove that the account claimed its credit.
+The [native integration suite](devnet/native_recipient_pull/README.md) runs the
+real dispatcher and proof with an authenticated test account. It covers ordinary
+ETH delivery, an ETH-to-DAI swap on a local Uniswap V2 market, failure and
+recovery, and both gas limits. The swap uses 210,779 execution gas and needs
+489,600 state gas at its peak, within the limits above. Other accounts and
+actions need their own gas checks. A successful recipient call alone does not
+prove that the account claimed its credit.
 
 ## Active implementation
 
@@ -169,13 +171,15 @@ reviewed artifact set rather than routine dependency maintenance.
 The envelope tests execute the dispatcher with test substitutes for FrameTx
 introspection and approval. The recipient tests use the real settlement logic
 and a test-only account with a modeled frame context. These tests do not make
-Forge a FrameTx client or establish native state-gas bounds.
+Forge a FrameTx client or establish native state-gas bounds. The separate
+[native suite](devnet/native_recipient_pull/README.md) tests the complete signed
+transactions on ethrex with real frame opcodes, proofs, and gas accounting.
 
 ## Compatibility
 
 | Dependency | Status |
 |---|---|
-| Ethrex v23 Hegotá FrameTx ABI | The earlier three-frame lifecycle was mined on a devnet at these pins; the new fourth frame still needs an integrated run |
+| Ethrex v23 Hegotá FrameTx ABI | The earlier three-frame lifecycle was mined on a devnet; the four-frame flow passes the pinned native transaction suite, including an authenticated swap |
 | Current EIP-8141 wire format | Implemented by the active encoder and tested on a private three-node devnet |
 | EIP-8141 published 100k public mempool budget | Not compatible: the two validation frames and the signature need 352.8k execution gas |
 | EIP-8250 keyed nonces | The pool follows PR 12279: two fresh keys cost `195,840` state gas in the proof frame |
@@ -200,6 +204,10 @@ candidate, not a finalized per-transaction consensus limit.
   Poseidon runtime hashes.
 - Re-run the full signature-mutation, capacity, reorg, gas-boundary, and
   cross-client vectors on the exact activation fork.
+- Make settlement total before production. The native suite reproduces an
+  existing race where a recipient can pre-shield a positive output after the
+  sender signs, causing settlement to reject it only after the input nonce keys
+  are consumed. Pure withdrawals with two sink outputs avoid this race.
 - Re-run the fixed 2M SENDER-cap proof on every supported gas schedule.
   Deactivate the profile before an unsupported repricing fork.
 - Obtain an independent contract and circuit audit.

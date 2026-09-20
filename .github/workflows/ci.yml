@@ -76,6 +76,7 @@ jobs:
           python devnet/test_withdrawal_frames.py
           python devnet/test_recent_root_window.py
           python tooling/check_gas_profile.py
+          python devnet/native_recipient_pull/run.py --check-inputs
           python tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
           python tooling/check_activation.py \
             devnet/vectors/2026-09-01-hegota-final-profile/activation_manifest.testbed.json \
