@@ -114,7 +114,6 @@ jobs:
     timeout-minutes: 45
     env:
       RUSTUP_TOOLCHAIN: 1.93.0
-      CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
     steps:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
@@ -137,4 +136,6 @@ jobs:
           npm ci --prefix tooling
           python -m pip install --requirement requirements.txt
       - name: Test duplicate notes, reorgs, settlement gas and client policy
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
         run: python devnet/native_occurrence/run.py --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
