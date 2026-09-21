@@ -33,6 +33,20 @@ Private transfers use three frames. Public withdrawals add a fourth:
    If it fails, the credit created by settlement remains and can be claimed
    later. Standalone `claimWithdrawal` remains for leftover credits.
 
+A spend with `publicAmount = 0` and `recipient = 0` may instead append one
+`DEFAULT` call to an existing account, paying its gas from the shielded fee.
+For example, an account holding tokens but no ETH can authorize a token
+transfer without first receiving an ETH withdrawal. The frame target and
+calldata are covered by the spend's signature. The call has zero value and
+flags, a nonzero target other than the pool, and maximum limits of 300,000
+execution gas, 500,000 state gas and 4,096 calldata bytes. Withdrawals still
+use only the exact pool claim above.
+
+The called account must authenticate its own owner; the note authorizer does
+not gain permission to spend that account's assets. This is a direct account
+call, not an ERC-4337 UserOperation adapter. The pool adds no account or factory
+implementation. See [the account integration requirements](SECURITY.md#gas-only-account-actions).
+
 The proof chooses a fresh secp256k1 authorizer. Its sole EIP-8141 empty-message
 signature covers the canonical hash of the complete transaction, including
 the proof bytes, nonce keys, the recent-root frame, frames, gas limits, fee
@@ -84,7 +98,9 @@ nested them, so the correction confirms the shape rather than changing it. Every
 spend gives its proof frame `195,840` state gas to create its two nullifier
 keys, and leads with a `30,000`-gas recent-root verifier frame that counts
 toward the public mempool's verify budget. The gas schedule is recorded in the
-testbed activation manifest, wire profile `recipient-pull-v1`.
+testbed activation manifest, wire profile `gas-actions-v1`. This requires a
+fresh immutable dispatcher deployment. The checked-in `deploy_config.json`
+is an older deployment record and is intentionally rejected by the new builder.
 
 This profile targets the chain 8141 testnet's next re-genesis, which moves the
 node to those revisions; the chain launched on September 3 runs the older
@@ -106,6 +122,7 @@ python3 -m pip install --requirement requirements.txt
 
 python3 devnet/frametx.py
 python3 devnet/test_pool_envelope_binding.py
+python3 devnet/test_gas_only_action.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
 python3 wallet/wallet.py
@@ -115,6 +132,10 @@ forge fmt --root contracts --check
 forge lint --root contracts --deny warnings
 forge test --root contracts --force -vv
 ```
+
+The [native gas-action tests](devnet/native_gas_actions/README.md) run separately
+against a pinned ethrex VM, using real proofs and a test account with no ETH.
+They cover successful actions, authorization failures and partial execution.
 
 CI also recompiles the circuit in a temporary directory and compares the R1CS
 and WASM byte for byte with the committed artifacts. Run `tooling/setup.sh`

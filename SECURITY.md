@@ -24,12 +24,12 @@ upgrade to that format requires a new immutable pool profile and deployment.
 
 The pool holds native ETH. Notes, fees, withdrawals, and payer costs are all
 wei-denominated. The pool is the EIP-8141 sender and payer. There is no
-sponsorship or caller-selected fee recipient.
+external paymaster or caller-selected fee recipient.
 
 The circuit selects a fresh nonzero secp256k1 authorizer. EIP-8141 validates
 its canonical low-s signature over the complete FrameTx hash. The dispatcher
 requires that recovered signer through `SIGPARAM`, one signature, a three-frame
-transfer grammar or a four-frame withdrawal grammar, the complete two-key
+transfer grammar or a four-frame withdrawal or gas-only action grammar, the complete two-key
 EIP-8250 nonce set, and the exact EIP-8272 tuple proven by the leading
 recent-root verifier frame. A copied or rerandomized proof cannot be rewrapped
 without the one-time private key.
@@ -41,8 +41,9 @@ existing production blocker: approval can succeed and settlement can still fail
 after the nullifier keys are consumed, so the promised outputs are not created.
 A failed claim frame does not undo settlement. If the recipient reverts or the
 claim runs out of gas, the credit created by frame 2 remains and can be claimed
-later. The implementation does not allow caller-chosen post-approval calls. Its
-required Poseidon operations use fixed-code
+later. The optional gas-only action is outside settlement's failure scope.
+Its execution, state gas and calldata are capped, and the proof-bound fee must
+cover the complete transaction's maximum cost. Required Poseidon operations use fixed-code
 static calls to two immutable, deployment-verified libraries. The 2M SENDER
 constant must be re-proved before every gas repricing fork.
 
@@ -67,6 +68,41 @@ the credit.
 The Solidity implementation rejects direct state-changing calls. The immutable
 dispatcher owns funds and storage. Deployment verifies the verifier,
 dispatcher, logic, and both Poseidon runtimes before the pool is used.
+
+## Gas-only account actions
+
+A zero-withdrawal spend keeps `recipient = 0` in the unchanged proof and
+settlement tuple. It may append one `DEFAULT` frame whose target and calldata
+are chosen by the note authorizer and bound by the complete transaction
+signature. The frame has zero value and flags, cannot target the pool or the
+zero address, and is limited to 300,000 execution gas, 500,000 state gas and
+4,096 calldata bytes. Settlement remains the only `SENDER` frame. Public
+withdrawals cannot replace their exact claim frame with an action.
+
+The account sees EIP-8141's shared entry point (`0xaa`) as its caller, not
+the pool or the account owner. Trusting that caller alone would let any frame
+transaction operate the account. The account must independently authenticate
+its owner's action and prevent replay. The pool's proof-selected authorizer
+only authorizes spending the shielded notes and paying gas.
+
+A wallet must select an execution path compatible with this call. Supporting
+EIP-8141, EIP-7702 or ERC-4337 does not by itself establish compatibility. The
+tested account binds the chain, account, pool, exact settlement, action and
+nonce, and checks the native frame context and successful settlement before
+executing. These are account checks, not checks performed by the generic
+pool hook. The test account is an integration fixture, not a production wallet.
+
+After successful settlement, a failed action still spends the input notes
+and pays fees; the private change outputs remain. The wallet must inspect the
+individual frame receipts and must not retry the consumed spend. An account
+may also report an action failure through its return value instead of reverting,
+so a successful frame receipt alone does not prove the requested action ran.
+An independently submitted account signature may execute before the pool
+transaction unless its authorization also binds the intended execution context.
+
+The existing settlement-failure blocker above is unchanged. An account that
+requires settlement to succeed must verify that status before acting. This
+extension neither repairs that blocker nor provides full-spend atomicity.
 
 ## Assumptions and remaining gates
 

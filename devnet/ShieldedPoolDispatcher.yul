@@ -152,10 +152,12 @@ object "ShieldedPoolDispatcher" {
             }
 
             function verifyFrameApprove() {
-                // Three frames for private transfers; four when publicAmount is
-                // nonzero. The fourth frame is never SENDER: an exact DEFAULT claim.
+                // Withdrawals require the exact claim below. A zero-withdrawal
+                // spend may instead append one gas-only action, or keep three frames.
                 if iszero(eq(txParam(0x02), address())) { fail(errShape()) }
-                if iszero(eq(txParam(0x09), add(3, iszero(iszero(frameDataLoad(2, 260)))))) { fail(errShape()) }
+                let frames := txParam(0x09)
+                if iszero(or(eq(frames, 3), eq(frames, 4))) { fail(errShape()) }
+                if and(iszero(eq(frames, 4)), iszero(iszero(frameDataLoad(2, 260)))) { fail(errShape()) }
                 if iszero(eq(txParam(0x0A), 1)) { fail(errShape()) }
                 if iszero(eq(txParam(0x0B), 1)) { fail(errShape()) }
                 if txParam(0x07) { fail(errShape()) }
@@ -225,6 +227,19 @@ object "ShieldedPoolDispatcher" {
                     if frameParam(3, 0x08) { fail(errShape()) }
                     if iszero(eq(shr(224, frameDataLoad(3, 0)), 0xa3066aab)) { fail(errShape()) }
                     if iszero(eq(frameDataLoad(3, 4), frameDataLoad(2, 324))) { fail(errShape()) }
+                }
+                if and(eq(frames, 4), iszero(frameDataLoad(2, 260))) {
+                    // The outer signature authorizes this target and calldata,
+                    // not spending from the target account. It must authenticate
+                    // its owner itself. DEFAULT never lends the pool's identity.
+                    let target := frameParam(3, 0x00)
+                    if or(iszero(target), eq(target, address())) { fail(errShape()) }
+                    if frameParam(3, 0x02) { fail(errShape()) }
+                    if frameParam(3, 0x03) { fail(errShape()) }
+                    if frameParam(3, 0x08) { fail(errShape()) }
+                    if gt(frameParam(3, 0x01), 300000) { fail(errShape()) }
+                    if gt(frameParam(3, 0x09), 500000) { fail(errShape()) }
+                    if gt(frameParam(3, 0x04), 4096) { fail(errShape()) }
                 }
 
                 // The consumed EIP-8250 key set is exactly the two nullifiers.

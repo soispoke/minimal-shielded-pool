@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "devnet"))
 
 from gas_profile import (  # noqa: E402
+    ACTION_FRAME_MAX_GAS,
+    ACTION_FRAME_MAX_STATE_GAS,
+    ACTION_FRAME_MAX_CALLDATA,
     CLAIM_FRAME_GAS,
     CLAIM_FRAME_STATE_GAS,
     POOL_PROFILE,
@@ -71,9 +74,23 @@ PROFILES = {
         "verify_frame_state_gas": VERIFY_FRAME_STATE_GAS,
         "settle_frame_gas": SETTLE_FRAME_GAS,
         "settle_frame_state_gas": SETTLE_FRAME_STATE_GAS,
+        "pool_profile": "recipient-pull-v1",
+        "claim_frame_gas": CLAIM_FRAME_GAS,
+        "claim_frame_state_gas": CLAIM_FRAME_STATE_GAS,
+    },
+    "gas-actions-v1": {
+        "recent_root_frame_gas": RECENT_ROOT_FRAME_GAS,
+        "verify_frame_gas": VERIFY_FRAME_GAS,
+        "signature_gas": 2_800,
+        "verify_frame_state_gas": VERIFY_FRAME_STATE_GAS,
+        "settle_frame_gas": SETTLE_FRAME_GAS,
+        "settle_frame_state_gas": SETTLE_FRAME_STATE_GAS,
         "pool_profile": POOL_PROFILE,
         "claim_frame_gas": CLAIM_FRAME_GAS,
         "claim_frame_state_gas": CLAIM_FRAME_STATE_GAS,
+        "action_frame_max_gas": ACTION_FRAME_MAX_GAS,
+        "action_frame_max_state_gas": ACTION_FRAME_MAX_STATE_GAS,
+        "action_frame_max_calldata": ACTION_FRAME_MAX_CALLDATA,
     },
 }
 
@@ -106,6 +123,10 @@ def main():
         for field in ("pool_profile", "claim_frame_gas", "claim_frame_state_gas"):
             if profile.get(field) != expected[field]:
                 raise SystemExit(f"{field} does not match the immutable dispatcher profile")
+    if "action_frame_max_gas" in expected:
+        for field in ("action_frame_max_gas", "action_frame_max_state_gas", "action_frame_max_calldata"):
+            if profile.get(field) != expected[field]:
+                raise SystemExit(f"{field} does not match the immutable dispatcher profile")
     # A profile with a recent-root verifier frame budgets it in the prefix.
     recent_root_gas = profile.get("recent_root_frame_gas", 0)
     if recent_root_gas != expected.get("recent_root_frame_gas", 0):
@@ -120,7 +141,7 @@ def main():
     if required > profile["hegota_profile_2_budget"]:
         raise SystemExit("transaction exceeds the configured Hegota Profile 2 budget")
     if profile["wire_profile"] in (
-            "eip8250-state-gas-pre-8272-frame", "eip8272-canonical-frame", "recipient-pull-v1"):
+            "eip8250-state-gas-pre-8272-frame", "eip8272-canonical-frame", "recipient-pull-v1", "gas-actions-v1"):
         historical_verify_gas = profile["pre_pr_12279_max_observed_verify_execution_gas"]
         # The field is required even before a measurement exists. Its explicit
         # null records the remaining live-test gap; omitting it must not look

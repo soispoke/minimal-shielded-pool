@@ -1,0 +1,162 @@
+{
+  "addresses": {
+    "poseidon3": "0xb78d43019965859706222cbfbc750f24da823d29",
+    "poseidon4": "0x5a57d0d0bde5346d02036752863248c3887044a6",
+    "verifier": "0xd08f0d4bbc17f47f09914ecb0991ab0650c5630e",
+    "logic": "0x110907c24fd3188f0471e74fdf8020e6aa182b7f",
+    "pool": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+    "context": "0x913c0d467a4eb6c0dd842187ebd5574395d8868e",
+    "account": "0x5660cbbf0bdf54cc98f22e19aaf1c78749072e90",
+    "asset": "0x3981a5b23070a1b29f7e20d6c426aee51494bd60",
+    "failure": "0xab642e0a0fce7d249c192eefabf6236ed82f46b4"
+  },
+  "deployer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+  "owner": "0xe05fcc23807536bee418f142d19fa0d21bb0cff7",
+  "beneficiary": "0x000000000000000000000000000000000000beef",
+  "eoa": "0x00000000000000000000000000000000cafebabe",
+  "entries": {
+    "transfer": {
+      "root": "0x185decf7a4a7106844cdc1e4050fb6a78e5e631239b3bbc0b2a10c332aa2fb11",
+      "epoch": "0",
+      "domain": "0x03909c88395589cddb7c95eacd1ea6437490c6347bbf978bcbe387e6136311db",
+      "nf1": "0x0156e14c76066906a4a8d432a03c1fc2ec83f2826d0c5d8c6ae635d20022ea38",
+      "nf2": "0x2f73ce5793c3763702720a06c72e552502d57254fc37224da7f66a1601ae2a3e",
+      "out_cm1": "0x273edfd254d489381489dcfe36f9c16e34f38f2076fd4fe815ea6390e11e5c51",
+      "out_cm2": "0x0b76cdd9daa0e8f88a8771e4e788de5d938a819a6d80fd7acd9ffcc08abf738c",
+      "public_amount": "0",
+      "fee": "50000000000000000",
+      "recipient": "0x0000000000000000000000000000000000000000",
+      "authorizer": "0x395a682f0f60e6894df0cea059b03059fa77982d",
+      "authorizer_private_key": "0x1ede4ea9f3ce87542e7404a322b6b19463077237f593db2328671c113b79be45",
+      "proof": {
+        "pA": [
+          "0x2d3f7c5dbb65db0170ad2c7d4c461aee5491e9aeccdaf8f750690d1cbea9a119",
+          "0x287b45afdc9af49c4b410efa4711ddbc9f01565140f7784d11069baeeb09a2b0"
+        ],
+        "pB": [
+          [
+            "0x2438f94fc4d4fcf5d88c5b1c32c9b558ec3ad36db36a7517d8a3eed8eb6b254c",
+            "0x0257e4afee422b42fee3289fb46c4d6a1c08f8fa44c4a5f28a61de16e2c09e69"
+          ],
+          [
+            "0x2464d756c8a91bcde48a095e759e92eb8369ec8d064fe07d8d612a4eae153f66",
+            "0x111fe1012ecb42797ecedcb3282c741f0deeb0012fbfa62f07196b54a4701b8b"
+          ]
+        ],
+        "pC": [
+          "0x1006ed7b27afb04b2b5daad349e7bdeb40bd717192cdeaa73b0c5fa8d15c2ff8",
+          "0x146efc1f197e8939ae79c3c58ce43bcbb4c1f15ec3e9f3d8be89a2c8f4fa0af3"
+        ]
+      },
+      "root_slot": "100"
+    },
+    "second": {
+      "root": "0x185decf7a4a7106844cdc1e4050fb6a78e5e631239b3bbc0b2a10c332aa2fb11",
+      "epoch": "0",
+      "domain": "0x03909c88395589cddb7c95eacd1ea6437490c6347bbf978bcbe387e6136311db",
+      "nf1": "0x18f4754ad14b22de0f400052f6f42502974c4b11ef7d720c1e957a1485e8a4a3",
+      "nf2": "0x21f87d8595b78adda29d33422d4256f1e88e6e7f4a14fb1b24105f52014b6a19",
+      "out_cm1": "0x107d342bf091b4f158cb3d0b5aacd983ff0fb3d0019c474dfaa58c824ce5f845",
+      "out_cm2": "0x30209a29b2576519ff0ca2dcb8c7e031d855602d68b6a15b442cda42f25576c7",
+      "public_amount": "0",
+      "fee": "50000000000000000",
+      "recipient": "0x0000000000000000000000000000000000000000",
+      "authorizer": "0xe479bffe2667c84d1459083000b8b0a240c1374a",
+      "authorizer_private_key": "0x8e97873eaa86c7ad21859f7d7c006277675332ef941dcbfdafed4424725d6baf",
+      "proof": {
+        "pA": [
+          "0x08534cb7b882bd21553ad665cf5b3c780ce3a03664247510b3ed5fcd1097ff9d",
+          "0x19e6368fadb16e258c22aa5da008066bc0f688a1e9ab4f7bb1293fe3135ce816"
+        ],
+        "pB": [
+          [
+            "0x19033c4df31ae04cf29cab6e6b26a6b7ada47840aac06177c7e00607ee6ef52a",
+            "0x16718aa4fae6da6e834d3929af63ff3edbf4164248cea22f83017931e6f25034"
+          ],
+          [
+            "0x145e5c7046826393ed10f1ae8409c76bb94231a682d240d4ac5e6d3464869cec",
+            "0x1cb9cb23b9b822507a53120539cfbcbfad05ed4a57b7e616f61876f56104549d"
+          ]
+        ],
+        "pC": [
+          "0x206f9a05d36a762895252eb10d4ae8f65268dae0e2a92bc9327d968a676d7236",
+          "0x26c9a70ba317b9d49296091811f399364dade0027ce3f4c0aa1b27fad902e0ca"
+        ]
+      },
+      "root_slot": "100"
+    },
+    "conflict": {
+      "root": "0x185decf7a4a7106844cdc1e4050fb6a78e5e631239b3bbc0b2a10c332aa2fb11",
+      "epoch": "0",
+      "domain": "0x03909c88395589cddb7c95eacd1ea6437490c6347bbf978bcbe387e6136311db",
+      "nf1": "0x0156e14c76066906a4a8d432a03c1fc2ec83f2826d0c5d8c6ae635d20022ea38",
+      "nf2": "0x00a2c6ea97d6efba46e29f1adf6c4791fb2aa16378510f915e9bc1176e270f09",
+      "out_cm1": "0x19ecc4484e09d4c7b0a0160c5b096c22d543053a5b88304e908f2da1be6af770",
+      "out_cm2": "0x2fd476622c67c880b3049a76c7337192362834c9d6dfb55c5060bb96c98932bb",
+      "public_amount": "0",
+      "fee": "50000000000000000",
+      "recipient": "0x0000000000000000000000000000000000000000",
+      "authorizer": "0x47c0ed8a3f78ec9b11ee72b10eb7b725372ff813",
+      "authorizer_private_key": "0x0d176fe0b697efb61d21c243ac41ad75ad3f68050dd9da7bc50d6dda9623d39e",
+      "proof": {
+        "pA": [
+          "0x222da19744894b40a59c1717261bfaf35b4e34c48d51042004f943cf712e70f1",
+          "0x2af5ee34521e72d51e061a42c7eb9d3f24a7d43ebed6df7e590c115219e3abd9"
+        ],
+        "pB": [
+          [
+            "0x10233aebfc107c60728dab16b2597a0014ac132e945c59d5a8934aae4013cc7a",
+            "0x1684d2d4969120bd382ef8d0ca867293a1502b3835dbeb8c9983bdc6054bfd67"
+          ],
+          [
+            "0x27478b8d438ae13c42bb1aa7e975d30fd364b497e88fa7db88d27759cd9b35e6",
+            "0x112e2e902b933d5eac9604af95dcd924c9bddc5c62254df094df9243d906e5ac"
+          ]
+        ],
+        "pC": [
+          "0x2f8ef919ca7210cfd68338a80b37616b4f4955c4ee19dc1058454de49cb07017",
+          "0x1a0484924904ccd90d8c937e16d3bd539103bb2e676efed45f18bcad9ed4aded"
+        ]
+      },
+      "root_slot": "100"
+    },
+    "withdrawal": {
+      "root": "0x185decf7a4a7106844cdc1e4050fb6a78e5e631239b3bbc0b2a10c332aa2fb11",
+      "epoch": "0",
+      "domain": "0x03909c88395589cddb7c95eacd1ea6437490c6347bbf978bcbe387e6136311db",
+      "nf1": "0x18f4754ad14b22de0f400052f6f42502974c4b11ef7d720c1e957a1485e8a4a3",
+      "nf2": "0x015abc6cd4c6df2a73b738ffe516c54cba63d047d4f5a8b93ca3215f83e9a0e7",
+      "out_cm1": "0x23f1b896ada6ee5dac80945b11329e7ab64412c2be9f5c87cfa3261cc1d8216f",
+      "out_cm2": "0x2fd476622c67c880b3049a76c7337192362834c9d6dfb55c5060bb96c98932bb",
+      "public_amount": "900000000000000000",
+      "fee": "50000000000000000",
+      "recipient": "0x00000000000000000000000000000000cafebabe",
+      "authorizer": "0x3eeaa53481be111ab08699cf38e2d33e87fd8286",
+      "authorizer_private_key": "0x23202b5f735f7c67ec2b5c8599bae9d6b86e9d504f0aaff64bffbfbc61796562",
+      "proof": {
+        "pA": [
+          "0x20fb8d06df665e8be99181dc2e88ceef83e2bc4e0f13d00f9fca5fbcc199d919",
+          "0x194f2a3ad8f359e96ab6b4ae1cbe419571a6ae2170a938a7a58a093a178b7c76"
+        ],
+        "pB": [
+          [
+            "0x0aab109aaa6ae9375960c6b5d469b6b833f63365057402c2b5398c5e0ad21fcd",
+            "0x034ee8cf39a65eb62785d313b667d55ff8543cabbe3c99289271aff8e625a653"
+          ],
+          [
+            "0x22def1bfa61bdb88e37a28727f86566fa01dcaf3cfcfb5f11cd86462bdea94f5",
+            "0x1845729373c248d49d3665c336e66dc9d1cf68818fe09d5e87a5c9498bc40dd2"
+          ]
+        ],
+        "pC": [
+          "0x2fe8bc6b987b665d66cf0d4c20923c971174085236966903d2b8692207a34d3d",
+          "0x1a556c610c98e0e0bc4d76895096712ed77b9419e8863b37368486f8a61be2ed"
+        ]
+      },
+      "root_slot": "100"
+    }
+  },
+  "token_start": 1000,
+  "token_spend": 100,
+  "setup_next_nonce": 13
+}

@@ -1,0 +1,5 @@
+Cargo.toml
+target/
+fixture-contracts/*.json
+fixture-contracts/*.hex
+proof-work/
