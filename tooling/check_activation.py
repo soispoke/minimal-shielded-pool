@@ -26,8 +26,10 @@ from gas_profile import (  # noqa: E402
 # than letting a manifest name its own.
 #
 # Split profiles declare execution and state independently. Historical budgets
-# stay frozen here; position-notes-v1 raises execution after native long-carry
-# testing exposed a failure at the old 1.4M limit.
+# stay frozen here; position-notes-v1 pins settlement execution at 2M because
+# native spends at 262,143 and 524,287 leaves OOG at 1.4M after VERIFY and
+# approval succeed. State remains 550,000. 2M is the reproduced fix, not a
+# proof of every settlement shape.
 PROFILES = {
     "ethrex-v23-hegota-testnet": {
         "verify_frame_gas": 320_000,
@@ -75,8 +77,8 @@ PROFILES = {
     },
 }
 
-# Same frame grammar, new circuit/nullifier identities and storage layout.
-# This profile requires a fresh pool deployment.
+# Same frame grammar plus an optional generic DEFAULT tail, new
+# circuit/nullifier identities and storage layout. Fresh deployment required.
 PROFILES["position-notes-v1"] = {
     **PROFILES["recipient-pull-v1"], "pool_profile": POOL_PROFILE,
     "settle_frame_gas": SETTLE_FRAME_GAS,

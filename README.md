@@ -36,7 +36,8 @@ commitments at different positions have different nullifiers, so neither
 deposit nor settlement needs a commitment-uniqueness registry. Wallets track
 each occurrence separately and rebuild positions after a reorg.
 
-Private transfers use three frames. Public withdrawals add a fourth:
+Every spend uses three frames and may append a fourth. `publicAmount` does
+not force the tail: a withdrawal without one leaves `withdrawalCredit`.
 
 1. `VERIFY(0x…8272, tuple)`, EIP-8272's canonical recent-root verifier. The
    protocol runs `RECENT_ROOT_CODE` over the 72-byte tuple before any pool code
@@ -44,10 +45,34 @@ Private transfers use three frames. Public withdrawals add a fourth:
 2. `VERIFY(pool, proof)`, which verifies the proof and exact envelope, then
    approves execution and payment.
 3. `SENDER(pool, settle(Spend))`, which performs bounded internal settlement.
-4. When `publicAmount` is nonzero, `DEFAULT(pool, claimWithdrawal(recipient))`.
-   Anyone can call `claimWithdrawal`, so this frame does not use `SENDER`.
-   If it fails, the credit created by settlement remains and can be claimed
+4. Optional generic `DEFAULT` tail, never `SENDER`. The frame has zero value
+   and flags and a nonzero target. The dispatcher does not pin tail gas or
+   calldata: the wallet allocates the action inside remaining EIP-7825
+   execution capacity (intrinsic plus all frame execution budgets and the
+   EIP-7976 calldata floor must fit `2^24`). State gas is a separate
+   dimension; native testing admitted 10M execution plus 10M state on a
+   spend that still left room for verification and settlement. The encoded
+   FrameTx as a whole must also fit the pinned ethrex 128 KiB mempool
+   limit. The normal withdraw path is still
+   `DEFAULT(pool, claimWithdrawal(recipient))` with the old claim budgets
+   (100,000 execution / 183,600 state). Custom tails declare their own
+   budgets inside leftover transaction capacity. Unused
+   `fee - actual_gas_cost` stays in the pool. The proof-selected
+   authorizer's FrameTx signature binds the target and calldata.
+   `publicAmount > 0` may target the pool so the simple path remains
+   `DEFAULT(pool, claimWithdrawal(recipient))`. A zero-withdrawal tail
+   cannot target the pool. If the tail is omitted or fails, settlement
+   stands: a withdrawal credit remains on `recipient` and can be claimed
    later. Standalone `claimWithdrawal` remains for leftover credits.
+   `claimWithdrawal` always pays the recorded `who`, so the proof recipient
+   is the payout dest.
+
+A spend with `publicAmount = 0` and `recipient = 0` uses that same optional
+tail, paying its gas from the shielded fee. The called account must
+authenticate its own owner; the note authorizer does not gain permission to
+spend that account's assets. This is a direct account call, not an ERC-4337
+UserOperation adapter. The pool adds no account or factory implementation.
+See [SECURITY.md](SECURITY.md#generic-default-tail).
 
 The proof chooses a fresh secp256k1 authorizer. Its sole EIP-8141 empty-message
 signature covers the canonical hash of the complete transaction, including
@@ -130,6 +155,7 @@ python3 devnet/frametx.py
 python3 devnet/test_pool_envelope_binding.py
 python3 devnet/test_occurrence_profile.py
 python3 wallet/test_occurrence.py
+python3 devnet/test_gas_only_action.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
 python3 wallet/wallet.py

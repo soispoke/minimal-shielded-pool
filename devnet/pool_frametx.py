@@ -4,14 +4,19 @@
 This tool targets the EIP-8141/8250/8272 dialect of the upgraded chain 8141: EIP-8250
 at f3079a09e8 and EIP-8272 at 824cbc0b0e.
 
-Spends use one exact grammar:
+Spends use one base grammar:
 
   VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment)
     -> SENDER(pool, settle(Spend))
 
-Public withdrawals append DEFAULT(pool, claimWithdrawal(recipient)). Private
-transfers stay at three frames. The claim target and `who` are read from the
-signed settle calldata so they cannot disagree with the proof.
+Every spend is three frames and may append one DEFAULT tail. The wallet
+default for a withdrawal is DEFAULT(pool, claimWithdrawal(recipient)) at
+CLAIM_FRAME_GAS / CLAIM_FRAME_STATE_GAS — the budgets the dispatcher used
+to pin. Omitting the tail leaves withdrawalCredit. Any other target and
+calldata is a custom tail: the wallet raises declared gas above those
+defaults, inside remaining EIP-7825 execution capacity. That frame has
+zero value and is fully
+covered by the proof-selected authorizer's FrameTx signature.
 
 The leading frame is EIP-8272's canonical recent-root verifier: the predeploy checks the
 `(source_id, slot, root)` tuple in its data and reverts otherwise. The pool is sender and
@@ -22,13 +27,17 @@ proof bytes, gas, fees and the exact tuple. The tuple's slot is read from EIP-78
 
 Usage (append --dry-run to simulate without submitting):
   pool_frametx.py <rpc> config.json fixture.json shield   <funded-private-key>
+  pool_frametx.py <rpc> config.json fixture.json publish  <funded-private-key> [--epoch N]
   pool_frametx.py <rpc> config.json fixture.json transfer <unused>
   pool_frametx.py <rpc> config.json fixture.json withdraw <unused>
+  pool_frametx.py ... transfer|withdraw <unused> --action-target 0x... \
+      --action-call 0x... --action-gas N --action-state-gas N
+  pool_frametx.py ... withdraw <unused> --no-tail
 
 Spend signing keys come from the fixture's proof-bound
 `authorizer_private_key`. `--root-slot N` supplies the consensus slot in which
 `publishEpochRoot(epoch)` committed the root. `--allow-failed-claim` sends a
-withdrawal whose DEFAULT claim frame is expected to revert, leaving
+withdrawal whose default claim tail is expected to revert, leaving
 withdrawalCredit for a later claim. Negative-vector flags include
 `--flip-proof`, `--nonce-keys`, `--settle-gas`, and `--sender`.
 """
@@ -45,6 +54,8 @@ from frametx import Frame, FrameSig, FrameTx
 from gas_profile import (
     CLAIM_FRAME_GAS,
     CLAIM_FRAME_STATE_GAS,
+    EIP7825_TX_GAS_CAP,
+    ETHEX_MEMPOOL_MAX_BYTES,
     POOL_PROFILE,
     RECENT_ROOT_FRAME_GAS,
     SETTLE_FRAME_GAS,
@@ -131,6 +142,52 @@ def _keccak(b):
     return keccak(b)
 
 
+ACTION_OPTION_FLAGS = {
+    "--action-target": "target",
+    "--action-call": "data",
+    "--action-gas": "gas_limit",
+    "--action-state-gas": "state_limit",
+}
+
+
+def action_options(argv):
+    """Parse one all-or-none raw DEFAULT tail from command-line arguments.
+
+    The calldata already contains whatever authorization the target requires.
+    The pool wallet neither understands nor creates that signature.
+    """
+    unknown = sorted({arg for arg in argv
+                      if arg.startswith("--action-") and arg not in ACTION_OPTION_FLAGS})
+    if unknown:
+        raise ValueError("unknown action option: " + ", ".join(unknown))
+    present = {flag for flag in ACTION_OPTION_FLAGS if flag in argv}
+    if not present:
+        return None
+    missing = set(ACTION_OPTION_FLAGS) - present
+    if missing:
+        raise ValueError("action requires " + ", ".join(sorted(missing)))
+
+    values = {}
+    for flag, name in ACTION_OPTION_FLAGS.items():
+        if argv.count(flag) != 1:
+            raise ValueError(f"{flag} must be supplied exactly once")
+        index = argv.index(flag)
+        if index + 1 >= len(argv) or argv[index + 1].startswith("--"):
+            raise ValueError(f"{flag} requires a value")
+        raw = argv[index + 1]
+        try:
+            if name == "data":
+                encoded = raw.removeprefix("0x").removeprefix("0X")
+                if len(encoded) % 2:
+                    raise ValueError
+                values[name] = bytes.fromhex(encoded)
+            else:
+                values[name] = int(raw, 0)
+        except ValueError:
+            raise ValueError(f"invalid {flag} value: {raw}") from None
+    return values
+
+
 def recent_root_window_error(slot, latest_slot, epoch=0):
     """Why the node would refuse this publication slot, or None if it would accept.
 
@@ -194,33 +251,97 @@ def recent_root_tuple(url, cfg, e):
     return source_id + slot.to_bytes(8, "big") + root
 
 
-def claim_frame(pool, settle_calldata):
-    """Derive the optional fourth frame from the signed settlement tuple."""
+def check_tx_resource_limits(tx):
+    """Reject a built spend that does not fit chain-wide transaction limits.
+
+    Execution usage is intrinsic plus frame execution budgets versus the
+    EIP-7976 calldata floor. State is not added: 10M execution plus 10M
+    state can still fit EIP-7825. Encoded size is the whole FrameTx,
+    including proof, signatures, other frames and RLP overhead — not a
+    tail-only allowance.
+    """
+    used = tx.execution_cap_usage()
+    if used > EIP7825_TX_GAS_CAP:
+        raise ValueError(
+            f"declared execution {used} exceeds EIP-7825 cap {EIP7825_TX_GAS_CAP}"
+        )
+    encoded = len(tx.raw())
+    if encoded > ETHEX_MEMPOOL_MAX_BYTES:
+        raise ValueError(
+            f"encoded transaction {encoded} bytes exceeds ethrex "
+            f"{ETHEX_MEMPOOL_MAX_BYTES}-byte mempool limit"
+        )
+
+
+def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
+    """Derive the optional fourth DEFAULT frame from a canonical settlement.
+
+    The fourth frame is optional on every spend. Withdrawals default to the
+    permissionless pool claim at the old pinned claimWithdrawal gas. omit=True
+    skips that default and leaves withdrawalCredit. Any spend may instead
+    append one explicitly authorized DEFAULT call. Resource limits are
+    checked on the assembled transaction so they include the proof,
+    signatures, other frames and encoding overhead. A zero-public-amount
+    tail cannot target the pool.
+    """
     selector = _keccak(f"settle({SPEND_TUPLE})".encode())[:4]
     if len(settle_calldata) != 4 + 12 * 32 or settle_calldata[:4] != selector:
-        raise ValueError("claim frame requires canonical settle(Spend) calldata")
+        raise ValueError("tail frame requires canonical settle(Spend) calldata")
     amount = int.from_bytes(settle_calldata[4 + 8 * 32:4 + 9 * 32], "big")
     recipient = int.from_bytes(settle_calldata[4 + 10 * 32:4 + 11 * 32], "big")
     if not 0 < pool < 1 << 160 or recipient >= 1 << 160 or amount >= 1 << 128:
         raise ValueError("invalid pool, recipient, or public amount")
     if (amount == 0) != (recipient == 0):
         raise ValueError("public amount and recipient must both be zero or both nonzero")
-    if amount == 0:
+    if omit:
+        if action is not None:
+            raise ValueError("omit cannot be combined with a custom action")
         return None
-    data = _keccak(b"claimWithdrawal(address)")[:4] + recipient.to_bytes(32, "big")
-    return Frame(0, 0, pool, CLAIM_FRAME_GAS, 0, data,
-                 state_limit=CLAIM_FRAME_STATE_GAS)
+    if action is None:
+        if amount == 0:
+            return None
+        data = _keccak(b"claimWithdrawal(address)")[:4] + recipient.to_bytes(32, "big")
+        return Frame(0, 0, pool, CLAIM_FRAME_GAS, 0, data,
+                     state_limit=CLAIM_FRAME_STATE_GAS)
+
+    expected = {"target", "data", "gas_limit", "state_limit"}
+    if not isinstance(action, dict) or set(action) != expected:
+        raise ValueError("action requires target, data, gas_limit, and state_limit")
+    target = action["target"]
+    data = action["data"]
+    execution = action["gas_limit"]
+    state = action["state_limit"]
+    if not isinstance(target, int) or not 0 < target < 1 << 160:
+        raise ValueError("action target must be a nonzero address")
+    if amount == 0 and target == pool:
+        raise ValueError("action target must be a nonzero non-pool address")
+    if not isinstance(data, bytes):
+        raise ValueError("action calldata must be bytes")
+    if not isinstance(execution, int) or execution <= 0:
+        raise ValueError("action execution gas must be positive")
+    if not isinstance(state, int) or state < 0:
+        raise ValueError("action state gas must be nonnegative")
+    return Frame(0, 0, target, execution, 0, data, state_limit=state)
+
+
+def claim_frame(pool, settle_calldata):
+    """Backward-compatible exact withdrawal claim builder."""
+    return spend_tail_frame(pool, settle_calldata)
 
 
 def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_verify=None,
                    recent_root=None, dry_run=False, sender_override=None,
                    max_fee_override=None, max_priority_override=None,
                    settle_gas_override=None, save_raw=None, frame0_data=b"",
-                   allow_failed_claim=False):
+                   allow_failed_claim=False, action=None, omit_tail=False):
     try:
-        tail = claim_frame(pool, calldata) if proof_verify else None
+        tail = (spend_tail_frame(pool, calldata, action, omit=omit_tail)
+                if proof_verify else None)
     except ValueError as error:
         raise SystemExit(str(error)) from None
+    if action is not None and not proof_verify:
+        raise SystemExit("action requires a proof-carrying spend")
+    tail_kind = "action" if action is not None else ("claim" if tail is not None else None)
     signer = int.from_bytes(pk.public_key.to_canonical_address(), "big")
     sender = sender_override if sender_override is not None else signer
     chain_id = int(rpc(url, "eth_chainId", []), 16)
@@ -235,6 +356,12 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         raise SystemExit("fee overrides require max_fee >= base_fee and max_priority <= max_fee")
     nonce_keys = protocol_nonces if protocol_nonces else [0]
     nonce_seq = 0 if protocol_nonces else nonce
+    if value:
+        bal = int(rpc(url, "eth_getBalance", [nonce_address, "latest"]), 16)
+        if bal < value:
+            raise SystemExit(
+                f"  sender {nonce_address} has {bal} wei; this frame moves {value} wei plus gas "
+                "(deployer balance after contract creates is a common cause)")
 
     def build(sender_gas=SETTLE_FRAME_GAS):
         if proof_verify:
@@ -270,9 +397,13 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         # convention 27/28 is statically invalid for frame signatures.
         sig = bytes([s.v]) + s.r.to_bytes(32, "big") + s.s.to_bytes(32, "big")
         tx.signatures = [FrameSig(FrameSig.SECP256K1, signer, b"", sig)]
+        check_tx_resource_limits(tx)
         return tx
 
-    tx = build() if settle_gas_override is None else build(sender_gas=settle_gas_override)
+    try:
+        tx = build() if settle_gas_override is None else build(sender_gas=settle_gas_override)
+    except ValueError as error:
+        raise SystemExit(str(error)) from None
     raw = "0x" + tx.raw().hex()
     if save_raw:
         with open(save_raw, "w") as f:
@@ -315,7 +446,7 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         per = ", ".join(f"f{i}={hexint(f.get('gasUsed'))}" for i, f in enumerate(sim.get("frames") or []))
         total = hexint(sim.get("gasUsed"))
         print(f"  simulate: valid  shape={sim.get('prefixShape')}  payer={sim.get('payer')}  "
-              f"gas={total}  ({per})")
+              f"status={sim.get('executionStatus')}  gas={total}  ({per})")
         # Down-size the SENDER frame from the simulated gas ONLY for
         # non-spends. EIP-8037 state-dimension accounting varies 2-4x across
         # blocks, so measured + 25% is not a safe margin when the failure is
@@ -323,20 +454,32 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         # burns the notes (nullifiers consumed, outputs never inserted). For
         # spends the generous default stays; the payer's worst case is
         # prepaying more gas, refunded on success.
+        #
+        # Prefix `valid` is MATCHA only. A reverting SENDER still reports
+        # per-frame gasUsed; do not adopt that as a size.
         used = hexint((sim.get("frames") or [{}])[-1].get("gasUsed"))
-        if used is not None and not protocol_nonces:
-            sized = used + used // 4  # measured + 25% for state-gas variance at a later block
+        if (used is not None and not protocol_nonces
+                and sim.get("executionStatus") == "success"):
+            sized = max(used + used // 4, 80_000)
             tx2 = build(sender_gas=sized)
             raw2 = "0x" + tx2.raw().hex()
             s2 = simulate(url, raw2)
-            if s2 and s2.get("valid"):
+            if s2 and s2.get("valid") and s2.get("executionStatus") == "success":
                 tx, raw, eff = tx2, raw2, s2
-                print(f"  sized SENDER frame to {sized:,} gas (measured {used:,} + 25%)")
+                print(f"  sized SENDER frame to {sized:,} gas (measured {used:,} + 25%, floor 80k)")
+            elif s2 and s2.get("valid"):
+                print(f"  sized SENDER {sized:,} did not execute; keeping default {SETTLE_FRAME_GAS:,}")
     else:
-        # A DEFAULT claim revert is not a prefix failure. The live seed path
-        # expects that revert; only abort when settlement itself did not run.
-        outcomes = (sim.get("frames") or []) if allow_failed_claim and protocol_nonces else []
-        if len(outcomes) > 2 and outcomes[2].get("succeeded") is True:
+        # A DEFAULT tail revert is not a prefix failure. Distinguish an
+        # explicitly allowed claim failure from an action failure: the latter
+        # must never be broadcast after simulation has shown it will fail.
+        outcomes = (sim.get("frames") or []) if protocol_nonces else []
+        settled = len(outcomes) > 2 and outcomes[2].get("succeeded") is True
+        if settled and tail_kind == "action":
+            raise SystemExit(
+                "  simulate: settlement would succeed but the gas-only action frame would fail; "
+                "not sending. Fix the account calldata or limits and rebuild from the unspent notes.")
+        if settled and tail_kind == "claim" and allow_failed_claim:
             print(f"  simulate: valid={sim.get('valid')} violation={sim.get('violation')}; "
                   "settlement succeeded and failed claim is allowed")
         else:
@@ -348,28 +491,38 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
                         "\n  gen_smoke.py --random or deploy a fresh pool.")
             raise SystemExit(msg)
 
-    # Require frame 2 itself to succeed. A failed claim does not undo
+    # Require frame 2 itself to succeed. A failed DEFAULT tail does not undo
     # settlement; an aggregate executionStatus cannot distinguish these outcomes.
     if protocol_nonces:
         outcomes = (eff or {}).get("frames") or []
         if len(outcomes) <= 2 or outcomes[2].get("succeeded") is not True:
             raise SystemExit("  simulate: settlement frame 2 did not explicitly succeed; not sending")
-        claim_failed = tail is not None and (
+        tail_failed = tail is not None and (
             len(outcomes) <= 3 or outcomes[3].get("succeeded") is not True)
-        if claim_failed and not allow_failed_claim:
+        if tail_failed and tail_kind == "action":
+            raise SystemExit(
+                "  simulate: settlement succeeded but the gas-only action frame failed; not sending. "
+                "Fix the account calldata or limits and rebuild from the unspent notes.")
+        if tail_failed and tail_kind == "claim" and not allow_failed_claim:
             raise SystemExit("  simulate: settlement succeeded but the claim frame failed; "
                              "not sending. The credit would remain and can be claimed later.")
         other_failed = len(outcomes) != len(tx.frames) or any(
             i != 3 and f.get("succeeded") is not True for i, f in enumerate(outcomes))
         if other_failed:
             raise SystemExit("  simulate: settlement succeeded but another frame failed; not sending")
-        if claim_failed:
+        if tail_failed:
             print("  simulate: settlement succeeded; claim frame failed (allowed); "
                   "credit will remain for a later claim")
     elif eff and eff.get("executionStatus") and eff["executionStatus"] != "success":
+        hint = ""
+        if value:
+            hint = (f"; this frame moves {value} wei — if the sender is short after "
+                    "contract creates, top up and redeploy from scratch")
+        else:
+            hint = " (if root-not-recent, retry one block later)"
         raise SystemExit(f"  simulate: execution did not succeed "
-                         f"({eff.get('executionError') or eff['executionStatus']}); not sending "
-                         "(if root-not-recent, retry one block later)")
+                         f"({eff.get('executionError') or eff['executionStatus']}); not sending"
+                         f"{hint}")
 
     print(f"  frame tx: sender=0x{sender:040x} signer={signer_address} nonce_keys={nonce_keys} "
           f"raw_len={len(tx.raw())} max_cost={tx.max_cost()} sig_hash={tx.sig_hash().hex()[:18]}...")
@@ -391,16 +544,26 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
                                      "without creating outputs. Inspect frame receipts before retrying.")
                 if tail is not None:
                     if len(outcomes) <= 3 or outcomes[3].get("status") not in ("0x0", "0x1", "0x2"):
+                        if tail_kind == "action":
+                            raise SystemExit(
+                                "  settlement succeeded, but the gas-only action outcome is unknown. "
+                                "The input notes may already be consumed; inspect the nullifiers, outputs, "
+                                "and account state. Do not retry or re-sign using those notes.")
                         raise SystemExit("  settlement succeeded, but the claim frame outcome is unknown. "
                                          "Inspect the pool credit before taking any recovery action.")
                     if outcomes[3].get("status") != "0x1":
+                        if tail_kind == "action":
+                            raise SystemExit(
+                                "  settlement succeeded, but the gas-only action frame failed. The input "
+                                "notes were consumed and settlement outputs were created; inspect them and "
+                                "the account state. Do not retry or re-sign using those notes.")
                         if not allow_failed_claim:
                             raise SystemExit("  settlement succeeded, but the claim frame failed. "
                                              "The settled credit remains recoverable.")
                         print("  settlement succeeded, but the claim frame failed (allowed). "
                               "The settled credit remains recoverable.")
                 claim_reverted = (
-                    tail is not None and allow_failed_claim
+                    tail_kind == "claim" and allow_failed_claim
                     and len(outcomes) > 3 and outcomes[3].get("status") != "0x1")
                 if status != 1 and not claim_reverted:
                     raise SystemExit(f'  tx reverted (status {rcpt.get("status")}) after successful '
@@ -410,6 +573,27 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
             return rcpt
         time.sleep(2)
     raise SystemExit("  not mined within timeout")
+
+
+def wait_published_slot(url, rcpt, timeout=180):
+    """Two successor blocks, then the publication block's EIP-7843 slotNumber."""
+    pub_block = int(rcpt["blockNumber"], 16)
+    pub_hash = rcpt["blockHash"]
+    deadline = time.time() + timeout
+    while True:
+        head = int(rpc(url, "eth_blockNumber", []), 16)
+        print(f"  confirmations: head={head} publish_block={pub_block} (need +2)", flush=True)
+        if head >= pub_block + 2:
+            break
+        if time.time() >= deadline:
+            raise SystemExit(
+                f"  timed out waiting for 2 blocks after publish at {pub_block} (head {head})")
+        time.sleep(2)
+    block = rpc(url, "eth_getBlockByHash", [pub_hash, False])
+    slot = block.get("slotNumber")
+    if slot in (None, ""):
+        raise SystemExit("  publication block has no slotNumber")
+    return int(slot, 0) if isinstance(slot, str) else int(slot)
 
 
 def main():
@@ -422,6 +606,15 @@ def main():
             raise SystemExit(f"spends require profile={POOL_PROFILE}; use a fresh deployment of this profile")
         if cfg.get("claimGas") != CLAIM_FRAME_GAS or cfg.get("claimStateGas") != CLAIM_FRAME_STATE_GAS:
             raise SystemExit(f"spends require claimGas/claimStateGas matching {POOL_PROFILE}")
+    omit_tail = "--no-tail" in sys.argv
+    try:
+        action = action_options(sys.argv[6:])
+    except ValueError as error:
+        raise SystemExit(str(error)) from None
+    if omit_tail and action is not None:
+        raise SystemExit("--no-tail cannot be combined with action options")
+    if (action is not None or omit_tail) and op not in ("transfer", "withdraw"):
+        raise SystemExit("action options and --no-tail are valid only for transfer or withdraw")
     pk = keys.PrivateKey(bytes.fromhex(priv.removeprefix("0x")))
     dry = "--dry-run" in sys.argv
     sender_override = None
@@ -443,6 +636,7 @@ def main():
     note_index = None
     spend_key_override = None
     root_slot_override = None
+    epoch_override = 0
     flip_proof = "--flip-proof" in sys.argv
     allow_failed_claim = "--allow-failed-claim" in sys.argv
     if "--note" in sys.argv:
@@ -460,6 +654,11 @@ def main():
         if i + 1 >= len(sys.argv):
             raise SystemExit("--root-slot requires the consensus slot that published the root")
         root_slot_override = int(sys.argv[i + 1], 0)
+    if "--epoch" in sys.argv:
+        i = sys.argv.index("--epoch")
+        if i + 1 >= len(sys.argv):
+            raise SystemExit("--epoch requires the epoch to publish")
+        epoch_override = int(sys.argv[i + 1], 0)
     if "--settle-gas" in sys.argv:
         i = sys.argv.index("--settle-gas")
         if i + 1 >= len(sys.argv):
@@ -498,6 +697,8 @@ def main():
             sender_override = pool
     if allow_failed_claim and op != "withdraw":
         raise SystemExit("--allow-failed-claim is only valid on withdraw")
+    if allow_failed_claim and omit_tail:
+        raise SystemExit("--allow-failed-claim cannot be combined with --no-tail")
 
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a
@@ -539,6 +740,15 @@ def main():
         calldata = cast_calldata("shield(bytes32)", inner)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
         build_and_send(url, pk, pool, value, calldata, dry_run=dry)
+    elif op == "publish":
+        # Same SelfVerify+SENDER shape as shield. A legacy cast send can sit in
+        # the Hegotá mempool forever when a non-frame tx fails to apply.
+        calldata = cast_calldata("publishEpochRoot(uint64)", str(epoch_override))
+        print(f"publishEpochRoot({epoch_override}) via frame tx -> pool {cfg['pool']}")
+        rcpt = build_and_send(url, pk, pool, 0, calldata, dry_run=dry)
+        if not dry and rcpt:
+            slot = wait_published_slot(url, rcpt)
+            print(f"ROOT_SLOT {slot}", flush=True)
     elif op == "transfer":
         e, protocol_nonces, verify, refs, auth_pk = spend_setup("transfer")
         if nonce_keys_override is not None:
@@ -549,7 +759,7 @@ def main():
                        dry_run=dry, sender_override=sender_override,
                        max_fee_override=max_fee_override, max_priority_override=max_priority_override,
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
-                       frame0_data=proof_bytes(e))
+                       frame0_data=proof_bytes(e), action=action, omit_tail=omit_tail)
     elif op == "withdraw":
         e, protocol_nonces, verify, refs, auth_pk = spend_setup("withdraw")
         if nonce_keys_override is not None:
@@ -560,7 +770,8 @@ def main():
                        dry_run=dry, sender_override=sender_override,
                        max_fee_override=max_fee_override, max_priority_override=max_priority_override,
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
-                       frame0_data=proof_bytes(e), allow_failed_claim=allow_failed_claim)
+                       frame0_data=proof_bytes(e), allow_failed_claim=allow_failed_claim,
+                       action=action, omit_tail=omit_tail)
     else:
         raise SystemExit(f"unknown op {op}")
 
