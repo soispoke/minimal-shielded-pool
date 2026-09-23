@@ -17,7 +17,7 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 39 native scenarios and two client-policy tests, using
+The recorded run passes 42 native scenarios and two client-policy tests, using
 24 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
@@ -29,20 +29,24 @@ replay against a later root and slot, epoch/domain changes, and failed recipient
 calls retaining their credit. Rejected transactions must leave the complete
 EVM account state unchanged, including nonce keys and balances.
 
-Twelve scenarios cover the optional fourth frame. A withdrawal without a tail
-keeps its credit, and a withdrawal or transfer may end with a generic call to
-another account. A transfer may also call the pool. In one scenario it
+Fifteen scenarios cover the optional fourth frame. A withdrawal without a
+tail keeps its credit, and a withdrawal or transfer may end with a generic
+call to another account. A transfer may also call the pool. In one scenario it
 publishes its own root, and the note it created is withdrawn against that root
-in the next slot. In two others, the tail calls the pool to repeat the
-settlement or the proof check; the call reverts, and the settlement stands with
-each key consumed once. Each rejected case breaks one rule of an otherwise
-valid spend and must fail in the pool's `VERIFY` frame: a `SENDER` tail
-repeating the settlement, a zero target, an approval flag on the tail, an
-atomic batch joining settlement and tail, and a fifth frame. A tail carrying
-value is rejected statically by the client, as EIP-8141 requires, before the
-dispatcher's own value check runs. Removing the dispatcher's mode check lets
-the repeated settlement through with twice the proven credit, which this suite
-then reports as a failure.
+in the next slot. When that publication fails, the settlement stands, and a
+separate publication makes the note spendable. After a rollover, the tail must
+publish the new epoch: doing so lets the output be withdrawn in the next slot,
+while publishing the old epoch succeeds without the output until the new epoch
+is published separately. Two tails call the pool to repeat the settlement or
+the proof check, with enough gas to finish either; both revert, and the
+settlement stands with each key consumed once. Each rejected case breaks one
+rule of an otherwise valid spend and must fail in the pool's `VERIFY` frame: a
+`SENDER` tail repeating the settlement, a zero target, an approval flag on the
+tail, an atomic batch joining settlement and tail, and a fifth frame. A tail
+carrying value is rejected statically by the client, as EIP-8141 requires,
+before the dispatcher's own value check runs. Removing the dispatcher's mode
+check lets the repeated settlement through with twice the proven credit, which
+this suite then reports as a failure.
 
 Seven scenarios cover the validation frames' limits, which the dispatcher no
 longer pins. A withdrawal declaring far more than the defaults is accepted.

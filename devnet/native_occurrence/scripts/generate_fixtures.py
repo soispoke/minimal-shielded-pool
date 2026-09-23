@@ -347,11 +347,15 @@ for label, mutate in [
 # Any spend's tail may call the pool, but it reaches only what any caller can.
 # A transfer's tail that repeats the settlement call (which requires the pool
 # as sender) or the proof call (which works only as frame 1) reverts on its
-# own, and the settlement stands with its keys consumed once.
-for label, index in [("settlement", 2), ("verify-entry", 1)]:
+# own, and the settlement stands with its keys consumed once. Each tail has
+# enough gas to finish the call it repeats, so only the pool's checks stop it.
+for label, index, execution, state in [
+        ("settlement", 2, SETTLE_FRAME_GAS, SETTLE_FRAME_STATE_GAS),
+        ("verify-entry", 1, 500_000, VERIFY_FRAME_STATE_GAS)]:
     case(f"tail-pool-call-repeating-{label}-on-transfer-reverts",
         spend(f"transfer-pool-tail-{label}", duplicate, expected_tree=private_tree, statuses=[1, 1, 1, 0],
-              mutate=lambda frames, i=index: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, frames[i].data))))
+              mutate=lambda frames, i=index, e=execution, st=state:
+                  frames.append(Frame(0, 0, POOL, e, 0, frames[i].data, st))))
 # EIP-8141 statically forbids value outside SENDER frames, so the client
 # rejects this before the dispatcher's own value check can run.
 case("tail-rejected-nonzero-value", spend("tail-nonzero-value", initial, rejected=True,
@@ -402,6 +406,48 @@ case("tail-transfer-publishes-root-then-created-note-withdrawn",
     spend("transfer-publishes-root", duplicate, expected_tree=private_tree, statuses=[1, 1, 1, 1],
           mutate=lambda frames: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, publish_call, CLAIM_FRAME_STATE_GAS))),
     spend("withdraw-note-from-tail-root", created_copy, 102, paid=NB["value"]-FEE))
+
+# If the tail's publication fails, only the publication is retried: settlement
+# stands and has already consumed the inputs. Here the tail has no state gas for
+# the new root slot.
+retry_copy = copy.deepcopy(created_copy)
+retry_copy["root_slot"] = "102"
+case("tail-publication-fails-then-publication-retried",
+    spend("transfer-publication-fails", duplicate, expected_tree=private_tree, statuses=[1, 1, 1, 0],
+          mutate=lambda frames: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, publish_call, 0))),
+    publish("publish-retried", NEXT, slot=102),
+    spend("withdraw-after-retried-publication", retry_copy, 103, paid=NB["value"]-FEE))
+
+# The tail must publish the epoch the outputs land in. This transfer's two
+# outputs do not fit in the tree's one free leaf, so settlement starts epoch 1
+# and inserts them there. Publishing epoch 1 makes them spendable from the next
+# slot. Publishing epoch 0 still succeeds, with epoch 0's final root, which
+# lacks them; only a later publication of epoch 1 helps.
+rolled = RepeatedTree(NA["cm"], (1 << 20) - 1)
+rolled_seed = {str(level): str(rolled.uniform[level] if rolled.count >= (1 << level) else 0)
+               for level in range(w.DEPTH+1)}
+rolled_seed.update({"21": str(rolled.count), "22": str(rolled.root())})
+rolled_state = {"synthetic_storage": {addr(POOL): rolled_seed},
+                "synthetic_balances": {addr(POOL): str(rolled.count*ETH)}}
+def rolled_transfer(name, epoch):
+    step = spend(name, entries["rollover"], 102, statuses=[1, 1, 1, 1],
+        mutate=lambda frames: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0,
+            keccak(b"publishEpochRoot(uint64)")[:4] + word(epoch), CLAIM_FRAME_STATE_GAS)))
+    step["storage"][addr(POOL)].update({"21": str(len(next_tree.leaves)), "22": str(next_tree.root()),
+        "24": "1", mapping(0, 25): str(rolled.root())})
+    return step
+output_next_slot = copy.deepcopy(epoch_output)
+output_next_slot["root_slot"] = "102"
+case("tail-publishes-output-epoch-after-rollover", rolled_state,
+    publish("publish-before-rollover-tail", NEXT, slot=101),
+    rolled_transfer("rollover-tail-publishes-epoch-one", 1),
+    spend("withdraw-output-from-tail-root", output_next_slot, 103, paid=OUT1["value"]-FEE))
+case("tail-publishing-input-epoch-after-rollover-misses-outputs", rolled_state,
+    publish("publish-before-wrong-epoch-tail", NEXT, slot=101),
+    rolled_transfer("rollover-tail-publishes-epoch-zero", 0),
+    spend("output-root-not-published", output_next_slot, 103, rejected=True, error="VERIFY frame 0"),
+    publish("publish-epoch-one-later", NEXT+1, epoch=1, slot=103),
+    spend("withdraw-output-after-later-publication", epoch_output, 104, paid=OUT1["value"]-FEE))
 
 (OUT / "rejector-runtime.hex").write_text("0x60006000fd\n")
 (OUT / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")

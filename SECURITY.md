@@ -81,7 +81,14 @@ does not roll or insert.
 
 Root publication is not part of settlement. `publishEpochRoot(epoch)` accepts
 no caller-supplied root, reads the active or finalized authenticated root, and
-may safely be retried. A publication failure cannot consume note keys.
+may safely be retried. A publication failure cannot consume note keys. A
+transfer may publish from its tail, after settlement. It must name the epoch
+its outputs landed in: after a rollover, publishing the old epoch succeeds but
+leaves the new notes unpublished. If the tail's publication fails or names the
+wrong epoch, retry only the publication, because settlement has already
+consumed the input notes. Under EIP-8272, a later publication for the same
+epoch in the same slot replaces the stored root. The replacement still
+contains the notes, but proofs must use the root stored last.
 Withdrawals use checks-effects-interactions; a failed claim reverts and restores
 the credit.
 
@@ -199,7 +206,7 @@ zero authorizers, and recipient mismatches. The envelope vector mutates 48
 signed transfer components, 56 signed withdrawal components, 57 signed
 gas-only tails, and 57 signed custom withdrawal tails.
 
-The position-bound note suite passes 39 native scenarios using 24 real Groth16
+The position-bound note suite passes 42 native scenarios using 24 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, the fourth-frame rules,
