@@ -17,22 +17,15 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 WORK = BUILD / "occurrence-tests"
 RESULTS = []
-# The statement is private. Its four computed values are read from the
-# witness by name; the other six are circuit inputs, some of which the
-# compiler folds into other wires.
-STATEMENT_WIRES = ["main.stmt[0]", "main.stmt[1]", "main.stmt[2]", "main.stmt[3]"]
 STATEMENT_INPUTS = ["root", "domain", "public_amount", "fee", "recipient", "authorizer"]
-COMPRESSION_WIRES = ["main.beta", "main.gamma", "main.alpha"]
 
 
-def wire_indices(names):
-    found = {}
-    for line in (BUILD / "spend.sym").read_text().splitlines():
-        _, wire, _, name = line.split(",", 3)
-        if name in names:
-            found[name] = int(wire)
-    assert all(found.get(n, -1) >= 0 for n in names), found
-    return [found[n] for n in names]
+def statement_for(witness, nullifiers):
+    """The ten-value statement a witness should prove, given the nullifiers the
+    caller expects the circuit to compute."""
+    outputs = [(int(i), int(v)) for i, v in zip(witness["out_inner"], witness["out_value"])]
+    out_cm1, out_cm2 = w.output_commitments(outputs)
+    return w.statement(*nullifiers, out_cm1, out_cm2, *(int(witness[k]) for k in STATEMENT_INPUTS))
 
 
 def run(args):
@@ -46,7 +39,7 @@ def must(args):
     return result
 
 
-def witness_case(name, witness, expected=True):
+def witness_case(name, witness, expected=True, nullifiers=None):
     start = time.monotonic()
     source = WORK / (name + ".json")
     target = WORK / (name + ".wtns")
@@ -59,10 +52,11 @@ def witness_case(name, witness, expected=True):
         must(["npx", "snarkjs", "wtns", "check", BUILD / "spend.r1cs", target])
         exported = WORK / (name + ".witness.json")
         must(["npx", "snarkjs", "wtns", "export", "json", target, exported])
-        wires = json.loads(exported.read_text())
-        publics = ([int(wires[i]) for i in wire_indices(STATEMENT_WIRES)]
-                   + [int(witness[k]) for k in STATEMENT_INPUTS])
-        beta, gamma, alpha = (int(wires[i]) for i in wire_indices(COMPRESSION_WIRES))
+        # Wire 0 is the constant; then the outputs beta and gamma, then alpha.
+        beta, gamma, alpha = (int(x) for x in json.loads(exported.read_text())[1:4])
+        # The statement is private. gamma matches the expected statement only
+        # if the circuit computed exactly these ten values.
+        publics = statement_for(witness, nullifiers)
         assert gamma == w.fingerprint((alpha + beta) % w.P, publics), name
     RESULTS.append({"name": name, "accepted": expected,
                     "seconds": round(time.monotonic() - start, 4)})
@@ -95,12 +89,15 @@ def main():
 
     first = make([real, dummy])
     second = make([duplicate, dummy])
-    public_first = witness_case("first-occurrence", first)
-    public_second = witness_case("identical-second-occurrence", second)
+    public_first = witness_case("first-occurrence", first,
+                                nullifiers=w.input_nullifiers(domain0, [real, dummy]))
+    public_second = witness_case("identical-second-occurrence", second,
+                                 nullifiers=w.input_nullifiers(domain0, [duplicate, dummy]))
     assert public_first[0] != public_second[0]
     assert public_first[:2] == w.input_nullifiers(domain0, [real, dummy])
     assert public_second[:2] == w.input_nullifiers(domain0, [duplicate, dummy])
-    public_pair = witness_case("both-identical-funded-occurrences", make([real, duplicate]))
+    public_pair = witness_case("both-identical-funded-occurrences", make([real, duplicate]),
+                               nullifiers=w.input_nullifiers(domain0, [real, duplicate]))
     assert public_pair[:2] == [public_first[0], public_second[0]]
 
     witness_case("same-occurrence-twice", make([real, real]), False)
@@ -124,14 +121,16 @@ def main():
     # identity when the root changes. Publication slot is intentionally absent.
     tree.append(w.commitment(*w.new_note(), 29))
     later = make([real, dummy])
-    public_later = witness_case("same-occurrence-later-root", later)
+    public_later = witness_case("same-occurrence-later-root", later,
+                                nullifiers=w.input_nullifiers(domain0, [real, dummy]))
     assert public_later[4] != public_first[4]
     assert public_later[:2] == public_first[:2]
 
     # Both epochs have to be authenticated independently by the dispatcher.
     # This circuit test only checks domain separation, not root provenance.
     other_epoch = make([real, dummy], domain1)
-    public_epoch = witness_case("same-position-other-authenticated-epoch", other_epoch)
+    public_epoch = witness_case("same-position-other-authenticated-epoch", other_epoch,
+                                nullifiers=w.input_nullifiers(domain1, [real, dummy]))
     assert public_epoch[0] != public_later[0]
 
     # A reorg can change the insertion order. Reconstruct the canonical tree
@@ -153,16 +152,20 @@ def main():
     rebuilt = w.build_witness(branch_b, [rebuilt_input, dummy], w.sink_outputs(), domain0,
                               authorizer=authorizer, public_amount=100,
                               recipient="0x" + "34" * 20)
-    public_rebuilt = witness_case("reorg-rebuilt-tree-and-index", rebuilt)
+    public_rebuilt = witness_case("reorg-rebuilt-tree-and-index", rebuilt,
+                                  nullifiers=w.input_nullifiers(domain0, [rebuilt_input, dummy]))
     assert public_rebuilt[0] != public_first[0]
     assert public_rebuilt[:2] == w.input_nullifiers(domain0, [rebuilt_input, dummy])
 
     same_secrets_dummy = {"sk": sk, "rho": rho, "value": 0, "idx": None}
-    public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]))
+    public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]),
+                                nullifiers=w.input_nullifiers(domain0, [real, same_secrets_dummy]))
     assert public_dummy[0] != public_dummy[1]
     dummy_at_max = make([real, same_secrets_dummy])
     dummy_at_max["in_bits"][1] = ["1"] * w.DEPTH
-    public_dummy_max = witness_case("dummy-arbitrary-maximum-position", dummy_at_max)
+    max_dummy_nf = w.nullifier(domain0, sk, w.commitment(sk, rho, 0), (1 << w.DEPTH) - 1)
+    public_dummy_max = witness_case("dummy-arbitrary-maximum-position", dummy_at_max,
+                                    nullifiers=[public_dummy[0], max_dummy_nf])
     assert public_dummy_max[1] == w.nullifier(domain0, sk, w.commitment(sk, rho, 0), (1 << w.DEPTH) - 1)
     assert public_dummy_max[1] != public_later[0]
 
