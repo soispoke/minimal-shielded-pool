@@ -31,6 +31,7 @@ from gas_profile import (  # noqa: E402
     KEYED_NONCE_FIRST_USE_STATE_GAS,
     MAX_VERIFY_STATE_GAS,
     POOL_PROFILE,
+    PREVIOUS_POOL_PROFILE,
     RECENT_ROOT_FRAME_GAS,
     REQUIRED_VERIFY_BUDGET,
     SETTLE_FRAME_GAS,
@@ -45,11 +46,12 @@ PRE_PR_12279_KEYED_NONCE_EXECUTION_GAS = 2 * 20_000
 # Measured on a devnet running EIP-8250 at f3079a09e8 and EIP-8272 at 824cbc0b0e:
 # the transfer's proof frame reported 254,685 and the withdraw's 254,712. The drop
 # from the pre-12279 figure is the keyed-nonce first use leaving the execution
-# dimension for the state one, which is the whole point of that PR.
-POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 254_712
+# dimension for the state one, which is the whole point of that PR. The activation
+# manifest records 255,011, the largest proof-frame execution observed since.
+POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 255_011
 # The pool grammar permits exactly one 72-byte recent-root tuple, pinned by the
 # dispatcher's `frameParam(0, 0x04) == 72`. The measured verifier-frame execution cost
-# for that shape was 5,579 gas, so the pinned 30,000-gas limit covers it.
+# for that shape was 5,579 gas, so the 8,000-gas wallet default covers it.
 #
 # This figure says nothing about a frame carrying the sixteen tuples EIP-8272 allows.
 # An earlier revision claimed it did, on a measurement that repeated ONE tuple sixteen
@@ -106,13 +108,21 @@ def check_tree_shapes():
     return {"no_rollover": maxima[False], "rollover": maxima[True]}
 
 
+def check_deployment_record(cfg):
+    assert cfg["recentRootGas"] == RECENT_ROOT_FRAME_GAS
+    assert cfg["verifyGas"] == VERIFY_FRAME_GAS
+    assert cfg["verifyStateGas"] == VERIFY_FRAME_STATE_GAS
+    assert cfg["settleGas"] == SETTLE_FRAME_GAS
+    assert cfg["settleStateGas"] == SETTLE_FRAME_STATE_GAS
+    assert cfg["claimGas"] == CLAIM_FRAME_GAS
+    assert cfg["claimStateGas"] == CLAIM_FRAME_STATE_GAS
+
+
 def main():
     tree_shapes = check_tree_shapes()
-    # Historical measurements bound the unchanged verifier shape. The exact
-    # position-notes deployment is checked by devnet/native_occurrence.
-    assert PRE_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS < VERIFY_FRAME_GAS
-    # The measured figures must fit the budgets the dispatcher pins, or a spend that
-    # simulates fine halts mid-frame on a chain with slightly different access costs.
+    # The pre-PR 12279 figure charged keyed-nonce creation as execution gas and no
+    # longer applies. The measured figures must fit the wallet defaults, or a spend
+    # that simulates fine halts mid-frame on a chain with slightly different costs.
     assert POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS < VERIFY_FRAME_GAS
     assert MAX_OBSERVED_RECENT_ROOT_FRAME_GAS < RECENT_ROOT_FRAME_GAS
     assert CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND < SETTLE_FRAME_GAS
@@ -147,10 +157,10 @@ def main():
     # cannot import the Python module, so check its unavoidable literals here.
     # The optional DEFAULT tail has no pool-specific gas or calldata ceiling.
     dispatcher = (ROOT / "devnet" / "ShieldedPoolDispatcher.yul").read_text()
+    # The validation frames' limits are wallet defaults, not dispatcher pins.
+    for unpinned in ("frameParam(0, 0x01)", "frameParam(1, 0x01)", "frameParam(1, 0x09)"):
+        assert unpinned not in dispatcher, f"dispatcher pins {unpinned}"
     dispatcher_pins = (
-        f"if iszero(eq(frameParam(0, 0x01), {RECENT_ROOT_FRAME_GAS})) {{ fail(errShape()) }}",
-        f"if iszero(eq(frameParam(1, 0x01), {VERIFY_FRAME_GAS})) {{ fail(errShape()) }}",
-        f"if iszero(eq(frameParam(1, 0x09), {VERIFY_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
         f"if iszero(eq(frameParam(2, 0x01), {SETTLE_FRAME_GAS})) {{ fail(errShape()) }}",
         f"if iszero(eq(frameParam(2, 0x09), {SETTLE_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
     )
@@ -160,18 +170,15 @@ def main():
     assert "if gt(frameParam(3, 0x09)," not in dispatcher
     assert "if gt(frameParam(3, 0x04)," not in dispatcher
 
-    # The deployment record is a fresh deployment of this dispatcher. The
-    # builder also checks the deployed pool's domain before shielding or
-    # spending, since a profile label alone does not prove the deployed code.
+    # The deployment record describes a deployment of this profile, or still the
+    # previous one until this profile is deployed; the spend CLI refuses the latter.
     cfg = json.loads((ROOT / "devnet" / "deploy_config.json").read_text())
-    assert cfg["profile"] == POOL_PROFILE
-    assert cfg["recentRootGas"] == RECENT_ROOT_FRAME_GAS
-    assert cfg["verifyGas"] == VERIFY_FRAME_GAS
-    assert cfg["verifyStateGas"] == VERIFY_FRAME_STATE_GAS
-    assert cfg["settleGas"] == SETTLE_FRAME_GAS
-    assert cfg["settleStateGas"] == SETTLE_FRAME_STATE_GAS
-    assert cfg["claimGas"] == CLAIM_FRAME_GAS
-    assert cfg["claimStateGas"] == CLAIM_FRAME_STATE_GAS
+    if cfg["profile"] == PREVIOUS_POOL_PROFILE:
+        cfg = None
+    else:
+        assert cfg["profile"] == POOL_PROFILE
+    if cfg is not None:
+        check_deployment_record(cfg)
 
     print(json.dumps({
         "verify": {

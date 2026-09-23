@@ -658,6 +658,10 @@ def main():
     cfg = json.loads(open(cfg_path).read())
     fix = json.loads(open(fix_path).read())
     pool = int(cfg["pool"], 16)
+    # A config that names another profile describes a pool this tooling cannot spend
+    # from, so do not shield into it either. The deploy script's stub has no label.
+    if op == "shield" and cfg.get("profile", POOL_PROFILE) != POOL_PROFILE:
+        raise SystemExit(f"shield requires profile={POOL_PROFILE}; this config names {cfg['profile']}")
     if op in ("transfer", "withdraw"):
         if cfg.get("profile") != POOL_PROFILE:
             raise SystemExit(f"spends require profile={POOL_PROFILE}; use a fresh deployment of this profile")

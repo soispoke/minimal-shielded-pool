@@ -350,6 +350,25 @@ case("tail-rejected-pool-target-on-transfer",
 case("tail-rejected-nonzero-value", spend("tail-nonzero-value", initial, rejected=True,
     error="non-zero value only allowed in SENDER mode", mutate=tail_field("value", 1)))
 
+# Validation-frame limits are wallet defaults, not dispatcher pins. Raising them
+# is accepted; a limit below what a frame needs makes the transaction invalid
+# before approval, so nonce keys and balances stay unchanged.
+def limits(frame, execution=None, state=None):
+    def change(frames):
+        if execution is not None: frames[frame].gas_limit = execution
+        if state is not None: frames[frame].state_limit = state
+    return change
+def both(*changes): return lambda frames: [change(frames) for change in changes]
+case("validation-limits-raised-accepted",
+    spend("validation-limits-raised", initial, paid=ETH-FEE,
+          mutate=both(limits(0, execution=50_000), limits(1, execution=400_000, state=300_000))))
+for label, frame, change in [
+        ("recent-root-execution", 0, limits(0, execution=5_000)),
+        ("proof-execution", 1, limits(1, execution=250_000)),
+        ("proof-state", 1, limits(1, state=VERIFY_FRAME_STATE_GAS - 1))]:
+    case("validation-limit-too-low-" + label, spend("too-low-" + label, initial, rejected=True,
+         error=f"VERIFY frame {frame}", mutate=change))
+
 # Two independently signed private transfers are reusable policy fixtures.
 policy_a = duplicate
 policy_b = prove("policy-second", BASE, NB, 1, outputs=[(NC["inner"], 50*ETH//100), (ND["inner"], 40*ETH//100)])

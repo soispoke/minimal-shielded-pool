@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 import pool_frametx as builder
-from gas_profile import POOL_PROFILE
+from gas_profile import POOL_PROFILE, PREVIOUS_POOL_PROFILE
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "wallet"))
@@ -21,22 +21,26 @@ def check_profile_labels():
     original = json.loads((ROOT / "devnet/deploy_config.json").read_text())
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.json"
-        for profile in ("recipient-pull-v1", "eip8272-canonical-frame", None):
+        for profile in (PREVIOUS_POOL_PROFILE, "recipient-pull-v1", "eip8272-canonical-frame", None):
             cfg = dict(original, profile=profile)
             path.write_text(json.dumps(cfg))
-            for operation in ("transfer", "withdraw"):
+            for operation in ("shield", "transfer", "withdraw"):
+                if operation == "shield" and profile is None:
+                    continue  # the deploy script's unlabelled stub may shield
                 result = subprocess.run([
                     sys.executable, str(ROOT / "devnet/pool_frametx.py"),
                     "http://127.0.0.1:1", str(path), str(ROOT / "wallet/smoke_fixture.json"),
                     operation, "01" * 32, "--dry-run",
                 ], capture_output=True, text=True)
                 assert result.returncode != 0, (profile, operation)
-                assert f"spends require profile={POOL_PROFILE}" in result.stderr, result.stderr
+                assert f"profile={POOL_PROFILE}" in result.stderr, result.stderr
 
 
 def check_recorded_deployment():
     cfg = json.loads((ROOT / "devnet/deploy_config.json").read_text())
-    assert cfg["profile"] == POOL_PROFILE
+    # Until this profile is deployed the record names the previous one, which the
+    # spend CLI refuses. Both profiles share the domain formula checked here.
+    assert cfg["profile"] in (POOL_PROFILE, PREVIOUS_POOL_PROFILE)
     pool = int(cfg["pool"], 16)
     domain = builder.expected_domain(cfg["chainId"], pool)
     assert domain == int(cfg["domain"], 16), "recorded domain is not this profile's formula"
@@ -94,8 +98,11 @@ def check_deployed_domain_gate():
 
 def check_cli_runs_deployed_gate():
     """shield, transfer and withdraw check the deployed pool before anything else."""
-    cfg_path = ROOT / "devnet/deploy_config.json"
-    chain_id = json.loads(cfg_path.read_text())["chainId"]
+    cfg = json.loads((ROOT / "devnet/deploy_config.json").read_text())
+    chain_id = cfg["chainId"]
+    tmp = tempfile.TemporaryDirectory()
+    cfg_path = Path(tmp.name) / "config.json"
+    cfg_path.write_text(json.dumps(dict(cfg, profile=POOL_PROFILE)))
 
     def rpc(url, method, params):
         if method == "eth_chainId":
@@ -118,13 +125,13 @@ def check_cli_runs_deployed_gate():
 
 
 def main():
-    assert POOL_PROFILE == "position-notes-v1"
+    assert POOL_PROFILE == "position-notes-v2"
     check_profile_labels()
     check_recorded_deployment()
     check_deployed_domain_gate()
     check_cli_runs_deployed_gate()
-    print("PASS: six incompatible profile labels rejected before RPC; recorded deployment "
-          "matches this profile; relabeled, codeless, wrong-domain and wrong-chain pools refused; "
+    print("PASS: eleven incompatible profile labels rejected before RPC; recorded deployment "
+          "matches the domain formula; relabeled, codeless, wrong-domain and wrong-chain pools refused; "
           "shield, transfer and withdraw run the check")
 
 
