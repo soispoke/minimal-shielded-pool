@@ -37,6 +37,15 @@ EIP-8250 nonce set, and the exact EIP-8272 tuple proven by the leading
 recent-root verifier frame. A copied or rerandomized proof cannot be rewrapped
 without the one-time private key.
 
+The proof exposes three public signals instead of the ten statement values,
+using the hybrid compression of eprint 2025/1500. Binding the statement to the
+proof therefore rests on that paper's assumption about Keccak and Poseidon
+together, as well as on Groth16. The dispatcher recomputes `alpha` and `gamma`
+from the settlement calldata and range-checks each statement value before the
+verifier runs. Those range checks are load-bearing: without them, a nullifier
+and the same value plus the field modulus would fold into the same proof but
+be different nonce keys.
+
 Payment approval consumes the EIP-8250 keys before SENDER settlement. Safety
 therefore requires settlement to be total for every proof-valid admitted
 transaction under the pinned fork gas profile. Previously, a duplicate output
@@ -163,8 +172,8 @@ extension neither repairs that blocker nor provides full-spend atomicity.
 - Correct ethrex v23 implementations of EIP-8141, EIP-8250, EIP-8272 and
   EIP-7843 at the pins the activation manifest records.
 - An explicitly supported verification budget covering what wallets declare:
-  280,800 gas by default, the recent-root frame's 8,000, the proof frame's
-  270,000 and 2,800 for the signature. The dispatcher does not pin these two
+  235,800 gas by default, the recent-root frame's 8,000, the proof frame's
+  225,000 and 2,800 for the signature. The dispatcher does not pin these two
   limits, so wallets can raise them after a repricing, up to the fixed 500,000
   gas the dispatcher forwards to the verifier. The published EIP-8141
   public-mempool value is 100,000 and is insufficient.
@@ -206,7 +215,7 @@ zero authorizers, and recipient mismatches. The envelope vector mutates 48
 signed transfer components, 56 signed withdrawal components, 57 signed
 gas-only tails, and 57 signed custom withdrawal tails.
 
-The position-bound note suite passes 42 native scenarios using 24 real Groth16
+The position-bound note suite passes 54 native scenarios using 24 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, the fourth-frame rules,

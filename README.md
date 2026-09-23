@@ -17,9 +17,16 @@ owner_pk = Poseidon3(1, spend_key, 0)
 cm       = Poseidon3(2, Poseidon2(owner_pk, rho), value)
 ```
 
-A spend proves a join-split with two inputs and two outputs. Its ten public
-signals are `[nf1, nf2, outCm1, outCm2, root, domain, publicAmount, fee,
-recipient, authorizer]`. The circuit checks that every positive input is in the
+A spend proves a join-split with two inputs and two outputs. Its statement is
+ten values: `[nf1, nf2, outCm1, outCm2, root, domain, publicAmount, fee,
+recipient, authorizer]`. To save verification gas, the proof exposes three
+public signals instead, using the hybrid compression of
+[eprint 2025/1500](https://eprint.iacr.org/2025/1500): the pool computes
+`alpha = keccak256(statement) mod p`, the circuit computes
+`beta = Poseidon(statement)`, and both evaluate `gamma`, the statement as a
+polynomial at `alpha + beta`. The pool recomputes `alpha` and `gamma` from the
+settlement data and range-checks every statement value itself, since the
+verifier no longer sees them. The circuit checks that every positive input is in the
 tree, that value is conserved over 128-bit amounts, and that at least one input
 carries value. It also requires distinct nullifiers and outputs, a nonzero
 authorizer address, and a recipient exactly when `publicAmount` is positive. A
@@ -77,11 +84,12 @@ stands out.
 | Frame | Execution gas | State gas | Data |
 |---|---:|---:|---:|
 | Recent root | 8,000 default (uses 5,579) | 0 pinned | 72 bytes |
-| Proof | 270,000 default (uses about 255,000) | 195,840 default | 256 bytes |
+| Proof | 225,000 default (uses about 210,000) | 195,840 default | 288 bytes |
 | Settlement | 2,000,000 pinned | 550,000 pinned | 388 bytes |
 
-The proof frame needs a limit of about 262,000, although it uses about
-255,000, because each nested call keeps back 1/64 of its gas (EIP-150). Below
+The proof frame's data is the 256-byte proof followed by `beta`. It needs a
+limit of about 216,000, although it uses about 210,000, because each nested
+call keeps back 1/64 of its gas (EIP-150). Below
 that, the verifier runs out of gas and the pool reports an invalid proof. The
 proof frame's state gas pays for creating the two nullifier keys.
 
@@ -92,7 +100,7 @@ part stays in the pool.
 
 The wallet chooses the fourth frame's limits. Intrinsic gas plus every frame's
 execution limit, or the calldata floor when larger, must fit EIP-7825's `2^24`
-cap, of which the pool's own frames use 2.28M by default; state gas is
+cap, of which the pool's own frames use 2.23M by default; state gas is
 budgeted separately. The encoded transaction must also fit ethrex's 128 KiB
 mempool limit.
 
@@ -151,8 +159,8 @@ profile's formula. The code check matters because both profiles share the
 domain formula.
 
 The public mempool counts the two validation frames' declared limits plus
-2,800 gas for the signature: 280,800 by default, while a spend uses about
-263,000. That is well above EIP-8141's published default of 100,000. The chain
+2,800 gas for the signature: 235,800 by default, while a spend uses about
+218,500. That is well above EIP-8141's published default of 100,000. The chain
 8141 testnet admits it; other networks need a policy that does.
 [EIP-8369](https://eips.ethereum.org/EIPS/eip-8369) has not settled a
 per-transaction budget.
