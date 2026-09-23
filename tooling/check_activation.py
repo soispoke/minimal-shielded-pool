@@ -94,6 +94,8 @@ REQUIRED_ARTIFACTS = (
     "build/spend_js/spend.wasm",
     "circuits/spend.circom",
     "contracts/src/Groth16Verifier.sol",
+    "contracts/src/PoseidonT3.sol",
+    "contracts/src/PoseidonT4.sol",
     "contracts/src/ShieldedPoolLogic.sol",
     "devnet/ShieldedPoolDispatcher.yul",
     "devnet/build/shielded_pool_dispatcher_init.hex",

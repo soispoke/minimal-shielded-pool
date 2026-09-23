@@ -35,6 +35,8 @@
     "build/spend_js/spend.wasm": "6ce7ba4e7889ab4796ee33d029ea2a78edbd4213f4e987a8a5c3a9c634ba6a28",
     "circuits/spend.circom": "2206f25b7ede7ca6f54f6b125e3deea28717eb5e88e8e8fc6b9c9f97647078dd",
     "contracts/src/Groth16Verifier.sol": "faebe71ddd7d6d7b7729b19139d7f6868300f2004dbedf23bdcd67017f7a86f8",
+    "contracts/src/PoseidonT3.sol": "f353af63ac124e51a37e78dc5278bcb2e93c19e44aa8dd13a4ecb4c54212720b",
+    "contracts/src/PoseidonT4.sol": "2384b8f71a2ed09f3b16c6b0d135bedcd293cb1c862e8a3c893d0ac79eae0960",
     "contracts/src/ShieldedPoolLogic.sol": "fa9d7b1fc5fdca83c3a78cdd81cd3856dbfc9e18d20095054c22c6c248ad753b",
     "devnet/ShieldedPoolDispatcher.yul": "3e2f7c5fec019c3c786b57ea3fe4249e4249e06ae390e520e443f524cfb339fe",
     "devnet/build/shielded_pool_dispatcher_init.hex": "9deb225693e36199caf52c6b21268abd40442415c6986c514ed6f0efb0da0548",
