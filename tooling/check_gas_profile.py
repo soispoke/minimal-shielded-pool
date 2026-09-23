@@ -8,9 +8,10 @@ that is not merely a re-encoding, it changes what has to be bounded:
 
   * the state growth the settlement performs leaves the execution budget, so the execution
     cap can drop by exactly the state-growth charge it used to have to cover;
-  * the state budget becomes a separate declared number the dispatcher must pin, because on
-    the current spec `max_gas` includes the declared state budgets and the pool is the payer. An unpinned
-    `limits.state` is an unbounded charge against the pool.
+  * the state budget becomes a separate declared number, and on the current spec the
+    transaction's maximum cost includes every declared state budget. The pool is the payer,
+    so the dispatcher approves payment only when the proof's fee covers that maximum cost.
+    Settlement's state budget is still pinned, because running out after approval burns notes.
 
 The execution check adds a conservative write/call margin to the maximum
 measured native case. Tree operation counts are checked over every index;
@@ -63,7 +64,7 @@ MIN_WORKING_VERIFY_FRAME_GAS = 261_521
 # An earlier revision claimed it did, on a measurement that repeated ONE tuple sixteen
 # times: identical (source_id, slot) pairs share a storage key, so that run paid one
 # cold SLOAD and fifteen warm ones. Sixteen distinct roots are sixteen cold SLOADs,
-# 33,600 gas before the rest of the verifier runs, which does not fit 30,000 at all.
+# 33,600 gas before the rest of the verifier runs, which did not fit the old 30,000 budget.
 MAX_OBSERVED_RECENT_ROOT_FRAME_GAS = 5_579
 CONSERVATIVE_VERIFY_STATE_BOUND = (
     SPEND_NONCE_KEY_COUNT * KEYED_NONCE_FIRST_USE_STATE_GAS
@@ -146,8 +147,8 @@ def main():
     assert VERIFY_FRAME_STATE_GAS == CONSERVATIVE_VERIFY_STATE_BOUND
     # EIP-8272: the recent-root verifier frame joins the public mempool's verify budget
     # and the prefix's state budgets stay under EIP-8141's MAX_VERIFY_STATE_GAS. One
-    # tuple costs the predeploy's cold entry plus two keccaks and a cold SLOAD, well
-    # under the pinned frame budget.
+    # tuple costs the predeploy's cold entry plus two keccaks and a cold SLOAD, under
+    # the wallet default.
     assert REQUIRED_VERIFY_BUDGET == RECENT_ROOT_FRAME_GAS + VERIFY_FRAME_GAS + 2_800
     assert REQUIRED_VERIFY_BUDGET <= HEGOTA_TESTNET_MAX_VERIFY_GAS
     assert VERIFY_FRAME_STATE_GAS <= MAX_VERIFY_STATE_GAS

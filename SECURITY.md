@@ -153,9 +153,10 @@ extension neither repairs that blocker nor provides full-spend atomicity.
   EIP-7843 at the pins the activation manifest records.
 - An explicitly supported verification budget covering what wallets declare:
   280,800 gas by default, the recent-root frame's 8,000, the proof frame's
-  270,000 and 2,800 for the signature. The dispatcher does not pin the two
-  validation frames, so wallets can raise these after a repricing. The
-  published EIP-8141 public-mempool value is 100,000 and is insufficient.
+  270,000 and 2,800 for the signature. The dispatcher does not pin these two
+  limits, so wallets can raise them after a repricing, up to the fixed 500,000
+  gas the dispatcher forwards to the verifier. The published EIP-8141
+  public-mempool value is 100,000 and is insufficient.
 - A fork-scoped proof that the settlement limits cover all cold-state, rollover,
   credit, proxy, and static-call paths. The current profile declares 2,000,000
   execution gas and 550,000 state gas. Native testing on ethrex `247e2dd2`
