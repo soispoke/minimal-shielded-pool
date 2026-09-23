@@ -17,7 +17,7 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 20 native scenarios and two client-policy tests, using
+The recorded run passes 30 native scenarios and two client-policy tests, using
 23 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
@@ -28,6 +28,16 @@ in one history, an identical private output and its original both being spent,
 replay against a later root and slot, epoch/domain changes, and failed recipient
 calls retaining their credit. Rejected transactions must leave the complete
 EVM account state unchanged, including nonce keys and balances.
+
+Ten scenarios cover the optional fourth frame. A withdrawal without a tail
+keeps its credit, and a withdrawal or transfer may end with a generic call to
+another account. Each rejected case changes one field of an otherwise valid
+spend and must fail in the pool's `VERIFY` frame: a `SENDER` tail repeating the
+settlement, a zero target, an approval flag on the tail, an atomic batch
+joining settlement and tail, a fifth frame, and a pool target on a transfer. A
+tail carrying value is rejected as EIP-8141 requires. Removing the dispatcher's
+mode check lets the repeated settlement through with twice the proven credit,
+which this suite then reports as a failure.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one
 branch, restores the checkpoint, and reverses two deposit transactions. The

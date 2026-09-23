@@ -112,7 +112,7 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
     entries[name] = entry
     return entry
 
-def signed(entry, settle_gas=SETTLE_FRAME_GAS):
+def signed(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None):
     source = keccak(POOL.to_bytes(20, "big") + word(int(entry["epoch"])))
     recent = source + int(entry["root_slot"]).to_bytes(8, "big") + word(int(entry["root"], 16))
     settle = builder.cast_calldata(f"settle({builder.SPEND_TUPLE})", builder.spend_args(entry))
@@ -121,6 +121,7 @@ def signed(entry, settle_gas=SETTLE_FRAME_GAS):
         Frame(2, 0, POOL, settle_gas, 0, settle, SETTLE_FRAME_STATE_GAS)]
     if int(entry["public_amount"]):
         frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, keccak(b"claimWithdrawal(address)")[:4] + word(int(entry["recipient"], 16)), CLAIM_FRAME_STATE_GAS))
+    if mutate is not None: mutate(frames)
     tx = FrameTx(CHAIN, sorted([int(entry["nf1"], 16), int(entry["nf2"], 16)]), 0, POOL, frames,
         [FrameSig(1, int(entry["authorizer"], 16), b"", b"")], 1, 2)
     sig = keys.PrivateKey(bytes.fromhex(entry["authorizer_private_key"].removeprefix("0x"))).sign_msg_hash(tx.sig_hash())
@@ -130,7 +131,8 @@ def signed(entry, settle_gas=SETTLE_FRAME_GAS):
 def mapping(key, slot): return "0x" + keccak(word(key) + word(slot)).hex()
 def key_slots(entry, value):
     return {"0x" + keccak(word(POOL) + word(int(entry[k], 16))).hex(): str(value) for k in ("nf1", "nf2")}
-def spend(name, entry, slot=101, rejected=False, failed_claim=False, paid=None, expected_tree=None):
+def spend(name, entry, slot=101, rejected=False, failed_claim=False, paid=None, expected_tree=None,
+          mutate=None, statuses=None, error=None):
     storage = {addr(0x8250): key_slots(entry, 0 if rejected else 1)}
     credit = int(entry["public_amount"]) if failed_claim else 0
     storage[addr(POOL)] = {mapping(int(entry["recipient"], 16), 23): str(credit)}
@@ -143,7 +145,9 @@ def spend(name, entry, slot=101, rejected=False, failed_claim=False, paid=None, 
         expect.update(statuses=([1, 1, 1, 0] if failed_claim else [1] * (4 if int(entry["public_amount"]) else 3)), payer=addr(POOL),
             balance_delta_before_gas={addr(POOL): "0" if failed_claim else str(-int(entry["public_amount"]))})
         if paid is not None: expect["balances"] = {addr(EOA): str(paid)}
-    return save(name, signed(entry), **expect)
+        if statuses is not None: expect["statuses"] = statuses
+    if error is not None: expect["error_contains"] = error
+    return save(name, signed(entry, mutate=mutate), **expect)
 
 cases = []
 def case(name, *steps): cases.append({"name": name, "transactions": list(steps)})
@@ -307,6 +311,43 @@ rebound.update(epoch="1", root_slot="101", domain=epoch1["domain"])
 case("authenticated-epoch-proof-binding", {"synthetic_storage": {addr(POOL): {"24": "1", mapping(0,25): str(BASE.root())}}, "synthetic_balances": {addr(POOL): str(4*ETH)}},
     publish("publish-epoch-one", NEXT, epoch=1, slot=101), spend("old-proof-rebound-epoch", rebound, 102, rejected=True),
     spend("epoch-one-proof", epoch1, 102, paid=ETH-FEE))
+
+# Fourth-frame rules. Each rejected case changes one field of an otherwise
+# valid spend and must fail in the pool's VERIFY frame, before approval, so
+# nonce keys, credits and balances stay unchanged. The accepted controls
+# change only the field under test.
+POOL_VERIFY = f"VERIFY frame 1 (target {addr(POOL)}"
+ACCOUNT_CALL = b"\x12\x34"
+def account_tail(): return Frame(0, 0, EOA, CLAIM_FRAME_GAS, 0, ACCOUNT_CALL)
+def set_tail(frames): frames[3:] = [account_tail()]
+def tail_field(field, value): return lambda frames: setattr(frames[3], field, value)
+def settle_field(field, value): return lambda frames: setattr(frames[2], field, value)
+def second_settlement(frames):
+    # A SENDER tail would run as the pool and could settle the same spend twice.
+    frames[3] = Frame(2, 0, POOL, SETTLE_FRAME_GAS, 0, frames[2].data, SETTLE_FRAME_STATE_GAS)
+
+case("tail-omitted-withdrawal-leaves-credit",
+    spend("withdrawal-without-tail", initial, failed_claim=True, paid=0, statuses=[1, 1, 1],
+          mutate=lambda frames: frames.pop()))
+case("tail-generic-account-call-on-withdrawal-accepted",
+    spend("withdrawal-account-tail", initial, failed_claim=True, paid=0, statuses=[1, 1, 1, 1], mutate=set_tail))
+case("tail-generic-account-call-on-transfer-accepted",
+    spend("transfer-account-tail", duplicate, expected_tree=private_tree, statuses=[1, 1, 1, 1],
+          mutate=lambda frames: frames.append(account_tail())))
+for label, mutate in [
+        ("sender-mode-second-settlement", second_settlement),
+        ("zero-target", tail_field("target", 0)),
+        ("approval-flag", tail_field("flags", 1)),
+        ("settlement-atomic-batch-with-tail", settle_field("flags", 4)),
+        ("fifth-frame", lambda frames: frames.append(account_tail()))]:
+    case("tail-rejected-" + label, spend("tail-" + label, initial, rejected=True, error=POOL_VERIFY, mutate=mutate))
+case("tail-rejected-pool-target-on-transfer",
+    spend("transfer-pool-tail", duplicate, rejected=True, error=POOL_VERIFY,
+          mutate=lambda frames: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0,
+              keccak(b"claimWithdrawal(address)")[:4] + word(EOA), CLAIM_FRAME_STATE_GAS))))
+# EIP-8141 statically forbids value outside SENDER frames; the dispatcher's
+# value check is a second line behind that rule.
+case("tail-rejected-nonzero-value", spend("tail-nonzero-value", initial, rejected=True, mutate=tail_field("value", 1)))
 
 # Two independently signed private transfers are reusable policy fixtures.
 policy_a = duplicate
