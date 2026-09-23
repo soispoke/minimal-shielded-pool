@@ -154,14 +154,17 @@ def expected_domain(chain_id, pool, epoch=0):
     return int.from_bytes(_keccak(preimage), "big") % SCALAR_FIELD
 
 
-def check_deployed_profile(url, pool):
+def check_deployed_profile(url, pool, configured_chain=None):
     """Refuse a pool whose deployed logic does not use this profile's domain.
 
     A config's profile label is not evidence of the deployed code. A pool from
     before position-bound notes exposes `domain()` and reverts on
     `domain(uint64)`; shielding into it would create notes this tooling cannot
-    spend, and spends against it fail in VERIFY."""
+    spend, and spends against it fail in VERIFY. A configured chain must also
+    match the RPC, so a deposit cannot land in a same-address pool elsewhere."""
     chain_id = int(rpc(url, "eth_chainId", []), 16)
+    if configured_chain is not None and chain_id != configured_chain:
+        raise SystemExit(f"RPC is on chain {chain_id}, but the config names chain {configured_chain}")
     data = "0x" + (_keccak(b"domain(uint64)")[:4] + bytes(32)).hex()
     try:
         result = rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"])
@@ -747,7 +750,7 @@ def main():
     if allow_failed_claim and omit_tail:
         raise SystemExit("--allow-failed-claim cannot be combined with --no-tail")
     if op in ("shield", "transfer", "withdraw"):
-        check_deployed_profile(url, pool)
+        check_deployed_profile(url, pool, cfg.get("chainId"))
 
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a

@@ -76,6 +76,15 @@ def check_deployed_domain_gate():
                 raise AssertionError(f"accepted {label}")
         builder.rpc = fake(good)
         builder.check_deployed_profile("http://node", pool)
+        builder.check_deployed_profile("http://node", pool, chain_id)
+        # A genuine pool at the same address on the RPC's chain is still refused
+        # when the config names another chain.
+        try:
+            builder.check_deployed_profile("http://node", pool, 1)
+        except SystemExit as error:
+            assert "config names chain 1" in str(error), error
+        else:
+            raise AssertionError("accepted an RPC on a different chain")
     finally:
         builder.rpc = real_rpc
 
@@ -86,7 +95,7 @@ def main():
     check_recorded_deployment()
     check_deployed_domain_gate()
     print("PASS: six incompatible profile labels rejected before RPC; recorded deployment "
-          "matches this profile; relabeled, codeless and wrong-domain pools refused")
+          "matches this profile; relabeled, codeless, wrong-domain and wrong-chain pools refused")
 
 
 if __name__ == "__main__":
