@@ -194,12 +194,12 @@ zero authorizers, and recipient mismatches. The envelope vector mutates 48
 signed transfer components, 56 signed withdrawal components, 57 signed
 gas-only tails, and 57 signed custom withdrawal tails.
 
-The position-bound note suite passes 34 native scenarios using 23 real Groth16
+The position-bound note suite passes 37 native scenarios using 23 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, the fourth-frame rules,
-including rejection of a `SENDER` tail that repeats settlement, and the
-unpinned validation-frame limits. The highest measured settlement execution cost is 1,423,709;
+including rejection of a `SENDER` tail that repeats settlement, the
+unpinned validation limits, and the fee check that covers them. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
 additional margin, not a formal proof of a universal bound. These runs use
 ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where

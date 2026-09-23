@@ -17,7 +17,7 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 34 native scenarios and two client-policy tests, using
+The recorded run passes 37 native scenarios and two client-policy tests, using
 23 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
@@ -40,10 +40,14 @@ before the dispatcher's own value check runs. Removing the dispatcher's
 mode check lets the repeated settlement through with twice the proven credit,
 which this suite then reports as a failure.
 
-Four scenarios cover the validation-frame limits, which the dispatcher no longer
-pins. A withdrawal declaring far more than the defaults is accepted. Declaring
-less than the recent-root frame's execution, the proof frame's execution or the
-proof frame's state gas needs makes the transaction invalid in that frame, with
+Seven scenarios cover the validation frames' limits, which the dispatcher no
+longer pins. A withdrawal declaring far more than the defaults is accepted.
+Declaring less than the recent-root frame's execution, the proof frame's
+execution or the proof frame's state gas needs makes the transaction invalid in
+that frame, with state unchanged. At a price where the default limits just fit
+the proof's fee, the same withdrawal is accepted; raising the recent-root
+frame's execution limit or the proof frame's state limit then pushes the
+maximum cost past the fee, and the pool refuses it before approval, again with
 state unchanged.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one

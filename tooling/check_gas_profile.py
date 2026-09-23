@@ -49,6 +49,12 @@ PRE_PR_12279_KEYED_NONCE_EXECUTION_GAS = 2 * 20_000
 # dimension for the state one, which is the whole point of that PR. The activation
 # manifest records 255,011, the largest proof-frame execution observed since.
 POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 255_011
+# The proof frame needs a larger limit than it uses. Each nested call keeps back 1/64 of
+# the gas it could forward (EIP-150), once from the dispatcher to the verifier and once
+# from the verifier to the pairing precompile. On native ethrex 247e2dd2 a withdrawal
+# uses 254,814 but needs a limit of 261,521 (261,520 fails). Below that the verifier
+# runs out of gas and the dispatcher reports an invalid proof.
+MIN_WORKING_VERIFY_FRAME_GAS = 261_521
 # The pool grammar permits exactly one 72-byte recent-root tuple, pinned by the
 # dispatcher's `frameParam(0, 0x04) == 72`. The measured verifier-frame execution cost
 # for that shape was 5,579 gas, so the 8,000-gas wallet default covers it.
@@ -86,6 +92,7 @@ CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND = (_WITH_WRITE_MARGIN * 64 * 64 + 63 * 6
 CONSERVATIVE_SETTLEMENT_STATE_BOUND = MAX_NEW_STORAGE_SLOTS * EIP_8037_NEW_SLOT_STATE_GAS
 
 # What the frozen profile had to declare for the same work, as one number.
+FROZEN_VERIFY_FRAME_GAS = 320_000
 FROZEN_SETTLE_FRAME_GAS = 2_000_000
 
 
@@ -124,6 +131,7 @@ def main():
     # longer applies. The measured figures must fit the wallet defaults, or a spend
     # that simulates fine halts mid-frame on a chain with slightly different costs.
     assert POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS < VERIFY_FRAME_GAS
+    assert MIN_WORKING_VERIFY_FRAME_GAS < VERIFY_FRAME_GAS
     assert MAX_OBSERVED_RECENT_ROOT_FRAME_GAS < RECENT_ROOT_FRAME_GAS
     assert CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND < SETTLE_FRAME_GAS
     assert CONSERVATIVE_SETTLEMENT_STATE_BOUND < SETTLE_FRAME_STATE_GAS
@@ -146,11 +154,13 @@ def main():
 
     declared_split = (VERIFY_FRAME_GAS + VERIFY_FRAME_STATE_GAS
                    + SETTLE_FRAME_GAS + SETTLE_FRAME_STATE_GAS)
-    declared_single = VERIFY_FRAME_GAS + FROZEN_SETTLE_FRAME_GAS
+    declared_single = FROZEN_VERIFY_FRAME_GAS + FROZEN_SETTLE_FRAME_GAS
     extra_over_frozen = declared_split - declared_single
     # Execution pin returned to 2M because 1.4M missed long-carry. The extra
-    # versus the frozen single-dimension 2M budget is the two state dimensions.
-    assert extra_over_frozen == VERIFY_FRAME_STATE_GAS + SETTLE_FRAME_STATE_GAS
+    # versus the frozen single-dimension budget is the two state dimensions,
+    # less what the proof frame's lower wallet default saves.
+    assert extra_over_frozen == (VERIFY_FRAME_STATE_GAS + SETTLE_FRAME_STATE_GAS
+                                 - (FROZEN_VERIFY_FRAME_GAS - VERIFY_FRAME_GAS))
     assert EIP7825_TX_GAS_CAP == 16_777_216
 
     # The dispatcher must enforce the same settlement pins the wallet emits. Yul
@@ -187,6 +197,7 @@ def main():
             "pre_pr_12279_observed_execution": PRE_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS,
             "pre_pr_12279_keyed_nonce_execution_gas": PRE_PR_12279_KEYED_NONCE_EXECUTION_GAS,
             "post_pr_12279_observed_execution": POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS,
+            "min_working_execution_limit": MIN_WORKING_VERIFY_FRAME_GAS,
             "keyed_nonce_state_bound": CONSERVATIVE_VERIFY_STATE_BOUND,
         },
         "recent_root": {
