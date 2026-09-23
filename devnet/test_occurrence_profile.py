@@ -69,7 +69,17 @@ def linked(initcode, logic, verifier):
     return initcode + f"{logic:064x}{verifier:064x}"
 
 
-def fake_node(chain_id, pool_code, domain):
+def word(value):
+    return "0x" + value.to_bytes(32, "big").hex()
+
+
+def fake_node(chain_id, pool_code, domain, verifier="committed"):
+    """A node holding the pool's code and, at the linked verifier address, a
+    verifier that behaves as named: the committed one, one with the previous
+    ten-input interface (reverts), one for another proving key (rejects all), or
+    one that accepts any proof."""
+    good, _ = builder.reference_verifier_calls()
+
     def rpc(url, method, params):
         if method == "eth_chainId":
             return hex(chain_id)
@@ -79,6 +89,14 @@ def fake_node(chain_id, pool_code, domain):
             if isinstance(pool_code, Exception):
                 raise pool_code
             return deployed(params[0]["data"])
+        if method == "eth_call" and params[0]["data"].startswith("0x11479fea"):
+            if verifier == "previous-interface":
+                raise RuntimeError("execution reverted")
+            if verifier == "other-key":
+                return word(0)
+            if verifier == "accepts-any":
+                return word(1)
+            return word(1 if params[0]["data"] == good else 0)
         if method == "eth_call" and params[0]["data"] == DOMAIN_CALL:
             if isinstance(domain, Exception):
                 raise domain
@@ -106,6 +124,7 @@ def check_deployed_pool_gate():
     good = "0x" + builder.expected_domain(chain_id, pool).to_bytes(32, "big").hex()
     wrong = "0x" + builder.expected_domain(chain_id, pool, 1).to_bytes(32, "big").hex()
     not_dispatcher = f"is not the {POOL_PROFILE} dispatcher"
+    not_verifier = f"does not verify {POOL_PROFILE} proofs"
     cases = {
         "previous profile's dispatcher with a matching domain": (previous_code, good, not_dispatcher),
         "this dispatcher linked to other logic": (
@@ -118,11 +137,17 @@ def check_deployed_pool_gate():
         "pool reverts on domain(uint64)": (
             this_code, RuntimeError("execution reverted"), "does not expose domain(uint64)"),
         "domain from another epoch": (this_code, wrong, "domain(0) does not match"),
+        "this dispatcher linked to the previous ten-input verifier": (
+            this_code, good, not_verifier, "previous-interface"),
+        "this dispatcher linked to a verifier for another proving key": (
+            this_code, good, not_verifier, "other-key"),
+        "this dispatcher linked to a verifier that accepts any proof": (
+            this_code, good, not_verifier, "accepts-any"),
     }
     real_rpc = builder.rpc
     try:
-        for label, (code, domain, expected) in cases.items():
-            builder.rpc = fake_node(chain_id, code, domain)
+        for label, (code, domain, expected, *behavior) in cases.items():
+            builder.rpc = fake_node(chain_id, code, domain, *behavior)
             try:
                 builder.check_deployed_profile("http://node", pool, chain_id, logic, verifier)
             except SystemExit as error:
@@ -175,7 +200,8 @@ def main():
     check_cli_runs_deployed_gate()
     print(f"PASS: other, null and missing profile labels rejected before RPC in {runs} CLI runs; "
           "recorded deployment matches the domain formula; the previous profile's dispatcher, "
-          "other logic or verifier, codeless, wrong-domain and wrong-chain pools refused; "
+          "other logic or verifier, a verifier that does not verify this profile's proofs, "
+          "codeless, wrong-domain and wrong-chain pools refused; "
           "shield, transfer and withdraw refuse a relabeled previous-profile pool before sending")
 
 

@@ -157,6 +157,31 @@ def expected_domain(chain_id, pool, epoch=0):
 
 DISPATCHER_INITCODE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "build", "shielded_pool_dispatcher_init.hex")
+# A proof from the committed proving key, used to check the verifier a pool is
+# linked to. verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[3]).
+REFERENCE_FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 "..", "wallet", "smoke_fixture.json")
+VERIFY_PROOF_SELECTOR = bytes.fromhex("11479fea")
+
+
+def reference_verifier_calls():
+    """Calldata for the reference transfer proof with its compressed signals
+    (beta, gamma, alpha), and the same call with gamma changed."""
+    with open(REFERENCE_FIXTURE) as f:
+        e = json.load(f)["transfer"]
+    stmt = [int(e[k], 16) for k in ("nf1", "nf2", "out_cm1", "out_cm2", "root", "domain")]
+    stmt += [int(e["public_amount"]), int(e["fee"]), int(e["recipient"], 16), int(e["authorizer"], 16)]
+    alpha = int.from_bytes(_keccak(b"".join(x.to_bytes(32, "big") for x in stmt)), "big") % SCALAR_FIELD
+    beta = int(e["beta"], 16)
+    sigma = (alpha + beta) % SCALAR_FIELD
+    gamma = 0
+    for x in reversed(stmt):
+        gamma = (gamma * sigma + x) % SCALAR_FIELD
+
+    def call(g):
+        signals = b"".join(v.to_bytes(32, "big") for v in (beta, g, alpha))
+        return "0x" + (VERIFY_PROOF_SELECTOR + proof_bytes(e)[:256] + signals).hex()
+    return call(gamma), call((gamma + 1) % SCALAR_FIELD)
 
 
 def check_deployed_profile(url, pool, configured_chain, logic, verifier):
@@ -168,8 +193,11 @@ def check_deployed_profile(url, pool, configured_chain, logic, verifier):
     dispatcher initcode deploys when linked to the logic and verifier the config
     records, which run_live_dispatcher.sh verifies at deployment. Otherwise a
     deposit could land in a pool whose VERIFY rejects every spend this tooling
-    builds. A configured chain must also match the RPC, so a deposit cannot land
-    in a same-address pool elsewhere."""
+    builds. The dispatcher's code does not cover the verifier it calls, so the
+    linked verifier must accept this repository's reference proof and reject it
+    with gamma changed; a verifier for another circuit or interface, such as
+    the previous ten-input one, fails that. A configured chain must also match
+    the RPC, so a deposit cannot land in a same-address pool elsewhere."""
     chain_id = int(rpc(url, "eth_chainId", []), 16)
     if chain_id != configured_chain:
         raise SystemExit(f"RPC is on chain {chain_id}, but the config names chain {configured_chain}")
@@ -183,6 +211,13 @@ def check_deployed_profile(url, pool, configured_chain, logic, verifier):
     if len(expected) <= 2 or code.lower() != expected.lower():
         raise SystemExit(f"pool 0x{pool:040x} is not the {POOL_PROFILE} dispatcher linked to "
                          f"the configured logic 0x{logic:040x} and verifier 0x{verifier:040x}")
+    for data, verdict in zip(reference_verifier_calls(), (1, 0)):
+        try:
+            result = rpc(url, "eth_call", [{"to": f"0x{verifier:040x}", "data": data}, "latest"])
+        except RuntimeError:
+            result = None
+        if not isinstance(result, str) or len(result) != 66 or int(result, 16) != verdict:
+            raise SystemExit(f"verifier 0x{verifier:040x} does not verify {POOL_PROFILE} proofs")
     data = "0x" + (_keccak(b"domain(uint64)")[:4] + bytes(32)).hex()
     try:
         result = rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"])
