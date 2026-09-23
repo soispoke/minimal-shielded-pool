@@ -31,11 +31,12 @@ EVM account state unchanged, including nonce keys and balances.
 
 Ten scenarios cover the optional fourth frame. A withdrawal without a tail
 keeps its credit, and a withdrawal or transfer may end with a generic call to
-another account. Each rejected case changes one field of an otherwise valid
+another account. Each rejected case breaks one rule of an otherwise valid
 spend and must fail in the pool's `VERIFY` frame: a `SENDER` tail repeating the
 settlement, a zero target, an approval flag on the tail, an atomic batch
 joining settlement and tail, a fifth frame, and a pool target on a transfer. A
-tail carrying value is rejected as EIP-8141 requires. Removing the dispatcher's
+tail carrying value is rejected statically by the client, as EIP-8141 requires,
+before the dispatcher's own value check runs. Removing the dispatcher's
 mode check lets the repeated settlement through with twice the proven credit,
 which this suite then reports as a failure.
 

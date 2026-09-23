@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """The new proof format must not be submitted to the recorded old deployment."""
+import contextlib
+import io
 import json
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest import mock
 
 import pool_frametx as builder
 from gas_profile import POOL_PROFILE
@@ -89,13 +92,40 @@ def check_deployed_domain_gate():
         builder.rpc = real_rpc
 
 
+def check_cli_runs_deployed_gate():
+    """shield, transfer and withdraw check the deployed pool before anything else."""
+    cfg_path = ROOT / "devnet/deploy_config.json"
+    chain_id = json.loads(cfg_path.read_text())["chainId"]
+
+    def rpc(url, method, params):
+        if method == "eth_chainId":
+            return hex(chain_id)
+        if method == "eth_call":
+            return "0x"
+        raise AssertionError(f"{method} called before the deployed-pool check")
+
+    for operation in ("shield", "transfer", "withdraw"):
+        argv = ["pool_frametx.py", "http://node", str(cfg_path),
+                str(ROOT / "wallet/smoke_fixture.json"), operation, "01" * 32]
+        with mock.patch.object(builder, "rpc", rpc), mock.patch.object(sys, "argv", argv), \
+                contextlib.redirect_stdout(io.StringIO()):
+            try:
+                builder.main()
+            except SystemExit as error:
+                assert "does not expose domain(uint64)" in str(error), (operation, error)
+            else:
+                raise AssertionError(f"{operation} ran without the deployed-pool check")
+
+
 def main():
     assert POOL_PROFILE == "position-notes-v1"
     check_profile_labels()
     check_recorded_deployment()
     check_deployed_domain_gate()
+    check_cli_runs_deployed_gate()
     print("PASS: six incompatible profile labels rejected before RPC; recorded deployment "
-          "matches this profile; relabeled, codeless, wrong-domain and wrong-chain pools refused")
+          "matches this profile; relabeled, codeless, wrong-domain and wrong-chain pools refused; "
+          "shield, transfer and withdraw run the check")
 
 
 if __name__ == "__main__":

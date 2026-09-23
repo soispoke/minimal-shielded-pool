@@ -312,10 +312,10 @@ case("authenticated-epoch-proof-binding", {"synthetic_storage": {addr(POOL): {"2
     publish("publish-epoch-one", NEXT, epoch=1, slot=101), spend("old-proof-rebound-epoch", rebound, 102, rejected=True),
     spend("epoch-one-proof", epoch1, 102, paid=ETH-FEE))
 
-# Fourth-frame rules. Each rejected case changes one field of an otherwise
+# Fourth-frame rules. Each rejected case breaks one rule of an otherwise
 # valid spend and must fail in the pool's VERIFY frame, before approval, so
 # nonce keys, credits and balances stay unchanged. The accepted controls
-# change only the field under test.
+# keep that rule.
 POOL_VERIFY = f"VERIFY frame 1 (target {addr(POOL)}"
 ACCOUNT_CALL = b"\x12\x34"
 def account_tail(): return Frame(0, 0, EOA, CLAIM_FRAME_GAS, 0, ACCOUNT_CALL)
@@ -345,9 +345,10 @@ case("tail-rejected-pool-target-on-transfer",
     spend("transfer-pool-tail", duplicate, rejected=True, error=POOL_VERIFY,
           mutate=lambda frames: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0,
               keccak(b"claimWithdrawal(address)")[:4] + word(EOA), CLAIM_FRAME_STATE_GAS))))
-# EIP-8141 statically forbids value outside SENDER frames; the dispatcher's
-# value check is a second line behind that rule.
-case("tail-rejected-nonzero-value", spend("tail-nonzero-value", initial, rejected=True, mutate=tail_field("value", 1)))
+# EIP-8141 statically forbids value outside SENDER frames, so the client
+# rejects this before the dispatcher's own value check can run.
+case("tail-rejected-nonzero-value", spend("tail-nonzero-value", initial, rejected=True,
+    error="non-zero value only allowed in SENDER mode", mutate=tail_field("value", 1)))
 
 # Two independently signed private transfers are reusable policy fixtures.
 policy_a = duplicate
