@@ -3,8 +3,9 @@
 ## Status
 
 Unaudited research software. Do not use the committed proving key or deployed
-testnet pool for real value. The repository setup uses public test-only phase-2
-entropy, so its toxic waste can be recovered to forge arbitrary spends.
+testnet pool for real value. The committed key comes from one test-only phase-2
+contribution; whoever ran it could have kept the toxic waste and could forge
+arbitrary spends.
 
 The previously identified implementation blockers are fixed in the active
 code: complete-envelope authorization, positional sinks, pre-insert epoch

@@ -3,7 +3,7 @@
   "ceremony": {
     "phase2_contributions": 1,
     "independent_verification": null,
-    "label": "public-entropy test-only occurrence prototype"
+    "label": "single-contribution test-only occurrence prototype"
   },
   "profile": {
     "wire_profile": "position-notes-v1",
