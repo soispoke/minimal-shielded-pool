@@ -3,7 +3,7 @@
   "ceremony": {
     "phase2_contributions": 1,
     "independent_verification": null,
-    "label": "single-contribution test-only occurrence prototype"
+    "label": "local test-only setup, one phase-2 contribution, occurrence prototype"
   },
   "profile": {
     "wire_profile": "position-notes-v1",

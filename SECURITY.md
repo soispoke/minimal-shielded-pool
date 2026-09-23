@@ -3,9 +3,11 @@
 ## Status
 
 Unaudited research software. Do not use the committed proving key or deployed
-testnet pool for real value. The committed key comes from one test-only phase-2
-contribution; whoever ran it could have kept the toxic waste and could forge
-arbitrary spends.
+testnet pool for real value. The committed key comes from a local test setup.
+Its phase 2 records one contribution, and its phase 1 is not recorded:
+`tooling/setup.sh` generates both phases locally unless given an external powers
+of tau. Whoever produced either phase could have kept the toxic waste and could
+forge arbitrary spends.
 
 The previously identified implementation blockers are fixed in the active
 code: complete-envelope authorization, positional sinks, pre-insert epoch
@@ -143,8 +145,10 @@ extension neither repairs that blocker nor provides full-spend atomicity.
 
 - Groth16 soundness, BN254 pairing security, Poseidon collision resistance,
   Keccak collision resistance, and secp256k1 unforgeability.
-- A production multi-party phase-2 ceremony with destroyed contributions and
-  independent transcript verification.
+- A production setup: a public multi-party phase 1, and a multi-party phase-2
+  ceremony with destroyed contributions and independent transcript
+  verification. The activation gate counts only phase-2 contributions, so
+  phase-1 provenance must be checked separately.
 - Correct ethrex v23 implementations of EIP-8141, EIP-8250, EIP-8272 and
   EIP-7843 at the pins the activation manifest records.
 - An explicitly supported verification budget of at least 352,800 gas: the
@@ -162,7 +166,7 @@ extension neither repairs that blocker nor provides full-spend atomicity.
   require a new immutable profile.
 - Independent circuit, Solidity, Yul, wallet, and deployment review.
 
-EIP-8369 remains an open Informational proposal. Its current `2^20` per-IL
+EIP-8369 is a Draft Informational EIP. Its current `2^20` per-IL
 budget is provisional and does not activate or guarantee a per-transaction
 limit. Hegotá's configured Profile 2 behavior is testnet evidence only.
 
@@ -176,9 +180,9 @@ secrets and one-time authorizer keys are not durably backed up.
 
 ## Evidence
 
-The Forge suite runs the via-IR Poseidon builds, which cost about 11% less
+The Forge suite runs the via-IR Poseidon builds, which cost about 10% less
 gas per hash than the deployed `libsmall` builds, so the binding settlement
-bound comes from the native suite below. It covers a 2M-capped
+bound comes from the native suite below. The Forge suite covers a 2M-capped
 rollover with two outputs and a new credit, long-carry at 262,143 and 524,287
 leaves under EIP-150 forwarding of that 2M budget, pre-insert rollover, full-tree
 exit, sink rules, separate publication failure/retry, pull-credit failure,
@@ -195,7 +199,9 @@ duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, and the fourth-frame rules,
 including rejection of a `SENDER` tail that repeats settlement. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
-additional margin, not a formal proof of a universal bound. See
+additional margin, not a formal proof of a universal bound. These runs use
+ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where
+settlement gas has not been re-measured. See
 [`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
 
 The earlier profile's gas derivation is recorded in

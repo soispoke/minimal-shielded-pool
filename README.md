@@ -5,8 +5,8 @@ EIP-8141 frame transactions, EIP-8250 keyed nonces and EIP-8272 recent roots.
 It has no ERC-20 support, admin, governance or external paymaster.
 
 This is research software. The committed Groth16 proving key comes from a
-single test-only setup whose operator could have kept the toxic waste, so the
-pool must never hold real value.
+local test setup whose operator could have kept the toxic waste of either setup
+phase, so the pool must never hold real value.
 
 ## How it works
 
@@ -36,8 +36,9 @@ nf = Poseidon3(4, Poseidon2(D, spend_key), Poseidon2(cm, leaf_index))
 ```
 
 Here `domain_tag = keccak("minimal-shielded-pool:occurrence-domain:v1")` and
-each field is 32 bytes. Wallets must track notes by position and rebuild
-positions after a reorg.
+each field is 32 bytes. The epoch in `D` is the one the recent-root tuple names,
+so a spend cannot combine notes from different epochs. Wallets must track notes
+by position and rebuild positions after a reorg.
 
 ## Transactions
 
@@ -54,27 +55,48 @@ second spend of either note. A spend has three frames and an optional fourth:
 3. `SENDER(pool, settle(Spend))`: settlement inserts the outputs and records
    any withdrawal as a credit for `recipient`. It never publishes a root or
    calls the recipient, and the pool's `VERIFY` rejects anything settlement
-   would refuse.
+   would refuse. Its gas limit must cover the worst tree shape, because running
+   out after approval burns the notes.
 4. Optional `DEFAULT` call: any nonzero target and calldata, with zero value
    and flags. Only a withdrawal may target the pool; its usual call is
    `claimWithdrawal(recipient)`.
+
+The dispatcher pins the first three frames exactly:
+
+| Frame | Execution gas | State gas | Data |
+|---|---:|---:|---:|
+| Recent root | 30,000 | 0 | 72 bytes |
+| Proof | 320,000 | 195,840 | 256 bytes |
+| Settlement | 2,000,000 | 550,000 | 388 bytes |
+
+The proof frame's state gas pays for creating the two nullifier keys.
 
 The proof names a fresh secp256k1 authorizer, and its signature covers the
 whole transaction, including the proof, the recent-root tuple and the fourth
 frame. The proof's `fee` must cover the transaction's maximum cost; any unused
 part stays in the pool.
 
-The fourth frame is chosen by the wallet. Its gas must fit within EIP-7825's
-`2^24` transaction limit, and the whole transaction within ethrex's 128 KiB
-mempool limit. If the call fails or is left out, settlement still stands and a
-withdrawal remains as a credit that anyone can pay out later with
-`claimWithdrawal(recipient)`. A called account sees EIP-8141's entry point as
-its caller, so it must authenticate its own owner. This is a direct account
-call, not an ERC-4337 adapter. See [SECURITY.md](SECURITY.md#generic-default-tail).
+The wallet chooses the fourth frame's limits. Intrinsic gas plus every frame's
+execution limit, or the calldata floor when larger, must fit EIP-7825's `2^24`
+cap, of which the pool's own frames use 2.35M; state gas is budgeted
+separately. The encoded transaction must also fit ethrex's 128 KiB mempool
+limit.
 
-When the tree is full, settlement starts a new epoch before inserting outputs.
-Sinks take no space, so a note can always be withdrawn. Anyone may publish the
-pool's current or final epoch root to EIP-8272.
+If the fourth frame fails or is left out, settlement still stands, and a
+withdrawal remains as a credit that anyone can pay out later with
+`claimWithdrawal(recipient)`. A failed fourth frame makes the receipt's overall
+status 0 even though settlement succeeded, so check each frame's status. The
+claim pays `recipient` with a plain ETH transfer and cannot redirect it, so the
+recipient must accept one.
+
+A called account sees EIP-8141's entry point as its caller, so it must
+authenticate its own owner. This is a direct account call, not an ERC-4337
+adapter. See [SECURITY.md](SECURITY.md#generic-default-tail).
+
+When the current tree lacks room for the notes being inserted, the pool starts
+a new epoch first, for shields and settlements alike. Sinks take no space, so a
+note can always be withdrawn. Anyone may publish the pool's current or final
+epoch root to EIP-8272.
 
 ## Code
 
@@ -110,7 +132,7 @@ and that the pool's `domain(uint64)` matches this profile.
 
 Validation needs 352,800 execution gas, well above EIP-8141's published
 100,000 public-mempool default. The chain 8141 testnet admits it; other
-networks need a policy that does. [EIP-8369](https://github.com/ethereum/EIPs/pull/12110)
+networks need a policy that does. [EIP-8369](https://eips.ethereum.org/EIPS/eip-8369)
 has not settled a per-transaction budget.
 
 ## Test
@@ -138,8 +160,8 @@ forge test --root contracts --force -vv
 ```
 
 CI also rebuilds the circuit and requires byte-identical R1CS and WASM. The
-tools are pinned to the committed artifacts; a newer circom2 does not reproduce
-them, so upgrading it means a new reviewed artifact set. Run `tooling/setup.sh`
+committed artifacts come from circom2 0.2.8; 0.2.23 does not reproduce them
+byte for byte, so a compiler upgrade means a new reviewed artifact set. Run `tooling/setup.sh`
 only to replace the test setup on purpose, then rebuild the activation manifest
 and proof fixtures.
 
@@ -150,8 +172,8 @@ other clients or FOCIL.
 
 ## Before real value
 
-- Replace the test proving key with an independently verified multi-party
-  ceremony.
+- Replace the test proving key with one built on a public multi-party phase 1
+  and an independently verified multi-party phase 2.
 - Publish the hashes of the final circuit, keys, verifier, dispatcher, logic
   and Poseidon contracts.
 - Rerun the signature, capacity, reorg, gas and cross-client tests on the
