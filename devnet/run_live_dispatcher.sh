@@ -113,7 +113,9 @@ REJECTER=$(forge create --root "$BN" --rpc-url "$RPC" --private-key "$DEPLOYER_P
 echo "    rejecter=$REJECTER"
 
 echo "==> deployment-bound proofs"
-python3 ../wallet/gen_smoke.py --chain-id="$CHAIN_ID" --pool-address="$POOL" \
+# Fresh secrets: with the fixed fixture seed, anyone could rebuild these notes'
+# keys and one-time authorizers and sweep what a live run leaves behind.
+python3 ../wallet/gen_smoke.py --random --chain-id="$CHAIN_ID" --pool-address="$POOL" \
   --recipient="$REJECTER" --output="$SMOKE_OUTPUT"
 
 python3 - "$RPC" "$POOL" <<'PY'
