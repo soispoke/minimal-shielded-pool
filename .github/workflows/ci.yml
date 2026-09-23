@@ -71,6 +71,7 @@ jobs:
             wallet/gen_nonce_race.py wallet/gen_smoke.py wallet/wallet.py \
             reference/gen_poseidon_sol.py reference/poseidon_bn254.py \
             tooling/check_activation.py tooling/check_gas_profile.py \
+            tooling/test_check_activation.py \
             tooling/patch_verifier.py
           python devnet/frametx.py
           python devnet/test_pool_envelope_binding.py
@@ -81,6 +82,7 @@ jobs:
           python wallet/test_wallet_occurrence.py
           python tooling/check_gas_profile.py
           python tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
+          python tooling/test_check_activation.py
           python wallet/wallet.py
           python reference/poseidon_bn254.py
 

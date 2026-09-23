@@ -1,100 +1,104 @@
 # Minimal shielded pool
 
-An immutable, native-ETH shielded pool built for the ethrex Hegotá testnet's
-EIP-8141 Frame Transactions, EIP-8250 keyed nonces, and EIP-8272 recent roots.
-It has no ERC-20 path, admin, governance, external paymaster, or MATCHA-specific
-mempool mechanism.
+An immutable shielded pool for native ETH on the ethrex Hegotá testnet. It uses
+EIP-8141 frame transactions, EIP-8250 keyed nonces and EIP-8272 recent roots.
+It has no ERC-20 support, admin, governance or external paymaster.
 
-This repository is research software. The committed Groth16 proving key uses
-public test-only phase-2 entropy and must never protect real value.
+This is research software. The committed Groth16 proving key comes from a
+local test setup whose operator could have kept the toxic waste of either setup
+phase, so the pool must never hold real value.
 
-## Design
+## How it works
 
-A note commitment is `Poseidon3(2, Poseidon2(owner_pk, rho), value)`, where
-`owner_pk = Poseidon3(1, spend_key, 0)`. A spend proves
-a 2-input/2-output join-split with ten public signals:
-
-`[nf1, nf2, outCm1, outCm2, root, domain, publicAmount, fee, recipient, authorizer]`
-
-The circuit enforces membership for positive inputs, value conservation,
-128-bit amounts, at least one positive input, distinct nullifiers, distinct
-outputs, two position-specific zero-value sinks, a nonzero `uint160`
-authorizer, and the transfer/withdrawal recipient shape.
-
-Each funded insertion is a separate note, identified by its tree epoch and
-leaf index. The index comes from the same path bits that prove membership:
+A note commits to its owner, a random `rho` and its value:
 
 ```text
-D  = Keccak(domain_tag || chain_id || padded_pool_address || input_epoch) mod Fr
-nf = Poseidon3(4, Poseidon2(D, spend_key), Poseidon2(commitment, leaf_index))
+owner_pk = Poseidon3(1, spend_key, 0)
+cm       = Poseidon3(2, Poseidon2(owner_pk, rho), value)
 ```
 
-The domain fields are each 32 bytes; `domain_tag` is
-`Keccak("minimal-shielded-pool:occurrence-domain:v1")`. The dispatcher binds
-the input epoch to the authenticated recent-root source. Identical funded
-commitments at different positions have different nullifiers, so neither
-deposit nor settlement needs a commitment-uniqueness registry. Wallets track
-each occurrence separately and rebuild positions after a reorg.
+A spend proves a join-split with two inputs and two outputs. Its ten public
+signals are `[nf1, nf2, outCm1, outCm2, root, domain, publicAmount, fee,
+recipient, authorizer]`. The circuit checks that every positive input is in the
+tree, that value is conserved over 128-bit amounts, and that at least one input
+carries value. It also requires distinct nullifiers and outputs, a nonzero
+authorizer address, and a recipient exactly when `publicAmount` is positive. A
+zero-value output must use a fixed "sink" commitment for its position, which
+the pool never inserts.
 
-Every spend uses three frames and may append a fourth. `publicAmount` does
-not force the tail: a withdrawal without one leaves `withdrawalCredit`.
+Every deposit is a separate note, identified by its tree epoch and leaf index.
+The nullifier binds that position, so two deposits of the same commitment are
+spent independently and no uniqueness registry is needed:
 
-1. `VERIFY(0x…8272, tuple)`, EIP-8272's canonical recent-root verifier. The
-   protocol runs `RECENT_ROOT_CODE` over the 72-byte tuple before any pool code
-   runs, so the root is already proven when frame 1 begins.
-2. `VERIFY(pool, proof)`, which verifies the proof and exact envelope, then
-   approves execution and payment.
-3. `SENDER(pool, settle(Spend))`, which performs bounded internal settlement.
-4. Optional generic `DEFAULT` tail, never `SENDER`. The frame has zero value
-   and flags and a nonzero target. The dispatcher does not pin tail gas or
-   calldata: the wallet allocates the action inside remaining EIP-7825
-   execution capacity (intrinsic plus all frame execution budgets and the
-   EIP-7976 calldata floor must fit `2^24`). State gas is a separate
-   dimension; native testing admitted 10M execution plus 10M state on a
-   spend that still left room for verification and settlement. The encoded
-   FrameTx as a whole must also fit the pinned ethrex 128 KiB mempool
-   limit. The normal withdraw path is still
-   `DEFAULT(pool, claimWithdrawal(recipient))` with the old claim budgets
-   (100,000 execution / 183,600 state). Custom tails declare their own
-   budgets inside leftover transaction capacity. Unused
-   `fee - actual_gas_cost` stays in the pool. The proof-selected
-   authorizer's FrameTx signature binds the target and calldata.
-   `publicAmount > 0` may target the pool so the simple path remains
-   `DEFAULT(pool, claimWithdrawal(recipient))`. A zero-withdrawal tail
-   cannot target the pool. If the tail is omitted or fails, settlement
-   stands: a withdrawal credit remains on `recipient` and can be claimed
-   later. Standalone `claimWithdrawal` remains for leftover credits.
-   `claimWithdrawal` always pays the recorded `who`, so the proof recipient
-   is the payout dest.
+```text
+D  = keccak(domain_tag || chain_id || pool || epoch) mod r
+nf = Poseidon3(4, Poseidon2(D, spend_key), Poseidon2(cm, leaf_index))
+```
 
-A spend with `publicAmount = 0` and `recipient = 0` uses that same optional
-tail, paying its gas from the shielded fee. The called account must
-authenticate its own owner; the note authorizer does not gain permission to
-spend that account's assets. This is a direct account call, not an ERC-4337
-UserOperation adapter. The pool adds no account or factory implementation.
-See [SECURITY.md](SECURITY.md#generic-default-tail).
+Here `domain_tag = keccak("minimal-shielded-pool:occurrence-domain:v1")` and
+each field is 32 bytes. The epoch in `D` is the one the recent-root tuple names,
+so a spend cannot combine notes from different epochs. Wallets must track notes
+by position and rebuild positions after a reorg.
 
-The proof chooses a fresh secp256k1 authorizer. Its sole EIP-8141 empty-message
-signature covers the canonical hash of the complete transaction, including
-the proof bytes, nonce keys, the recent-root frame, frames, gas limits, fee
-fields, and settlement calldata. Raw signature bytes alone are elided by EIP-8141.
+## Transactions
 
-The pool is both sender and payer. Its two proof nullifiers are the complete
-EIP-8250 key set at sequence zero. The transaction leads with EIP-8272's
-canonical recent-root verifier frame, whose 72-byte `(source_id, slot, root)`
-tuple the predeploy checks before any pool code runs; the dispatcher binds that
-exact tuple through `FRAMEDATALOAD` and requires the frame's shape and success
-through `FRAMEPARAM`. Slots come directly from EIP-7843 `slotNumber`;
-timestamp reconstruction is rejected.
+The pool is the sender and payer of every spend. The two nullifiers are the
+transaction's EIP-8250 nonce keys at sequence zero, so the protocol rejects a
+second spend of either note. A spend has three frames and an optional fourth:
 
-Settlement never publishes a root or calls a recipient. It rolls to a fresh
-Merkle epoch before inserting outputs when capacity is insufficient. The two
-zero sinks consume no capacity, so an exit remains possible at a full tree.
-Withdrawals are pull credits claimed by the optional fourth frame. Root publication is
-a separate permissionless call that reads only the active or finalized root
-stored by the pool.
+1. `VERIFY(0x…8272, tuple)`: EIP-8272's recent-root check of the
+   `(source_id, slot, root)` the proof uses. The slot comes from EIP-7843
+   `slotNumber`.
+2. `VERIFY(pool, proof)`: the pool checks the proof, binds it to that tuple,
+   and checks the frame layout and pinned gas limits. It then approves
+   execution and payment.
+3. `SENDER(pool, settle(Spend))`: settlement inserts the outputs and records
+   any withdrawal as a credit for `recipient`. It never publishes a root or
+   calls the recipient, and the pool's `VERIFY` rejects anything settlement
+   would refuse. Its gas limit must cover the worst tree shape, because running
+   out after approval burns the notes.
+4. Optional `DEFAULT` call: any nonzero target and calldata, with zero value
+   and flags. Only a withdrawal may target the pool; its usual call is
+   `claimWithdrawal(recipient)`.
 
-## Active implementation
+The dispatcher pins the first three frames exactly:
+
+| Frame | Execution gas | State gas | Data |
+|---|---:|---:|---:|
+| Recent root | 30,000 | 0 | 72 bytes |
+| Proof | 320,000 | 195,840 | 256 bytes |
+| Settlement | 2,000,000 | 550,000 | 388 bytes |
+
+The proof frame's state gas pays for creating the two nullifier keys.
+
+The proof names a fresh secp256k1 authorizer, and its signature covers the
+whole transaction, including the proof, the recent-root tuple and the fourth
+frame. The proof's `fee` must cover the transaction's maximum cost; any unused
+part stays in the pool.
+
+The wallet chooses the fourth frame's limits. Intrinsic gas plus every frame's
+execution limit, or the calldata floor when larger, must fit EIP-7825's `2^24`
+cap, of which the pool's own frames use 2.35M; state gas is budgeted
+separately. The encoded transaction must also fit ethrex's 128 KiB mempool
+limit.
+
+If the fourth frame fails or is left out, settlement still stands, and a
+withdrawal remains as a credit that anyone can pay out later with
+`claimWithdrawal(recipient)`. A failed fourth frame makes the receipt's overall
+status 0 even though settlement succeeded, so check each frame's status. The
+claim pays `recipient` with a plain ETH transfer and cannot redirect it, so the
+recipient must accept one.
+
+A called account sees EIP-8141's entry point as its caller, so it must
+authenticate its own owner. This is a direct account call, not an ERC-4337
+adapter. See [SECURITY.md](SECURITY.md#generic-default-tail).
+
+When the current tree lacks room for the notes being inserted, the pool starts
+a new epoch first, for shields and settlements alike. Sinks take no space, so a
+note can always be withdrawn. Anyone may publish the pool's current or final
+epoch root to EIP-8272.
+
+## Code
 
 ```
 circuits/spend.circom
@@ -109,41 +113,27 @@ wallet/wallet.py
 wallet/gen_smoke.py
 ```
 
-Unsafe historical standalone, sponsored, probe, and monolithic pool variants
-were removed. Git history retains them for research, but they are not supported
-deployment paths.
+## Deployment
 
-## Compatibility target
+This is pool profile `position-notes-v1`. It follows current EIP-8141,
+EIP-8250 at `f3079a09e8` and EIP-8272 at `824cbc0b0e`: an eight-field envelope
+with separate execution and state gas limits for each frame. Because the EIPs
+are drafts, each supported combination is a separate profile, and profiles are
+not wire compatible. The previous chain-8141 dialect is archived byte for byte
+under `devnet/vectors/2026-09-01-hegota-final-profile/`.
 
-The active encoder and immutable dispatcher follow current EIP-8141, EIP-8250 at
-`f3079a09e8` (merged PRs 12279 and 12316), and EIP-8272 at `824cbc0b0e` (PRs 12281
-and 12302). They use EIP-8141's nested `fees` field and separate execution and
-state gas limits for each frame; the envelope has eight fields. PR 12316 is what
-put the nested `fees` list back into EIP-8250's own payload block, which had
-flattened the three fee parameters into the outer list; the encoder here always
-nested them, so the correction confirms the shape rather than changing it. Every private
-spend gives its proof frame `195,840` state gas to create its two nullifier
-keys, and leads with a `30,000`-gas recent-root verifier frame that counts
-toward the public mempool's verify budget. The gas schedule is recorded in the
-testbed activation manifest, pool profile `position-notes-v1`.
+The profile needs its own deployment, since its nullifiers and storage differ
+from earlier pools. Replacing the verifier under an old pool could make spent
+notes spendable again. `devnet/deploy_config.json` records the deployment on
+chain 8141 (pool `0xac01…b100`, commit `c26b8e4`), which completed shield,
+transfer, withdrawal and fourth-frame calls on September 22, 2026. Before
+shielding or spending, the CLI checks that the RPC is on the configured chain
+and that the pool's `domain(uint64)` matches this profile.
 
-This profile requires a fresh deployment. Its nullifier formula, verifier
-and storage layout differ from `recipient-pull-v1`; replacing the verifier
-under an old pool could make spent notes spendable again. The recorded
-`devnet/deploy_config.json` remains historical and the spend CLI rejects it
-until a new deployment writes the new profile and addresses.
-
-This profile targets the chain 8141 testnet's next re-genesis, which moves the
-node to those revisions; the chain launched on September 3 runs the older
-EIP-8250 gas rule and the envelope-field form of EIP-8272 and cannot decode
-these transactions. The dialect deployed on the pre-relaunch chain-8141 testnet
-(11-field envelope, one gas limit per frame) is archived byte-exact under
-`devnet/vectors/2026-09-01-hegota-final-profile/`, the auditable record of that
-deployment.
-
-The Ethereum EIPs remain drafts, so each supported combination is a separate
-versioned profile. The archived profiles and the active profile are not wire
-compatible.
+Validation needs 352,800 execution gas, well above EIP-8141's published
+100,000 public-mempool default. The chain 8141 testnet admits it; other
+networks need a policy that does. [EIP-8369](https://eips.ethereum.org/EIPS/eip-8369)
+has not settled a per-transaction budget.
 
 ## Test
 
@@ -153,11 +143,14 @@ python3 -m pip install --requirement requirements.txt
 
 python3 devnet/frametx.py
 python3 devnet/test_pool_envelope_binding.py
+python3 devnet/test_gas_only_action.py
+python3 devnet/test_recent_root_window.py
 python3 devnet/test_occurrence_profile.py
 python3 wallet/test_occurrence.py
-python3 devnet/test_gas_only_action.py
+python3 wallet/test_wallet_occurrence.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
+python3 tooling/test_check_activation.py
 python3 wallet/wallet.py
 python3 reference/poseidon_bn254.py
 
@@ -166,56 +159,26 @@ forge lint --root contracts --deny warnings
 forge test --root contracts --force -vv
 ```
 
-CI also recompiles the circuit in a temporary directory and compares the R1CS
-and WASM byte for byte with the committed artifacts. Run `tooling/setup.sh`
-only when intentionally replacing the disposable proving setup. It randomizes
-the phase-2 contribution and changes the proving key, verification key, and
-verifier, so the activation manifest and proof fixtures must then be rebuilt.
-`tooling/check_activation.py` checks every pinned active artifact and fails
-closed on the testbed manifest unless `--allow-testbed` is explicit. CI checks
-the archived manifest against its original Git snapshot, not the new circuit.
+CI also rebuilds the circuit and requires byte-identical R1CS and WASM. The
+committed artifacts come from circom2 0.2.8; 0.2.23 does not reproduce them
+byte for byte, so a compiler upgrade means a new reviewed artifact set. Run `tooling/setup.sh`
+only to replace the test setup on purpose, then rebuild the activation manifest
+and proof fixtures.
 
-Native duplicate, replay, reorg and gas tests are documented in
-[`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
-They execute the pinned ethrex VM locally; they do not establish network,
-cross-client or full FOCIL integration.
+The native tests in [`devnet/native_occurrence/`](devnet/native_occurrence/README.md)
+run real proofs through the pinned ethrex VM. They cover duplicate notes,
+replay, reorgs, settlement gas and the fourth-frame rules, but not networking,
+other clients or FOCIL.
 
-The direct proving-tool versions are also pinned to the committed artifact
-provenance. In particular, circom2 0.2.23 does not reproduce the committed
-0.2.8 R1CS or WASM byte for byte, so a compiler upgrade belongs to a new
-reviewed artifact set rather than routine dependency maintenance.
+## Before real value
 
-## Compatibility
-
-| Dependency | Status |
-|---|---|
-| Ethrex v23 Hegotá FrameTx ABI | Earlier profiles mined the lifecycle on a devnet; this circuit change uses local native VM tests |
-| Current EIP-8141 wire format | Frame grammar unchanged; the new circuit and storage layout require a fresh deployment |
-| EIP-8141 published 100k public mempool budget | Not compatible: the two validation frames and the signature need 352.8k execution gas |
-| EIP-8250 keyed nonces | The pool follows PR 12279: two fresh keys cost `195,840` state gas in the proof frame |
-| EIP-8272 recent roots | The pool follows `824cbc0b0e`: the root travels in the canonical verifier frame that leads the transaction |
-| EIP-7843 slot number | Implemented: wallet requires the RPC `slotNumber` field |
-| EIP-8369 | The open draft does not set a final per-transaction budget; the devnet used for this profile admits the 352.8k budget |
-| Current ethrex privacy testnet | The live chain runs the older EIP-8250 gas rule and the envelope form of EIP-8272, so it cannot decode these transactions; this profile needs the chain's next re-genesis |
-
-Earlier testnet evidence is in
-[`devnet/vectors/2026-08-14-tight-gas-profile.md`](devnet/vectors/2026-08-14-tight-gas-profile.md).
-The published EIP-8141 100k policy remains a portability blocker. The pool must
-use a network profile that explicitly admits its 352.8k validation budget, which
-the live chain does not yet. [EIP-8369](https://github.com/ethereum/EIPs/pull/12110)
-is still an open Informational proposal; its `2^20` per-IL value is a benchmark
-candidate, not a finalized per-transaction consensus limit.
-
-## Production gates
-
-- Replace the single-party zkey with a documented multi-party phase-2
-  ceremony and independent verification.
-- Pin and publish the final circuit, zkey, verifier, dispatcher, logic, and
-  Poseidon runtime hashes.
-- Re-run the full signature-mutation, capacity, reorg, gas-boundary, and
-  cross-client vectors on the exact activation fork.
-- Re-run the 2M execution / 550k state settlement bounds on every supported gas schedule.
-  Deactivate the profile before an unsupported repricing fork.
+- Replace the test proving key with one built on a public multi-party phase 1
+  and an independently verified multi-party phase 2.
+- Publish the hashes of the final circuit, keys, verifier, dispatcher, logic
+  and Poseidon contracts.
+- Rerun the signature, capacity, reorg, gas and cross-client tests on the
+  activation fork. Recheck the settlement gas limits under every supported gas
+  schedule, and deactivate the profile before an unsupported repricing fork.
 - Obtain an independent contract and circuit audit.
 
-See [`SECURITY.md`](SECURITY.md) for the precise trust and failure boundaries.
+See [SECURITY.md](SECURITY.md) for trust and failure boundaries.

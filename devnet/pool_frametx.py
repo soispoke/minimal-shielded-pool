@@ -142,6 +142,42 @@ def _keccak(b):
     return keccak(b)
 
 
+SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+# keccak256(b"minimal-shielded-pool:occurrence-domain:v1"), as in wallet.py.
+DOMAIN_TAG = bytes.fromhex("a9d03fa1cd97bcf3294dc8e3bb024f555393c98967b356967fa502abab366ed3")
+
+
+def expected_domain(chain_id, pool, epoch=0):
+    """The nullifier domain this circuit and wallet use for `pool`."""
+    preimage = (DOMAIN_TAG + chain_id.to_bytes(32, "big") + pool.to_bytes(32, "big")
+                + epoch.to_bytes(32, "big"))
+    return int.from_bytes(_keccak(preimage), "big") % SCALAR_FIELD
+
+
+def check_deployed_profile(url, pool, configured_chain=None):
+    """Refuse a pool whose deployed logic does not use this profile's domain.
+
+    A config's profile label is not evidence of the deployed code. A pool from
+    before position-bound notes exposes `domain()` and reverts on
+    `domain(uint64)`; shielding into it would create notes this tooling cannot
+    spend, and spends against it fail in VERIFY. A configured chain must also
+    match the RPC, so a deposit cannot land in a same-address pool elsewhere."""
+    chain_id = int(rpc(url, "eth_chainId", []), 16)
+    if configured_chain is not None and chain_id != configured_chain:
+        raise SystemExit(f"RPC is on chain {chain_id}, but the config names chain {configured_chain}")
+    data = "0x" + (_keccak(b"domain(uint64)")[:4] + bytes(32)).hex()
+    try:
+        result = rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"])
+    except RuntimeError:
+        result = None
+    if not isinstance(result, str) or len(result) != 66:
+        raise SystemExit(f"pool 0x{pool:040x} does not expose domain(uint64); "
+                         f"it is not a {POOL_PROFILE} deployment")
+    if int(result, 16) != expected_domain(chain_id, pool):
+        raise SystemExit(f"pool 0x{pool:040x} domain(0) does not match {POOL_PROFILE} "
+                         f"on chain {chain_id}")
+
+
 ACTION_OPTION_FLAGS = {
     "--action-target": "target",
     "--action-call": "data",
@@ -219,8 +255,8 @@ def recent_root_tuple(url, cfg, e):
     `source_id(32) || uint64_be(slot) || root(32)`.
 
     The slot is the consensus `slotNumber` returned by EIP-7843. It is never
-    reconstructed from timestamps. The epoch selects the pool's deterministic
-    EIP-8272 source while the nullifier domain remains stable across epochs.
+    reconstructed from timestamps. The epoch selects both the pool's
+    deterministic EIP-8272 source and the nullifier domain.
     """
     slot = int(e["root_slot"])
     epoch = int(e["epoch"])
@@ -273,6 +309,24 @@ def check_tx_resource_limits(tx):
         )
 
 
+# A withdrawal credit is paid by an empty-calldata call to its recipient, and
+# there is no claim to another address. The pool has no receive path and these
+# system contracts revert on that call, so a credit to any of them is stranded.
+# Nobody controls the entry point, so a claim to it would lose the ETH. These
+# are known protocol addresses only: any contract that rejects a plain ETH
+# transfer strands a credit the same way.
+UNCLAIMABLE_RECIPIENTS = {
+    0xAA: "the EIP-8141 entry point, which no one controls",
+    0x8141: "the EIP-8141 expiry verifier",
+    0x8250: "the EIP-8250 nonce manager",
+    0x8272: "the EIP-8272 recent root contract",
+    0x000F3DF6D732807EF1319FB7B8BB8522D0BEAC02: "the EIP-4788 beacon roots contract",
+    0x0000F90827F1C53A10CB7A02335B175320002935: "the EIP-2935 history contract",
+    0x00000961EF480EB55E80D19AD83579A64C007002: "the EIP-7002 withdrawal request contract",
+    0x0000BBDDC7CE488642FB579F8B00F3A590007251: "the EIP-7251 consolidation request contract",
+}
+
+
 def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     """Derive the optional fourth DEFAULT frame from a canonical settlement.
 
@@ -293,6 +347,9 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
         raise ValueError("invalid pool, recipient, or public amount")
     if (amount == 0) != (recipient == 0):
         raise ValueError("public amount and recipient must both be zero or both nonzero")
+    if amount and (recipient == pool or recipient in UNCLAIMABLE_RECIPIENTS):
+        what = UNCLAIMABLE_RECIPIENTS.get(recipient, "the pool itself")
+        raise ValueError(f"withdrawal recipient would strand the credit: {what}")
     if omit:
         if action is not None:
             raise ValueError("omit cannot be combined with a custom action")
@@ -699,6 +756,8 @@ def main():
         raise SystemExit("--allow-failed-claim is only valid on withdraw")
     if allow_failed_claim and omit_tail:
         raise SystemExit("--allow-failed-claim cannot be combined with --no-tail")
+    if op in ("shield", "transfer", "withdraw"):
+        check_deployed_profile(url, pool, cfg.get("chainId"))
 
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a

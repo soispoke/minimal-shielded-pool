@@ -3,8 +3,11 @@
 ## Status
 
 Unaudited research software. Do not use the committed proving key or deployed
-testnet pool for real value. The repository setup uses public test-only phase-2
-entropy, so its toxic waste can be recovered to forge arbitrary spends.
+testnet pool for real value. The committed key comes from a local test setup.
+Its phase 2 records one contribution, and its phase 1 is not recorded:
+`tooling/setup.sh` generates both phases locally unless given an external powers
+of tau. Whoever produced either phase could have kept the toxic waste and could
+forge arbitrary spends.
 
 The previously identified implementation blockers are fixed in the active
 code: complete-envelope authorization, positional sinks, pre-insert epoch
@@ -109,6 +112,15 @@ cannot target the pool. A withdrawal tail may target the pool so
 always pays `who`. Anyone can still call `claimWithdrawal` later. The authorizer
 does not have to pull the credit in the tail; a later standalone claim remains.
 
+Credits are one balance per recipient address. Withdrawals to the same account
+accumulate, and anyone can push the whole balance to it at any time, so an
+account shared by several users must not attribute a claimed balance change to
+one withdrawal. The wallet refuses the pool itself and known protocol addresses
+that would strand the credit: the EIP-8141 entry point and expiry verifier, the
+EIP-8250 nonce manager, the EIP-8272 recent root contract, and the EIP-4788,
+EIP-2935, EIP-7002 and EIP-7251 system contracts. Any other contract that
+rejects a plain ETH transfer strands a credit the same way.
+
 The account sees EIP-8141's shared entry point (`0xaa`) as its caller, not
 the pool or the account owner. Trusting that caller alone would let any frame
 transaction operate the account. The account must independently authenticate
@@ -133,8 +145,10 @@ extension neither repairs that blocker nor provides full-spend atomicity.
 
 - Groth16 soundness, BN254 pairing security, Poseidon collision resistance,
   Keccak collision resistance, and secp256k1 unforgeability.
-- A production multi-party phase-2 ceremony with destroyed contributions and
-  independent transcript verification.
+- A production setup: a public multi-party phase 1, and a multi-party phase-2
+  ceremony with destroyed contributions and independent transcript
+  verification. The activation gate counts only phase-2 contributions, so
+  phase-1 provenance must be checked separately.
 - Correct ethrex v23 implementations of EIP-8141, EIP-8250, EIP-8272 and
   EIP-7843 at the pins the activation manifest records.
 - An explicitly supported verification budget of at least 352,800 gas: the
@@ -152,7 +166,7 @@ extension neither repairs that blocker nor provides full-spend atomicity.
   require a new immutable profile.
 - Independent circuit, Solidity, Yul, wallet, and deployment review.
 
-EIP-8369 remains an open Informational proposal. Its current `2^20` per-IL
+EIP-8369 is a Draft Informational EIP. Its current `2^20` per-IL
 budget is provisional and does not activate or guarantee a per-transaction
 limit. Hegotá's configured Profile 2 behavior is testnet evidence only.
 
@@ -166,7 +180,9 @@ secrets and one-time authorizer keys are not durably backed up.
 
 ## Evidence
 
-The Forge suite covers actual Poseidon runtimes, a 2M-capped worst-shape
+The Forge suite runs the via-IR Poseidon builds, which cost about 10% less
+gas per hash than the deployed `libsmall` builds, so the binding settlement
+bound comes from the native suite below. The Forge suite covers a 2M-capped
 rollover with two outputs and a new credit, long-carry at 262,143 and 524,287
 leaves under EIP-150 forwarding of that 2M budget, pre-insert rollover, full-tree
 exit, sink rules, separate publication failure/retry, pull-credit failure,
@@ -177,20 +193,26 @@ zero authorizers, and recipient mismatches. The envelope vector mutates 48
 signed transfer components, 56 signed withdrawal components, 57 signed
 gas-only tails, and 57 signed custom withdrawal tails.
 
-The position-bound note suite passes 20 native scenarios using 23 real Groth16
-proofs, plus two client-policy tests. It covers duplicate deposits and outputs,
-replay, epoch binding, database rollback and proof rebuilding, and settlement
-gas boundaries. The highest measured settlement execution cost is 1,423,709;
+The position-bound note suite passes 30 native scenarios using 23 real Groth16
+proofs, plus two client-policy tests, against the current dispatcher. It covers
+duplicate deposits and outputs, replay, epoch binding, database rollback and
+proof rebuilding, settlement gas boundaries, and the fourth-frame rules,
+including rejection of a `SENDER` tail that repeats settlement. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
-additional margin, not a formal proof of a universal bound. See
+additional margin, not a formal proof of a universal bound. These runs use
+ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where
+settlement gas has not been re-measured. See
 [`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
 
 The earlier profile's gas derivation is recorded in
 [`devnet/vectors/2026-08-14-tight-gas-profile.md`](devnet/vectors/2026-08-14-tight-gas-profile.md).
 
-The 2026-08-14 ethrex run completed shield, transfer, root refresh, withdrawal,
-claim, and replay rejection. It proves compatibility with that one testnet
-configuration, not production readiness or cross-client interoperability.
+On 2026-09-22 the deployment recorded in `devnet/deploy_config.json`
+completed shield, transfer, root refresh, withdrawal, claim, a fourth-frame
+claim and call, an intentional tail revert with later credit recovery, and
+replay rejection on the chain 8141 testnet. It proves compatibility with that
+one testnet configuration, not production readiness or cross-client
+interoperability.
 
 ## Reporting
 
