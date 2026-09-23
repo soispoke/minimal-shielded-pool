@@ -104,12 +104,13 @@ alone. Wallets default the tail to the old `claimWithdrawal` budgets (100,000
 execution / 183,600 state) and only raise gas for a custom target or
 calldata. Settlement remains the
 only `SENDER` frame. The fourth frame is optional on every spend, including
-withdrawals: omitting it leaves `withdrawalCredit`. Any tail may target the
-pool, and it reaches only what any caller can: `publishEpochRoot`,
-`claimWithdrawal` and the views. `settle` requires the pool as sender,
-`shield` requires value, and the pool's `VERIFY` entry works only as frame 1,
-so a tail that repeats settlement or verification reverts on its own and
-settlement stands.
+withdrawals: omitting it leaves `withdrawalCredit`. Any tail may call the
+pool, but it can only do what any caller can: publish a root with
+`publishEpochRoot`, pay out a credit with `claimWithdrawal`, or read state.
+`settle` accepts only the pool itself as caller, `shield` needs ETH, and the
+pool's `VERIFY` entry works only in frame 1. A tail that tries to repeat
+settlement or verification therefore reverts on its own, and the settlement
+stands.
 
 `recipient` is the payout key, not the frame target. `claimWithdrawal(who)`
 always pays `who`. Anyone can still call `claimWithdrawal` later. The authorizer

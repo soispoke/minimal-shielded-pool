@@ -31,17 +31,18 @@ EVM account state unchanged, including nonce keys and balances.
 
 Twelve scenarios cover the optional fourth frame. A withdrawal without a tail
 keeps its credit, and a withdrawal or transfer may end with a generic call to
-another account. A transfer may also call the pool: one publishes its own
-root, and the note it created is then withdrawn against that root from the
-next slot. Tails that call the pool to repeat the settlement or the proof
-check revert on their own, and the settlement stands with its keys consumed
-once. Each rejected case breaks one rule of an otherwise valid spend and must
-fail in the pool's `VERIFY` frame: a `SENDER` tail repeating the settlement, a
-zero target, an approval flag on the tail, an atomic batch joining settlement
-and tail, and a fifth frame. A tail carrying value is rejected statically by the client, as EIP-8141 requires,
-before the dispatcher's own value check runs. Removing the dispatcher's
-mode check lets the repeated settlement through with twice the proven credit,
-which this suite then reports as a failure.
+another account. A transfer may also call the pool. In one scenario it
+publishes its own root, and the note it created is withdrawn against that root
+in the next slot. In two others, the tail calls the pool to repeat the
+settlement or the proof check; the call reverts, and the settlement stands with
+each key consumed once. Each rejected case breaks one rule of an otherwise
+valid spend and must fail in the pool's `VERIFY` frame: a `SENDER` tail
+repeating the settlement, a zero target, an approval flag on the tail, an
+atomic batch joining settlement and tail, and a fifth frame. A tail carrying
+value is rejected statically by the client, as EIP-8141 requires, before the
+dispatcher's own value check runs. Removing the dispatcher's mode check lets
+the repeated settlement through with twice the proven credit, which this suite
+then reports as a failure.
 
 Seven scenarios cover the validation frames' limits, which the dispatcher no
 longer pins. A withdrawal declaring far more than the defaults is accepted.

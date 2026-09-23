@@ -217,9 +217,9 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(shr(224, frameDataLoad(2, 0)), 0x921fcac7)) { fail(errShape()) }
 
                 // Frame 3: generic DEFAULT. Present whenever frames == 4.
-                // Zero value and flags. Never SENDER. Nonzero target, which may
-                // be the pool on any spend: a DEFAULT call reaches only what any
-                // caller can, because settle requires the pool as sender, shield
+                // Zero value and flags. Never SENDER. The target must be nonzero
+                // and may be the pool on any spend. A DEFAULT call can only do
+                // what any caller can: settle requires the pool as sender, shield
                 // requires value, and this VERIFY entry requires frame 1. No
                 // pool-specific gas or calldata ceiling: remaining EIP-7825
                 // execution and the chain's transaction size limits are the
