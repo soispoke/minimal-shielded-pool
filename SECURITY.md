@@ -38,13 +38,18 @@ recent-root verifier frame. A copied or rerandomized proof cannot be rewrapped
 without the one-time private key.
 
 The proof exposes three public signals instead of the ten statement values,
-using the hybrid compression of eprint 2025/1500. Binding the statement to the
-proof therefore rests on that paper's assumption about Keccak and Poseidon
-together, as well as on Groth16. The dispatcher recomputes `alpha` and `gamma`
-from the settlement calldata and range-checks each statement value before the
-verifier runs. Those range checks are load-bearing: without them, a nullifier
-and the same value plus the field modulus would fold into the same proof but
-be different nonce keys.
+using the hybrid compression of eprint 2025/1500. The ten values stay public in
+the settlement calldata; only the verifier's inputs shrink. Binding the
+statement to the proof therefore rests on the paper's joint UHF hardness of
+Keccak-mod-p and Poseidon, as well as on Groth16. The dispatcher recomputes
+`alpha` and `gamma` from the settlement calldata and range-checks each
+statement value before the verifier runs. Those range checks are
+load-bearing. Without them, the note owner could re-prove a spend with a value
+plus the field modulus in the calldata: `alpha` changes, but `gamma` reduces
+the value to the same field element, so VERIFY approves under different
+nonce keys. Settlement re-checks the values and reverts after approval, so the
+pool pays the gas each time, and an aliased output, amount or fee spends the
+input notes without creating anything.
 
 Payment approval consumes the EIP-8250 keys before SENDER settlement. Safety
 therefore requires settlement to be total for every proof-valid admitted
@@ -165,6 +170,9 @@ extension neither repairs that blocker nor provides full-spend atomicity.
 
 - Groth16 soundness, BN254 pairing security, Poseidon collision resistance,
   Keccak collision resistance, and secp256k1 unforgeability.
+- Joint UHF hardness of Keccak-mod-p and circomlib Poseidon(10), the
+  assumption under which eprint 2025/1500 proves hybrid compression binds the
+  ten statement values to the proof's three public signals.
 - A production setup: a public multi-party phase 1, and a multi-party phase-2
   ceremony with destroyed contributions and independent transcript
   verification. The activation gate counts only phase-2 contributions, so
@@ -209,19 +217,24 @@ rollover with two outputs and a new credit, long-carry at 262,143 and 524,287
 leaves under EIP-150 forwarding of that 2M budget, pre-insert rollover, full-tree
 exit, sink rules, separate publication failure/retry, pull-credit failure,
 direct-call rejection, valid proof verification, coordinate aliases, infinity,
-and authorizer mutation. The circuit generator rejects same-note inputs,
-duplicate outputs, dummy-only spends, wrong sinks, sink-valued positive outputs,
-zero authorizers, and recipient mismatches. The envelope vector mutates 48
-signed transfer components, 56 signed withdrawal components, 57 signed
-gas-only tails, and 57 signed custom withdrawal tails.
+and mutation of each statement value, `beta` and `gamma`. The circuit generator
+rejects same-note inputs, duplicate outputs, dummy-only spends, wrong sinks,
+sink-valued positive outputs, zero authorizers, and recipient mismatches. The
+circuit test checks `beta` against an independent Poseidon(10) and rejects a
+forged witness whose `beta` or `gamma` does not follow from the statement. The
+envelope vector mutates 49 signed transfer components, 57 signed withdrawal
+components, 58 signed gas-only tails, and 58 signed custom withdrawal tails,
+including `beta`.
 
-The position-bound note suite passes 54 native scenarios using 24 real Groth16
+The position-bound note suite passes 61 native scenarios using 31 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, the fourth-frame rules,
 including a transfer that publishes its own root and rejection of a `SENDER`
 tail that repeats settlement, the
-unpinned validation limits, and the fee check that covers them. The highest measured settlement execution cost is 1,423,709;
+unpinned validation limits, the fee check that covers them, and hybrid
+compression, including fresh proofs over a statement value plus the field
+modulus that only the dispatcher's range checks refuse. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
 additional margin, not a formal proof of a universal bound. These runs use
 ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where

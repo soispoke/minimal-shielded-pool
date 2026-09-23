@@ -180,7 +180,7 @@ def main():
         raise SystemExit("transaction exceeds the configured Hegota Profile 2 budget")
     if profile["wire_profile"] == "position-notes-v2":
         # The pre-PR 12279 figure charged keyed-nonce creation as execution gas and no
-        # longer applies. The largest later measurement, from an earlier dispatcher,
+        # longer applies. The measurement on this dispatcher, native ethrex 247e2dd2,
         # must fit the default.
         if "post_pr_12279_max_observed_verify_execution_gas" not in profile:
             raise SystemExit("missing PR 12279 VERIFY execution measurement status")

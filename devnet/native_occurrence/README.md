@@ -17,8 +17,8 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 54 native scenarios and two client-policy tests, using
-24 real Groth16 proofs. The highest measured settlement execution cost is
+The recorded run passes 61 native scenarios and two client-policy tests, using
+31 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
 each transaction hash and per-frame results.
@@ -58,10 +58,17 @@ frame's execution limit or the proof frame's state limit then pushes the
 maximum cost past the fee, and the pool refuses it before approval, again with
 state unchanged.
 
-Twelve scenarios cover hybrid compression. Changing any one of the ten
-statement values in the settlement calldata, or the `beta` word after the
-proof, makes a withdrawal invalid in the pool's `VERIFY` frame with state
-unchanged, and so does a `beta` outside the field.
+Nineteen scenarios cover hybrid compression, and each leaves state unchanged.
+Twelve change one thing in a withdrawal: its `beta`, or one of the ten
+statement values in the settlement calldata. For `nf1` and `nf2` the nonce keys
+follow, and the authorizer case re-signs someone else's proof with an
+attacker's key, so these reach the proof check along with the output, amount,
+fee and recipient cases. The root and domain changes are refused earlier by the
+exact tuple and domain checks, and a `beta` outside the field by both the
+dispatcher and the verifier. Seven more prove an honest withdrawal against
+`alpha` over one value plus the field modulus, so the proof and `gamma` pass
+and only the dispatcher's range checks can refuse it. Deleting those checks
+makes exactly these seven fail.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one
 branch, restores the checkpoint, and reverses two deposit transactions. The

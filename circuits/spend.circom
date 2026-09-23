@@ -11,7 +11,7 @@ pragma circom 2.0.8;
 //   - EIP-8250 MULTI-KEY nonces: the two nullifiers are consumed as ONE
 //     keyed-nonce set (shared nonce_seq = 0, atomic, per-sender domain), the
 //     `nonce_keys` list shape bounded by MAX_NONCE_KEYS = 16;
-//   - native-ETH fee binding: `fee` is a public signal and the pool self-pays;
+//   - native-ETH fee binding: `fee` is in the statement and the pool self-pays;
 //   - complete intent authorization: the proof chooses a fresh one-time
 //     secp256k1 signer. EIP-8141 verifies that signer over the complete frame
 //     transaction after the proof has been generated.
@@ -45,9 +45,9 @@ pragma circom 2.0.8;
 // The statement is ten values, in this order:
 //     [nf1, nf2, out_cm1, out_cm2, root, domain, public_amount, fee,
 //      recipient, authorizer]
-// They stay inside the circuit. Hybrid compression (eprint 2025/1500, as in
-// the authors' reference implementation) exposes three public signals
-// instead of ten, saving the verifier seven scalar multiplications:
+// They are private here but public in the settlement calldata. Hybrid
+// compression (eprint 2025/1500, as in ark-hybrid-compression) exposes three
+// public signals instead of ten, saving seven scalar multiplications:
 //     alpha = keccak256(the ten values as 32-byte words) mod p, computed
 //             by the pool and passed in as a public input;
 //     beta  = Poseidon(the ten values), computed here;

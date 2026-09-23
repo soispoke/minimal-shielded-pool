@@ -24,14 +24,14 @@ public signals instead, using the hybrid compression of
 [eprint 2025/1500](https://eprint.iacr.org/2025/1500): the pool computes
 `alpha = keccak256(statement) mod p`, the circuit computes
 `beta = Poseidon(statement)`, and both evaluate `gamma`, the statement as a
-polynomial at `alpha + beta`. The pool recomputes `alpha` and `gamma` from the
-settlement data and range-checks every statement value itself, since the
-verifier no longer sees them. The circuit checks that every positive input is in the
-tree, that value is conserved over 128-bit amounts, and that at least one input
-carries value. It also requires distinct nullifiers and outputs, a nonzero
-authorizer address, and a recipient exactly when `publicAmount` is positive. A
-zero-value output must use a fixed "sink" commitment for its position, which
-the pool never inserts.
+polynomial at `alpha + beta`. The ten values stay public in the settlement
+data. The pool recomputes `alpha` and `gamma` from them and range-checks each
+value itself, since the verifier no longer sees them. The circuit checks that
+every positive input is in the tree, that value is conserved over 128-bit
+amounts, and that at least one input carries value. It also requires distinct
+nullifiers and outputs, a nonzero authorizer address, and a recipient exactly
+when `publicAmount` is positive. A zero-value output must use a fixed "sink"
+commitment for its position, which the pool never inserts.
 
 Every deposit is a separate note, identified by its tree epoch and leaf index.
 The nullifier binds that position, so two deposits of the same commitment are
