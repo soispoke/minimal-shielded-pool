@@ -142,6 +142,39 @@ def _keccak(b):
     return keccak(b)
 
 
+SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+# keccak256(b"minimal-shielded-pool:occurrence-domain:v1"), as in wallet.py.
+DOMAIN_TAG = bytes.fromhex("a9d03fa1cd97bcf3294dc8e3bb024f555393c98967b356967fa502abab366ed3")
+
+
+def expected_domain(chain_id, pool, epoch=0):
+    """The nullifier domain this circuit and wallet use for `pool`."""
+    preimage = (DOMAIN_TAG + chain_id.to_bytes(32, "big") + pool.to_bytes(32, "big")
+                + epoch.to_bytes(32, "big"))
+    return int.from_bytes(_keccak(preimage), "big") % SCALAR_FIELD
+
+
+def check_deployed_profile(url, pool):
+    """Refuse a pool whose deployed logic does not use this profile's domain.
+
+    A config's profile label is not evidence of the deployed code. A pool from
+    before position-bound notes exposes `domain()` and reverts on
+    `domain(uint64)`; shielding into it would create notes this tooling cannot
+    spend, and spends against it fail in VERIFY."""
+    chain_id = int(rpc(url, "eth_chainId", []), 16)
+    data = "0x" + (_keccak(b"domain(uint64)")[:4] + bytes(32)).hex()
+    try:
+        result = rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"])
+    except RuntimeError:
+        result = None
+    if not isinstance(result, str) or len(result) != 66:
+        raise SystemExit(f"pool 0x{pool:040x} does not expose domain(uint64); "
+                         f"it is not a {POOL_PROFILE} deployment")
+    if int(result, 16) != expected_domain(chain_id, pool):
+        raise SystemExit(f"pool 0x{pool:040x} domain(0) does not match {POOL_PROFILE} "
+                         f"on chain {chain_id}")
+
+
 ACTION_OPTION_FLAGS = {
     "--action-target": "target",
     "--action-call": "data",
@@ -699,6 +732,8 @@ def main():
         raise SystemExit("--allow-failed-claim is only valid on withdraw")
     if allow_failed_claim and omit_tail:
         raise SystemExit("--allow-failed-claim cannot be combined with --no-tail")
+    if op in ("shield", "transfer", "withdraw"):
+        check_deployed_profile(url, pool)
 
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a

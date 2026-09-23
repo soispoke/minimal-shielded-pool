@@ -160,17 +160,15 @@ def main():
     assert "if gt(frameParam(3, 0x09)," not in dispatcher
     assert "if gt(frameParam(3, 0x04)," not in dispatcher
 
-    # Keep the old deployment record historical. A new live deployment writes
-    # this profile from the activation manifest; the spend CLI rejects older
-    # profiles instead of using their addresses with the new circuit.
+    # The deployment record is a fresh deployment of this dispatcher. The
+    # builder also checks the deployed pool's domain before shielding or
+    # spending, since a profile label alone does not prove the deployed code.
     cfg = json.loads((ROOT / "devnet" / "deploy_config.json").read_text())
-    # This file records an older deployment, not a deployment of the new
-    # immutable dispatcher. The builder rejects it until a fresh deployment.
-    assert cfg["profile"] in ("recipient-pull-v1", POOL_PROFILE)
+    assert cfg["profile"] == POOL_PROFILE
     assert cfg["recentRootGas"] == RECENT_ROOT_FRAME_GAS
     assert cfg["verifyGas"] == VERIFY_FRAME_GAS
     assert cfg["verifyStateGas"] == VERIFY_FRAME_STATE_GAS
-    assert cfg["settleGas"] == (SETTLE_FRAME_GAS if cfg["profile"] == POOL_PROFILE else 1_400_000)
+    assert cfg["settleGas"] == SETTLE_FRAME_GAS
     assert cfg["settleStateGas"] == SETTLE_FRAME_STATE_GAS
     assert cfg["claimGas"] == CLAIM_FRAME_GAS
     assert cfg["claimStateGas"] == CLAIM_FRAME_STATE_GAS

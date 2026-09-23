@@ -1,13 +1,12 @@
 {
  "rpc": "https://rpc1.privacy.ethrex.xyz",
- "pool": "0xf074b6af758c31f3736bb5a74d347a8b4d014fe3",
- "verifier": "0x5f7Fc33316A8E0A61f3A039A3C5BF8f36eE8fb5E",
- "poseidonT3": "0x78bfb478192bEFbb0D2ae01354d1362cF54F5D93",
- "poseidonT4": "0x97bE1D3F231eA1e8ED288068CCed9081a0E38d65",
- "logic": "0x1dc2C066FE020E840D098e12C5b48D56Bb5930b8",
- "sourceIdEpoch0": "0x467bdb03b8a01ab92c366428692c1ee9129777d6f613483b84f54f5dcf13eab0",
- "domain": "0x002afbc3c945ace23c40ba99812226dea437a3a433a0ec1b56c30947c80a682a",
- "_slot_transfer": "108537",
+ "pool": "0xac01c30f28b32dd31d3c2854012e673e74f6b100",
+ "verifier": "0xc3492f2312f35cc4321ab55a7aa1bd4bfab88395",
+ "poseidonT3": "0x1f6cc533943f75e9f572a9ef2b08869d3599333b",
+ "poseidonT4": "0x35c45732792b3c024a5669ffd3989d403e61244c",
+ "logic": "0xb7ee4d3f44f543d1719ebfa9435529d89c280f4c",
+ "sourceIdEpoch0": "0x37cca6d9ac8fad0a6066bc4c75923f52beb889fc1533c281758b3a182fde9ff4",
+ "domain": "0x299ba2eaf9e8f65969c2421e1d0a34955b3870ea45e6dddabd4463e4c3c50778",
  "chainId": 8141,
  "profile": "position-notes-v1",
  "verifyGas": 320000,
@@ -17,5 +16,7 @@
  "verifyStateGas": 195840,
  "recentRootGas": 30000,
  "claimGas": 100000,
- "claimStateGas": 183600
+ "claimStateGas": 183600,
+ "revision": "c26b8e440d0250c6823b7bed37a594f1195c0f56",
+ "deploymentBlock": 105977
 }
