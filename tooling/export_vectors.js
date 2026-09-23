@@ -66,9 +66,9 @@ async function main() {
   const vec3 = cases(3).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
 
   // ---- the pool's tagged chain (mirrors circuits/spend.circom), seed 2026 ----
-  // note chain: the value-carrying note and the join-split outputs; the
-  // publics themselves are bound directly as Groth16 public signals, so no
-  // hash beyond the note chain exists to fix a vector for
+  // note chain: the value-carrying note and the join-split outputs. The
+  // statement's Poseidon(10) digest (hybrid compression's beta) is computed
+  // only inside the circuit, so no vector is fixed for it here
   const lcg = new Lcg(2026);
   const [spend_key, rho, out_inner1, out_inner2] =
     Array.from({ length: 4 }, () => lcg.nextFe(p));

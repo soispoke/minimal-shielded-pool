@@ -90,12 +90,15 @@ def spend_entry(
     root = tree.root()
     nf1, nf2 = w.input_nullifiers(domain, inputs)
     out_cm1, out_cm2 = w.output_commitments(outputs)
-    # the crux: the proof's public signals are exactly the wallet's own
-    # publics, in the circuit's order (outputs first, then public inputs),
-    # which is also the order verifySpend passes them to the verifier
-    assert publics == [nf1, nf2, out_cm1, out_cm2, root, domain,
-                       public_amount, fee, recipient, authorizer], \
-        "proof public signals do not bind the wallet's publics"
+    # the crux: the proof's public signals (beta, gamma, alpha), in the
+    # circuit's order, compress exactly the wallet's own ten statement values,
+    # recomputed here as the pool recomputes them
+    stmt = w.statement(nf1, nf2, out_cm1, out_cm2, root, domain,
+                       public_amount, fee, recipient, authorizer)
+    beta, gamma, alpha = publics
+    assert alpha == w.compression_alpha(stmt), "proof alpha does not hash the wallet's statement"
+    assert gamma == w.fingerprint((alpha + beta) % w.P, stmt), \
+        "proof gamma does not fingerprint the wallet's statement"
     e = {"root": hex32(root), "epoch": str(epoch),
          "domain": hex32(domain),
          "nf1": hex32(nf1), "nf2": hex32(nf2),
@@ -104,6 +107,7 @@ def spend_entry(
          "recipient": f"0x{recipient:040x}",
          "authorizer": f"0x{authorizer:040x}",
          "authorizer_private_key": authorizer_private_key,
+         "beta": hex32(beta),
          "proof": proof}
     e.update(extra)
     return e
@@ -271,7 +275,7 @@ def main():
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(fixture, indent=1))
-    print("real join-split proofs generated and verified off-chain; public signals bind the wallet publics")
+    print("real join-split proofs generated and verified off-chain; compressed public signals bind the wallet statement")
     print(f"wrote {output_path}")
     print(f"  transfer  nf1 {fixture['transfer']['nf1'][:18]}... nf2 {fixture['transfer']['nf2'][:18]}... fee {v_fee}")
     print(f"  withdraw_seed publicAmount {v_seed_pub} fee {v_fee}")

@@ -196,6 +196,10 @@ def build_witness(
         "output commitments must be distinct"
 
     recipient_value = address_scalar(recipient) if recipient is not None else 0
+    nf1, nf2 = input_nullifiers(domain, inputs)
+    out_cm1, out_cm2 = output_commitments(outputs)
+    alpha = compression_alpha(statement(nf1, nf2, out_cm1, out_cm2, tree.root(), domain,
+                                        public_amount, fee, recipient_value, authorizer))
     sibs, bits = [], []
     for i in inputs:
         if i["idx"] is None:
@@ -206,6 +210,7 @@ def build_witness(
             sibs.append(s)
             bits.append(b)
     return {
+        "alpha": str(alpha),
         "root": str(tree.root()),
         "domain": str(domain),
         "in_spend_key": [str(i["sk"]) for i in inputs],
@@ -220,6 +225,28 @@ def build_witness(
         "recipient": str(recipient_value),
         "authorizer": str(authorizer),
     }
+
+
+def statement(nf1, nf2, out_cm1, out_cm2, root, domain, public_amount, fee,
+              recipient, authorizer):
+    """The ten statement values, in the order the circuit and the pool hash them."""
+    return [nf1, nf2, out_cm1, out_cm2, root, domain, public_amount, fee,
+            recipient, authorizer]
+
+
+def compression_alpha(stmt):
+    """Hybrid compression's contract-side hash: keccak256 of the ten values as
+    32-byte words, reduced into the scalar field. The pool computes the same."""
+    assert len(stmt) == 10 and all(0 <= x < P for x in stmt)
+    return int.from_bytes(keccak(b"".join(x.to_bytes(32, "big") for x in stmt)), "big") % P
+
+
+def fingerprint(sigma, stmt):
+    """x[0] + x[1]*sigma + ... + x[9]*sigma^9 mod P, by Horner's rule."""
+    acc = 0
+    for x in reversed(stmt):
+        acc = (acc * sigma + x) % P
+    return acc
 
 
 def input_nullifiers(domain, inputs):

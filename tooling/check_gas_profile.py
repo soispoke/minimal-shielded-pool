@@ -44,18 +44,18 @@ from gas_profile import (  # noqa: E402
 
 PRE_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 294_401
 PRE_PR_12279_KEYED_NONCE_EXECUTION_GAS = 2 * 20_000
-# Measured on a devnet running EIP-8250 at f3079a09e8 and EIP-8272 at 824cbc0b0e:
-# the transfer's proof frame reported 254,685 and the withdraw's 254,712. The drop
-# from the pre-12279 figure is the keyed-nonce first use leaving the execution
-# dimension for the state one, which is the whole point of that PR. The activation
-# manifest records 255,011, the largest proof-frame execution observed since.
-POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 255_011
+# Measured on a devnet running EIP-8250 at f3079a09e8 and EIP-8272 at 824cbc0b0e,
+# the ten-input verifier's proof frame used up to 255,011; the drop from the pre-12279
+# figure is the keyed-nonce first use leaving the execution dimension for the state
+# one. Hybrid compression cuts the verifier to three public inputs: on native ethrex
+# 247e2dd2 the proof frame uses 210,049 to 210,166, the larger with a fourth frame.
+POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 210_166
 # The proof frame needs a larger limit than it uses. Each nested call keeps back 1/64 of
 # the gas it could forward (EIP-150), once from the dispatcher to the verifier and once
 # from the verifier to the pairing precompile. On native ethrex 247e2dd2 a withdrawal
-# uses 254,814 but needs a limit of 261,521 (261,520 fails). Below that the verifier
-# runs out of gas and the dispatcher reports an invalid proof.
-MIN_WORKING_VERIFY_FRAME_GAS = 261_521
+# needs a limit of 216,150 (216,140 fails) and a transfer 216,030. Below that the
+# verifier runs out of gas and the dispatcher reports an invalid proof.
+MIN_WORKING_VERIFY_FRAME_GAS = 216_150
 # The pool grammar permits exactly one 72-byte recent-root tuple, pinned by the
 # dispatcher's `frameParam(0, 0x04) == 72`. The measured verifier-frame execution cost
 # for that shape was 5,579 gas, so the 8,000-gas wallet default covers it.

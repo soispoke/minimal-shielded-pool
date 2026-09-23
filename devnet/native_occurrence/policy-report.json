@@ -9,14 +9,14 @@
   "first": "policy-first.hex",
   "fixture_keccak256": {
     "deploy-logic.hex": "0xb2b0f405824a271c2ccc32d9f55e3405afe97a85d31c506ead3b682204069cee",
-    "deploy-pool.hex": "0x71a339def09447a68ed7ad50aea61b3b02ab103605ae34c73de03b33f8b42892",
+    "deploy-pool.hex": "0x9408b9807a559f26c57e20a069acf72cfe4d4c1e5f926d9b728f373f3e08fd48",
     "deploy-poseidon3.hex": "0x22cd9c557847e26caca99b3bf9af2b1494819dd4e9ea80437157069b0297dcd5",
     "deploy-poseidon4.hex": "0xdcc1e6b8c328e532fe2dabc48179a6eaa11277a9592fe31c2240c89a46cfc07b",
-    "deploy-verifier.hex": "0xe801488b606225c406cfa9117a510ab258b580e3a5de7824edc1c290f0b913ed",
+    "deploy-verifier.hex": "0x1cc5e979e6f058f05d65a29fa90442920f1a6635412dc144c9fd294da778d237",
     "deposit-a.hex": "0xfda8d78c33aef5183567e6616129306c56a8b4291a2bd23876dcc44a9b84d1f6",
     "deposit-b.hex": "0x5b14aeaa2fad64674df3ad29ce7c2a372790b17258715953893bd534e1c1842d",
-    "policy-first.hex": "0xf6ab83aa2a0238ab3f9d26dced2c249f259c11471c98ec956f787192765388e7",
-    "policy-second.hex": "0xb0c3d166e83421c8f69cd2d944e89096ab43372afdb0462efe8f99dc197e7ca7",
+    "policy-first.hex": "0xf215fe908ea97993e0ff6dcc504ae0688894ac21cd5be1384089c1355b8a5d15",
+    "policy-second.hex": "0x1703f4818a1f77e078c79a186eb23b3e3bc692388684841cb3e2cf9aabd648b1",
     "publish-initial.hex": "0xcbd9ce5d16ee34a128902a7a9b95ccd44bb69b296e1f10ea1a877352fad34c2c"
   },
   "results": [
@@ -28,7 +28,7 @@
       "loaded_code_bodies": null,
       "loaded_code_bytes": null,
       "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
-      "prefix_gas": 260240,
+      "prefix_gas": 215628,
       "profile2_surface": false,
       "read_legacy_nonce": false,
       "sender_slots": [],
@@ -40,9 +40,9 @@
       "injected_mapping_read": false,
       "keyed_concurrency": "Allowed",
       "loaded_code_bodies": 3,
-      "loaded_code_bytes": 4661,
+      "loaded_code_bytes": 3662,
       "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
-      "prefix_gas": 260240,
+      "prefix_gas": 215628,
       "profile2_surface": true,
       "read_legacy_nonce": false,
       "sender_slots": [],
@@ -56,7 +56,7 @@
       "loaded_code_bodies": null,
       "loaded_code_bytes": null,
       "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
-      "prefix_gas": 260267,
+      "prefix_gas": 215655,
       "profile2_surface": false,
       "read_legacy_nonce": false,
       "sender_slots": [],
@@ -68,9 +68,9 @@
       "injected_mapping_read": false,
       "keyed_concurrency": "Allowed",
       "loaded_code_bodies": 3,
-      "loaded_code_bytes": 4661,
+      "loaded_code_bytes": 3662,
       "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
-      "prefix_gas": 260267,
+      "prefix_gas": 215655,
       "profile2_surface": true,
       "read_legacy_nonce": false,
       "sender_slots": [],
@@ -78,11 +78,11 @@
     },
     {
       "profile2_static_candidate": true,
-      "verify_budget_cost": 280800
+      "verify_budget_cost": 235800
     },
     {
       "profile2_static_candidate": true,
-      "verify_budget_cost": 280800
+      "verify_budget_cost": 235800
     },
     {
       "real_disjoint_transactions_pending": 2

@@ -17,6 +17,22 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 WORK = BUILD / "occurrence-tests"
 RESULTS = []
+# The statement is private. Its four computed values are read from the
+# witness by name; the other six are circuit inputs, some of which the
+# compiler folds into other wires.
+STATEMENT_WIRES = ["main.stmt[0]", "main.stmt[1]", "main.stmt[2]", "main.stmt[3]"]
+STATEMENT_INPUTS = ["root", "domain", "public_amount", "fee", "recipient", "authorizer"]
+COMPRESSION_WIRES = ["main.beta", "main.gamma", "main.alpha"]
+
+
+def wire_indices(names):
+    found = {}
+    for line in (BUILD / "spend.sym").read_text().splitlines():
+        _, wire, _, name = line.split(",", 3)
+        if name in names:
+            found[name] = int(wire)
+    assert all(found.get(n, -1) >= 0 for n in names), found
+    return [found[n] for n in names]
 
 
 def run(args):
@@ -43,8 +59,11 @@ def witness_case(name, witness, expected=True):
         must(["npx", "snarkjs", "wtns", "check", BUILD / "spend.r1cs", target])
         exported = WORK / (name + ".witness.json")
         must(["npx", "snarkjs", "wtns", "export", "json", target, exported])
-        # Constant wire 1, four outputs, six public inputs.
-        publics = [int(x) for x in json.loads(exported.read_text())[1:11]]
+        wires = json.loads(exported.read_text())
+        publics = ([int(wires[i]) for i in wire_indices(STATEMENT_WIRES)]
+                   + [int(witness[k]) for k in STATEMENT_INPUTS])
+        beta, gamma, alpha = (int(wires[i]) for i in wire_indices(COMPRESSION_WIRES))
+        assert gamma == w.fingerprint((alpha + beta) % w.P, publics), name
     RESULTS.append({"name": name, "accepted": expected,
                     "seconds": round(time.monotonic() - start, 4)})
     print("PASS", name, "accepted" if expected else "rejected", flush=True)
@@ -173,13 +192,28 @@ def main():
     must(["npx", "snarkjs", "groth16", "verify", key, publics, proof])
     RESULTS.append({"name": "real-groth16-proof", "passed": True,
                     "prove_seconds": round(prove_seconds, 4)})
-    mutated = json.loads(publics.read_text())
-    mutated[5] = str(domain1)
-    mutated_path = WORK / "mutated-epoch-domain.json"
-    mutated_path.write_text(json.dumps(mutated))
-    rejected = run(["npx", "snarkjs", "groth16", "verify", key, mutated_path, proof])
-    assert rejected.returncode != 0 or "Invalid proof" in rejected.stdout, rejected.stdout
-    RESULTS.append({"name": "proof-rejects-mutated-epoch-domain", "passed": True})
+    # The verifier sees (beta, gamma, alpha). Recompute alpha and gamma as the
+    # pool would for a statement with one value changed; the proof must fail.
+    beta, gamma, alpha = (int(x) for x in json.loads(publics.read_text()))
+    assert alpha == w.compression_alpha(public_first), "alpha does not hash the statement"
+    assert gamma == w.fingerprint((alpha + beta) % w.P, public_first)
+    mutated_path = WORK / "mutated-public.json"
+
+    def rejects(signals, label):
+        mutated_path.write_text(json.dumps([str(x) for x in signals]))
+        rejected = run(["npx", "snarkjs", "groth16", "verify", key, mutated_path, proof])
+        assert rejected.returncode != 0 or "Invalid proof" in rejected.stdout, (label, rejected.stdout)
+
+    for index in range(10):
+        stmt = list(public_first)
+        stmt[index] = domain1 if index == 5 else (stmt[index] + 1) % w.P
+        mutated_alpha = w.compression_alpha(stmt)
+        rejects([beta, w.fingerprint((mutated_alpha + beta) % w.P, stmt), mutated_alpha],
+                f"statement[{index}]")
+    RESULTS.append({"name": "proof-rejects-each-mutated-statement-value", "passed": True})
+    rejects([(beta + 1) % w.P, gamma, alpha], "beta")
+    rejects([beta, (gamma + 1) % w.P, alpha], "gamma")
+    RESULTS.append({"name": "proof-rejects-mutated-beta-and-gamma", "passed": True})
     (WORK / "report.json").write_text(json.dumps({"cases": RESULTS}, indent=2) + "\n")
     print(f"PASS {len(RESULTS)} focused circuit/reference/proof cases", flush=True)
 

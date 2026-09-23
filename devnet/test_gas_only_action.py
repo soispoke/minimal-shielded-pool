@@ -42,7 +42,7 @@ def _spend_tx(tail):
         chain_id=1, nonce_keys=[3, 4], nonce_seq=0, sender=POOL,
         frames=[
             Frame(1, 0, int(RECENT_ROOT_ADDRESS, 16), RECENT_ROOT_FRAME_GAS, 0, b"\x00" * 72),
-            Frame(1, 3, POOL, VERIFY_FRAME_GAS, 0, b"\x00" * 256,
+            Frame(1, 3, POOL, VERIFY_FRAME_GAS, 0, b"\x00" * 288,
                   state_limit=VERIFY_FRAME_STATE_GAS),
             Frame(2, 0, POOL, SETTLE_FRAME_GAS, 0, settlement(),
                   state_limit=SETTLE_FRAME_STATE_GAS),
@@ -101,7 +101,7 @@ def run_broadcast_case(simulation, receipt, action, rpc_calls, allow_failed_clai
                 protocol_nonces=[3, 4], proof_verify=True,
                 recent_root=b"\x00" * 72, sender_override=POOL,
                 max_fee_override=10, max_priority_override=1,
-                frame0_data=b"\x00" * 256, allow_failed_claim=allow_failed_claim,
+                frame0_data=b"\x00" * 288, allow_failed_claim=allow_failed_claim,
                 action=action,
             )
     finally:

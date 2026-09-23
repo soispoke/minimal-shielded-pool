@@ -375,7 +375,7 @@ case("validation-limits-raised-accepted",
           mutate=both(limits(0, execution=50_000), limits(1, execution=400_000, state=300_000))))
 for label, frame, change in [
         ("recent-root-execution", 0, limits(0, execution=5_000)),
-        ("proof-execution", 1, limits(1, execution=250_000)),
+        ("proof-execution", 1, limits(1, execution=200_000)),
         ("proof-state", 1, limits(1, state=VERIFY_FRAME_STATE_GAS - 1))]:
     case("validation-limit-too-low-" + label, spend("too-low-" + label, initial, rejected=True,
          error=f"VERIFY frame {frame}", mutate=change))
@@ -390,6 +390,28 @@ for label, change in [("recent-root-execution", limits(0, execution=100_000)),
                       ("proof-state", limits(1, state=300_000))]:
     case("validation-limit-raised-beyond-fee-" + label, spend("beyond-fee-" + label, initial,
          rejected=True, error=POOL_VERIFY, mutate=change, max_fee=fee_price))
+
+# Hybrid compression: the proof binds the ten statement values through alpha
+# and gamma, which the pool recomputes from the settlement calldata, and
+# through beta, which follows the proof in frame 1. Changing any one statement
+# value, or beta, makes the withdrawal invalid in the pool's VERIFY frame; a
+# beta outside the field is refused before the verifier runs.
+def bump_word(frame, offset, delta=1):
+    def change(frames):
+        data = bytearray(frames[frame].data)
+        value = int.from_bytes(data[offset:offset + 32], "big") + delta
+        data[offset:offset + 32] = value.to_bytes(32, "big")
+        frames[frame].data = bytes(data)
+    return change
+SETTLE_WORDS = {"nf1": 132, "nf2": 164, "out-cm1": 196, "out-cm2": 228, "root": 4, "domain": 100,
+                "public-amount": 260, "fee": 292, "recipient": 324, "authorizer": 356}
+for field, offset in SETTLE_WORDS.items():
+    case(f"compression-statement-{field}-changed-rejected", spend(f"changed-{field}", initial,
+         rejected=True, error=POOL_VERIFY, mutate=bump_word(2, offset)))
+case("compression-beta-changed-rejected", spend("changed-beta", initial, rejected=True,
+     error=POOL_VERIFY, mutate=bump_word(1, 256)))
+case("compression-beta-outside-field-rejected", spend("beta-outside-field", initial, rejected=True,
+     error=POOL_VERIFY, mutate=bump_word(1, 256, w.P)))
 
 # Two independently signed private transfers are reusable policy fixtures.
 policy_a = duplicate

@@ -124,12 +124,13 @@ def spend_args(entry):
 
 
 def proof_bytes(entry):
-    """The raw 256-byte proof (pA || pB || pC in snarkjs calldata word order):
-    frame 0's calldata. The frame-0 verifier reads these eight words directly;
-    settlement never carries them."""
+    """The proof frame's 288 bytes: the Groth16 proof (pA || pB || pC in
+    snarkjs calldata word order) followed by hybrid compression's beta. The
+    pool recomputes alpha and gamma from the settlement calldata; settlement
+    never carries the proof."""
     p = entry["proof"]
     words = [p["pA"][0], p["pA"][1], p["pB"][0][0], p["pB"][0][1],
-             p["pB"][1][0], p["pB"][1][1], p["pC"][0], p["pC"][1]]
+             p["pB"][1][0], p["pB"][1][1], p["pC"][0], p["pC"][1], entry["beta"]]
     return b"".join(int(w, 16).to_bytes(32, "big") for w in words)
 
 
