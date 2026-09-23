@@ -151,10 +151,11 @@ extension neither repairs that blocker nor provides full-spend atomicity.
   phase-1 provenance must be checked separately.
 - Correct ethrex v23 implementations of EIP-8141, EIP-8250, EIP-8272 and
   EIP-7843 at the pins the activation manifest records.
-- An explicitly supported verification budget of at least 352,800 gas: the
-  recent-root verifier frame's 30,000, the proof frame's 320,000, and 2,800 for
-  the signature. The published EIP-8141 public-mempool value is 100,000 and is
-  insufficient.
+- An explicitly supported verification budget covering what wallets declare:
+  280,800 gas by default, the recent-root frame's 8,000, the proof frame's
+  270,000 and 2,800 for the signature. The dispatcher does not pin the two
+  validation frames, so wallets can raise these after a repricing. The
+  published EIP-8141 public-mempool value is 100,000 and is insufficient.
 - A fork-scoped proof that the settlement limits cover all cold-state, rollover,
   credit, proxy, and static-call paths. The current profile declares 2,000,000
   execution gas and 550,000 state gas. Native testing on ethrex `247e2dd2`
@@ -193,11 +194,12 @@ zero authorizers, and recipient mismatches. The envelope vector mutates 48
 signed transfer components, 56 signed withdrawal components, 57 signed
 gas-only tails, and 57 signed custom withdrawal tails.
 
-The position-bound note suite passes 30 native scenarios using 23 real Groth16
+The position-bound note suite passes 34 native scenarios using 23 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
-proof rebuilding, settlement gas boundaries, and the fourth-frame rules,
-including rejection of a `SENDER` tail that repeats settlement. The highest measured settlement execution cost is 1,423,709;
+proof rebuilding, settlement gas boundaries, the fourth-frame rules,
+including rejection of a `SENDER` tail that repeats settlement, and the
+unpinned validation-frame limits. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
 additional margin, not a formal proof of a universal bound. These runs use
 ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where

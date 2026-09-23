@@ -17,7 +17,7 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 30 native scenarios and two client-policy tests, using
+The recorded run passes 34 native scenarios and two client-policy tests, using
 23 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
@@ -39,6 +39,12 @@ tail carrying value is rejected statically by the client, as EIP-8141 requires,
 before the dispatcher's own value check runs. Removing the dispatcher's
 mode check lets the repeated settlement through with twice the proven credit,
 which this suite then reports as a failure.
+
+Four scenarios cover the validation-frame limits, which the dispatcher no longer
+pins. A withdrawal declaring far more than the defaults is accepted. Declaring
+less than the recent-root frame's execution, the proof frame's execution or the
+proof frame's state gas needs makes the transaction invalid in that frame, with
+state unchanged.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one
 branch, restores the checkpoint, and reverses two deposit transactions. The
@@ -66,5 +72,5 @@ mempool insertion with two independently signed, disjoint spends. It requires
 zero sender-storage reads and both transactions to remain pending, and includes
 storage-read and overlapping-key negative controls. This is not a test of full
 blockchain admission, inclusion-list omission processing, block import or
-networking. The 352,800 declared validation budget still exceeds the standard
+networking. The 280,800 declared validation budget still exceeds the standard
 100,000 public-mempool default and requires the existing testnet profile.
