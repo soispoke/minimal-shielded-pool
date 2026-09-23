@@ -352,8 +352,8 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     skips that default and leaves withdrawalCredit. Any spend may instead
     append one explicitly authorized DEFAULT call. Resource limits are
     checked on the assembled transaction so they include the proof,
-    signatures, other frames and encoding overhead. A zero-public-amount
-    tail cannot target the pool.
+    signatures, other frames and encoding overhead. Any spend's tail may
+    target the pool, for example to publish the root its outputs create.
     """
     selector = _keccak(f"settle({SPEND_TUPLE})".encode())[:4]
     if len(settle_calldata) != 4 + 12 * 32 or settle_calldata[:4] != selector:
@@ -387,8 +387,6 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     state = action["state_limit"]
     if not isinstance(target, int) or not 0 < target < 1 << 160:
         raise ValueError("action target must be a nonzero address")
-    if amount == 0 and target == pool:
-        raise ValueError("action target must be a nonzero non-pool address")
     if not isinstance(data, bytes):
         raise ValueError("action calldata must be bytes")
     if not isinstance(execution, int) or execution <= 0:

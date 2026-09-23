@@ -58,8 +58,9 @@ second spend of either note. A spend has three frames and an optional fourth:
    would refuse. Its gas limit must cover the worst tree shape, because running
    out after approval burns the notes.
 4. Optional `DEFAULT` call: any nonzero target and calldata, with zero value
-   and flags. Only a withdrawal may target the pool; its usual call is
-   `claimWithdrawal(recipient)`.
+   and flags, including the pool. A withdrawal usually calls
+   `claimWithdrawal(recipient)`, and a transfer can call
+   `publishEpochRoot(epoch)` so its new notes are spendable from the next slot.
 
 The dispatcher pins the data length of the first three frames and the
 settlement frame's gas limits. The validation frames' gas limits are wallet

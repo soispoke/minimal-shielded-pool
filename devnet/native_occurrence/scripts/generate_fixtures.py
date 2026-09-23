@@ -344,10 +344,14 @@ for label, mutate in [
         ("settlement-atomic-batch-with-tail", settle_field("flags", 4)),
         ("fifth-frame", lambda frames: frames.append(account_tail()))]:
     case("tail-rejected-" + label, spend("tail-" + label, initial, rejected=True, error=POOL_VERIFY, mutate=mutate))
-case("tail-rejected-pool-target-on-transfer",
-    spend("transfer-pool-tail", duplicate, rejected=True, error=POOL_VERIFY,
-          mutate=lambda frames: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0,
-              keccak(b"claimWithdrawal(address)")[:4] + word(EOA), CLAIM_FRAME_STATE_GAS))))
+# Any spend's tail may call the pool, but it reaches only what any caller can.
+# A transfer's tail that repeats the settlement call (which requires the pool
+# as sender) or the proof call (which works only as frame 1) reverts on its
+# own, and the settlement stands with its keys consumed once.
+for label, index in [("settlement", 2), ("verify-entry", 1)]:
+    case(f"tail-pool-call-repeating-{label}-on-transfer-reverts",
+        spend(f"transfer-pool-tail-{label}", duplicate, expected_tree=private_tree, statuses=[1, 1, 1, 0],
+              mutate=lambda frames, i=index: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, frames[i].data))))
 # EIP-8141 statically forbids value outside SENDER frames, so the client
 # rejects this before the dispatcher's own value check can run.
 case("tail-rejected-nonzero-value", spend("tail-nonzero-value", initial, rejected=True,
@@ -388,6 +392,16 @@ policy_a = duplicate
 policy_b = prove("policy-second", BASE, NB, 1, outputs=[(NC["inner"], 50*ETH//100), (ND["inner"], 40*ETH//100)])
 save("policy-first", signed(policy_a))
 save("policy-second", signed(policy_b))
+
+# What a pool tail is for: a transfer that publishes its own root, so the note it
+# creates can be spent from the next slot without a separate publication. Proved
+# last so the earlier proofs keep their witnesses.
+publish_call = keccak(b"publishEpochRoot(uint64)")[:4] + word(0)
+created_copy = prove("tail-published-copy", private_tree, NB, 2, root_slot=101)
+case("tail-transfer-publishes-root-then-created-note-withdrawn",
+    spend("transfer-publishes-root", duplicate, expected_tree=private_tree, statuses=[1, 1, 1, 1],
+          mutate=lambda frames: frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, publish_call, CLAIM_FRAME_STATE_GAS))),
+    spend("withdraw-note-from-tail-root", created_copy, 102, paid=NB["value"]-FEE))
 
 (OUT / "rejector-runtime.hex").write_text("0x60006000fd\n")
 (OUT / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")

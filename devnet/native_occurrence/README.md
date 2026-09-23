@@ -17,8 +17,8 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 37 native scenarios and two client-policy tests, using
-23 real Groth16 proofs. The highest measured settlement execution cost is
+The recorded run passes 39 native scenarios and two client-policy tests, using
+24 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
 each transaction hash and per-frame results.
@@ -29,13 +29,16 @@ replay against a later root and slot, epoch/domain changes, and failed recipient
 calls retaining their credit. Rejected transactions must leave the complete
 EVM account state unchanged, including nonce keys and balances.
 
-Ten scenarios cover the optional fourth frame. A withdrawal without a tail
+Twelve scenarios cover the optional fourth frame. A withdrawal without a tail
 keeps its credit, and a withdrawal or transfer may end with a generic call to
-another account. Each rejected case breaks one rule of an otherwise valid
-spend and must fail in the pool's `VERIFY` frame: a `SENDER` tail repeating the
-settlement, a zero target, an approval flag on the tail, an atomic batch
-joining settlement and tail, a fifth frame, and a pool target on a transfer. A
-tail carrying value is rejected statically by the client, as EIP-8141 requires,
+another account. A transfer may also call the pool: one publishes its own
+root, and the note it created is then withdrawn against that root from the
+next slot. Tails that call the pool to repeat the settlement or the proof
+check revert on their own, and the settlement stands with its keys consumed
+once. Each rejected case breaks one rule of an otherwise valid spend and must
+fail in the pool's `VERIFY` frame: a `SENDER` tail repeating the settlement, a
+zero target, an approval flag on the tail, an atomic batch joining settlement
+and tail, and a fifth frame. A tail carrying value is rejected statically by the client, as EIP-8141 requires,
 before the dispatcher's own value check runs. Removing the dispatcher's
 mode check lets the repeated settlement through with twice the proven credit,
 which this suite then reports as a failure.
