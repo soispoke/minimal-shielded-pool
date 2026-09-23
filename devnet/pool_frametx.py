@@ -311,12 +311,19 @@ def check_tx_resource_limits(tx):
 
 # A withdrawal credit is paid by an empty-calldata call to its recipient, and
 # there is no claim to another address. The pool has no receive path and these
-# system contracts revert on value, so a credit to any of them is stranded.
-# Nobody controls the entry point, so a claim to it would lose the ETH.
+# system contracts revert on that call, so a credit to any of them is stranded.
+# Nobody controls the entry point, so a claim to it would lose the ETH. These
+# are known protocol addresses only: any contract that rejects a plain ETH
+# transfer strands a credit the same way.
 UNCLAIMABLE_RECIPIENTS = {
-    0xAA: "EIP-8141 entry point",
-    0x8250: "EIP-8250 nonce manager",
-    0x8272: "EIP-8272 recent root contract",
+    0xAA: "the EIP-8141 entry point, which no one controls",
+    0x8141: "the EIP-8141 expiry verifier",
+    0x8250: "the EIP-8250 nonce manager",
+    0x8272: "the EIP-8272 recent root contract",
+    0x000F3DF6D732807EF1319FB7B8BB8522D0BEAC02: "the EIP-4788 beacon roots contract",
+    0x0000F90827F1C53A10CB7A02335B175320002935: "the EIP-2935 history contract",
+    0x00000961EF480EB55E80D19AD83579A64C007002: "the EIP-7002 withdrawal request contract",
+    0x0000BBDDC7CE488642FB579F8B00F3A590007251: "the EIP-7251 consolidation request contract",
 }
 
 
@@ -342,7 +349,7 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
         raise ValueError("public amount and recipient must both be zero or both nonzero")
     if amount and (recipient == pool or recipient in UNCLAIMABLE_RECIPIENTS):
         what = UNCLAIMABLE_RECIPIENTS.get(recipient, "the pool itself")
-        raise ValueError(f"withdrawal recipient cannot receive the claim: {what}")
+        raise ValueError(f"withdrawal recipient would strand the credit: {what}")
     if omit:
         if action is not None:
             raise ValueError("omit cannot be combined with a custom action")
