@@ -154,17 +154,34 @@ def expected_domain(chain_id, pool, epoch=0):
     return int.from_bytes(_keccak(preimage), "big") % SCALAR_FIELD
 
 
-def check_deployed_profile(url, pool, configured_chain=None):
-    """Refuse a pool whose deployed logic does not use this profile's domain.
+DISPATCHER_INITCODE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "build", "shielded_pool_dispatcher_init.hex")
 
-    A config's profile label is not evidence of the deployed code. A pool from
-    before position-bound notes exposes `domain()` and reverts on
-    `domain(uint64)`; shielding into it would create notes this tooling cannot
-    spend, and spends against it fail in VERIFY. A configured chain must also
-    match the RPC, so a deposit cannot land in a same-address pool elsewhere."""
+
+def check_deployed_profile(url, pool, configured_chain, logic, verifier):
+    """Refuse a pool that is not this profile's dispatcher on the configured chain.
+
+    A config's profile label is not evidence of the deployed code, and the
+    previous profile shares this one's domain formula, so `domain(uint64)`
+    cannot tell them apart. The pool's code must be exactly what the committed
+    dispatcher initcode deploys when linked to the logic and verifier the config
+    records, which run_live_dispatcher.sh verifies at deployment. Otherwise a
+    deposit could land in a pool whose VERIFY rejects every spend this tooling
+    builds. A configured chain must also match the RPC, so a deposit cannot land
+    in a same-address pool elsewhere."""
     chain_id = int(rpc(url, "eth_chainId", []), 16)
-    if configured_chain is not None and chain_id != configured_chain:
+    if chain_id != configured_chain:
         raise SystemExit(f"RPC is on chain {chain_id}, but the config names chain {configured_chain}")
+    with open(DISPATCHER_INITCODE) as f:
+        initcode = f.read().strip() + f"{logic:064x}{verifier:064x}"
+    try:
+        expected = rpc(url, "eth_call", [{"data": initcode}, "latest"])
+    except RuntimeError as error:
+        raise SystemExit(f"could not simulate the {POOL_PROFILE} dispatcher deployment: {error}") from None
+    code = rpc(url, "eth_getCode", [f"0x{pool:040x}", "latest"])
+    if len(expected) <= 2 or code.lower() != expected.lower():
+        raise SystemExit(f"pool 0x{pool:040x} is not the {POOL_PROFILE} dispatcher linked to "
+                         f"the configured logic 0x{logic:040x} and verifier 0x{verifier:040x}")
     data = "0x" + (_keccak(b"domain(uint64)")[:4] + bytes(32)).hex()
     try:
         result = rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"])
@@ -658,9 +675,17 @@ def main():
     cfg = json.loads(open(cfg_path).read())
     fix = json.loads(open(fix_path).read())
     pool = int(cfg["pool"], 16)
-    if op in ("transfer", "withdraw"):
+    # A config for another profile describes a pool this tooling cannot spend from,
+    # so neither shield into it nor spend against it. The label is only a first
+    # check before any RPC; check_deployed_profile compares the deployed code.
+    if op in ("shield", "transfer", "withdraw"):
         if cfg.get("profile") != POOL_PROFILE:
-            raise SystemExit(f"spends require profile={POOL_PROFILE}; use a fresh deployment of this profile")
+            raise SystemExit(f"{op} requires profile={POOL_PROFILE}; this config names "
+                             f"{cfg.get('profile')!r}. Use a fresh deployment of this profile")
+        missing = [field for field in ("chainId", "logic", "verifier") if field not in cfg]
+        if missing:
+            raise SystemExit(f"{op} requires the config to record {', '.join(missing)}")
+    if op in ("transfer", "withdraw"):
         if cfg.get("claimGas") != CLAIM_FRAME_GAS or cfg.get("claimStateGas") != CLAIM_FRAME_STATE_GAS:
             raise SystemExit(f"spends require claimGas/claimStateGas matching {POOL_PROFILE}")
     omit_tail = "--no-tail" in sys.argv
@@ -757,7 +782,7 @@ def main():
     if allow_failed_claim and omit_tail:
         raise SystemExit("--allow-failed-claim cannot be combined with --no-tail")
     if op in ("shield", "transfer", "withdraw"):
-        check_deployed_profile(url, pool, cfg.get("chainId"))
+        check_deployed_profile(url, pool, cfg["chainId"], int(cfg["logic"], 16), int(cfg["verifier"], 16))
 
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a

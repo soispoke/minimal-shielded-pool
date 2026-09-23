@@ -112,7 +112,7 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
     entries[name] = entry
     return entry
 
-def signed(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None):
+def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2):
     source = keccak(POOL.to_bytes(20, "big") + word(int(entry["epoch"])))
     recent = source + int(entry["root_slot"]).to_bytes(8, "big") + word(int(entry["root"], 16))
     settle = builder.cast_calldata(f"settle({builder.SPEND_TUPLE})", builder.spend_args(entry))
@@ -123,16 +123,19 @@ def signed(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None):
         frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, keccak(b"claimWithdrawal(address)")[:4] + word(int(entry["recipient"], 16)), CLAIM_FRAME_STATE_GAS))
     if mutate is not None: mutate(frames)
     tx = FrameTx(CHAIN, sorted([int(entry["nf1"], 16), int(entry["nf2"], 16)]), 0, POOL, frames,
-        [FrameSig(1, int(entry["authorizer"], 16), b"", b"")], 1, 2)
+        [FrameSig(1, int(entry["authorizer"], 16), b"", b"")], 1, max_fee)
     sig = keys.PrivateKey(bytes.fromhex(entry["authorizer_private_key"].removeprefix("0x"))).sign_msg_hash(tx.sig_hash())
     tx.signatures[0].signature = bytes([sig.v]) + word(sig.r) + word(sig.s)
-    return tx.raw()
+    return tx
+
+def signed(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2):
+    return frame_tx(entry, settle_gas, mutate, max_fee).raw()
 
 def mapping(key, slot): return "0x" + keccak(word(key) + word(slot)).hex()
 def key_slots(entry, value):
     return {"0x" + keccak(word(POOL) + word(int(entry[k], 16))).hex(): str(value) for k in ("nf1", "nf2")}
 def spend(name, entry, slot=101, rejected=False, failed_claim=False, paid=None, expected_tree=None,
-          mutate=None, statuses=None, error=None):
+          mutate=None, statuses=None, error=None, max_fee=2):
     storage = {addr(0x8250): key_slots(entry, 0 if rejected else 1)}
     credit = int(entry["public_amount"]) if failed_claim else 0
     storage[addr(POOL)] = {mapping(int(entry["recipient"], 16), 23): str(credit)}
@@ -147,7 +150,7 @@ def spend(name, entry, slot=101, rejected=False, failed_claim=False, paid=None, 
         if paid is not None: expect["balances"] = {addr(EOA): str(paid)}
         if statuses is not None: expect["statuses"] = statuses
     if error is not None: expect["error_contains"] = error
-    return save(name, signed(entry, mutate=mutate), **expect)
+    return save(name, signed(entry, mutate=mutate, max_fee=max_fee), **expect)
 
 cases = []
 def case(name, *steps): cases.append({"name": name, "transactions": list(steps)})
@@ -349,6 +352,36 @@ case("tail-rejected-pool-target-on-transfer",
 # rejects this before the dispatcher's own value check can run.
 case("tail-rejected-nonzero-value", spend("tail-nonzero-value", initial, rejected=True,
     error="non-zero value only allowed in SENDER mode", mutate=tail_field("value", 1)))
+
+# Validation-frame limits are wallet defaults, not dispatcher pins. Raising them
+# is accepted; a limit below what a frame needs makes the transaction invalid
+# before approval, so nonce keys and balances stay unchanged.
+def limits(frame, execution=None, state=None):
+    def change(frames):
+        if execution is not None: frames[frame].gas_limit = execution
+        if state is not None: frames[frame].state_limit = state
+    return change
+def both(*changes): return lambda frames: [change(frames) for change in changes]
+case("validation-limits-raised-accepted",
+    spend("validation-limits-raised", initial, paid=ETH-FEE,
+          mutate=both(limits(0, execution=50_000), limits(1, execution=400_000, state=300_000))))
+for label, frame, change in [
+        ("recent-root-execution", 0, limits(0, execution=5_000)),
+        ("proof-execution", 1, limits(1, execution=250_000)),
+        ("proof-state", 1, limits(1, state=VERIFY_FRAME_STATE_GAS - 1))]:
+    case("validation-limit-too-low-" + label, spend("too-low-" + label, initial, rejected=True,
+         error=f"VERIFY frame {frame}", mutate=change))
+
+# The pool approves payment only if the proof's fee covers the maximum cost of
+# every declared limit. At a price where the default limits just fit the fee, the
+# same spend is accepted, and raising either validation frame's limit pushes the
+# maximum cost past the fee, so the pool refuses it before approval.
+fee_price = FEE // frame_tx(initial).total_gas_limit() - 1_000_000
+case("validation-fee-covers-defaults", spend("fee-covers-defaults", initial, paid=ETH-FEE, max_fee=fee_price))
+for label, change in [("recent-root-execution", limits(0, execution=100_000)),
+                      ("proof-state", limits(1, state=300_000))]:
+    case("validation-limit-raised-beyond-fee-" + label, spend("beyond-fee-" + label, initial,
+         rejected=True, error=POOL_VERIFY, mutate=change, max_fee=fee_price))
 
 # Two independently signed private transfers are reusable policy fixtures.
 policy_a = duplicate

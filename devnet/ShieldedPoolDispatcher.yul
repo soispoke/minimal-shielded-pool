@@ -165,12 +165,18 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(txParam(0x0E), 2)) { fail(errKeys()) }
                 if txParam(0x01) { fail(errKeys()) }
 
+                // The validation frames' gas limits are not pinned, except frame 0's
+                // zero state limit, which identifies it below. A limit that is too
+                // low only makes the transaction invalid, before any nonce key is
+                // consumed, and the fee check below covers whatever is declared.
+                // Wallets choose the limits and can raise them after a repricing,
+                // within the verifier call's fixed 500000 gas.
+
                 // Frame 0: EIP-8272's canonical recent-root verifier, exactly as the
                 // spec identifies a completed one: resolved target, mode, flags,
                 // state budget, one tuple's worth of data, and status success. The
                 // protocol ran RECENT_ROOT_CODE over the tuple before this frame.
                 if iszero(eq(frameParam(0, 0x00), recentRootAddress())) { fail(errRoot()) }
-                if iszero(eq(frameParam(0, 0x01), 30000)) { fail(errShape()) }
                 if iszero(eq(frameParam(0, 0x02), 1)) { fail(errRoot()) }
                 if frameParam(0, 0x03) { fail(errRoot()) }
                 if iszero(eq(frameParam(0, 0x04), 72)) { fail(errRoot()) }
@@ -190,11 +196,6 @@ object "ShieldedPoolDispatcher" {
 
                 // Frame 1: proof-carrying VERIFY by the pool.
                 if iszero(eq(frameParam(1, 0x00), address())) { fail(errShape()) }
-                if iszero(eq(frameParam(1, 0x01), 320000)) { fail(errShape()) }
-                // This profile pins EIP-8037 CPSB to 1530. EIP-8250 charges
-                // 64 * CPSB when payment approval creates a keyed nonce slot.
-                // Every spend creates two slots, so the total is 195840.
-                if iszero(eq(frameParam(1, 0x09), 195840)) { fail(errShape()) }
                 if iszero(eq(frameParam(1, 0x02), 1)) { fail(errShape()) }
                 if iszero(eq(frameParam(1, 0x03), 3)) { fail(errShape()) }
                 if iszero(eq(frameParam(1, 0x04), 256)) { fail(errShape()) }
@@ -205,9 +206,9 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(frameParam(2, 0x01), 2000000)) { fail(errShape()) }
                 // Settlement's state growth is bounded at five new slots
                 // (finalized/current root, epoch counter, two subtrees, withdrawal
-                // credit); 550000 covers 5 * 64 * 1530 with margin. Pinned for the
-                // same reason as the execution budget: unpinned, it is the pool's
-                // money.
+                // credit); 550000 covers 5 * 64 * 1530 with margin. Pinned like the
+                // execution budget, because running out of gas after approval would
+                // burn the notes.
                 if iszero(eq(frameParam(2, 0x09), 550000)) { fail(errShape()) }
                 if iszero(eq(frameParam(2, 0x02), 2)) { fail(errShape()) }
                 if frameParam(2, 0x03) { fail(errShape()) }

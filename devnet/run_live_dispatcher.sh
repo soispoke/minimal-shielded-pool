@@ -118,10 +118,15 @@ echo "==> deployment-bound proofs"
 python3 ../wallet/gen_smoke.py --random --chain-id="$CHAIN_ID" --pool-address="$POOL" \
   --recipient="$REJECTER" --output="$SMOKE_OUTPUT"
 
-python3 - "$RPC" "$POOL" <<'PY'
-import json, sys
+# The shield below checks the label, chain, and deployed code against this stub, so it
+# carries the profile and the logic and verifier verified above.
+MANIFEST_PATH=$MANIFEST python3 - "$RPC" "$POOL" "$LOGIC" "$VERIFIER" <<'PY'
+import json, os, sys
+manifest = json.load(open(os.environ["MANIFEST_PATH"]))["profile"]
 with open("deploy_config.json", "w") as f:
-    json.dump({"rpc": sys.argv[1], "pool": sys.argv[2]}, f, indent=1)
+    json.dump({"rpc": sys.argv[1], "pool": sys.argv[2], "logic": sys.argv[3],
+               "verifier": sys.argv[4], "chainId": manifest["chain_id"],
+               "profile": manifest["wire_profile"]}, f, indent=1)
 PY
 
 echo "==> shield fixture note"

@@ -8,9 +8,10 @@ that is not merely a re-encoding, it changes what has to be bounded:
 
   * the state growth the settlement performs leaves the execution budget, so the execution
     cap can drop by exactly the state-growth charge it used to have to cover;
-  * the state budget becomes a separate declared number the dispatcher must pin, because on
-    the current spec `max_gas` includes the declared state budgets and the pool is the payer. An unpinned
-    `limits.state` is an unbounded charge against the pool.
+  * the state budget becomes a separate declared number, and on the current spec the
+    transaction's maximum cost includes every declared state budget. The pool is the payer,
+    so the dispatcher approves payment only when the proof's fee covers that maximum cost.
+    Settlement's state budget is still pinned, because running out after approval burns notes.
 
 The execution check adds a conservative write/call margin to the maximum
 measured native case. Tree operation counts are checked over every index;
@@ -31,6 +32,7 @@ from gas_profile import (  # noqa: E402
     KEYED_NONCE_FIRST_USE_STATE_GAS,
     MAX_VERIFY_STATE_GAS,
     POOL_PROFILE,
+    PREVIOUS_POOL_PROFILE,
     RECENT_ROOT_FRAME_GAS,
     REQUIRED_VERIFY_BUDGET,
     SETTLE_FRAME_GAS,
@@ -45,17 +47,24 @@ PRE_PR_12279_KEYED_NONCE_EXECUTION_GAS = 2 * 20_000
 # Measured on a devnet running EIP-8250 at f3079a09e8 and EIP-8272 at 824cbc0b0e:
 # the transfer's proof frame reported 254,685 and the withdraw's 254,712. The drop
 # from the pre-12279 figure is the keyed-nonce first use leaving the execution
-# dimension for the state one, which is the whole point of that PR.
-POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 254_712
+# dimension for the state one, which is the whole point of that PR. The activation
+# manifest records 255,011, the largest proof-frame execution observed since.
+POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS = 255_011
+# The proof frame needs a larger limit than it uses. Each nested call keeps back 1/64 of
+# the gas it could forward (EIP-150), once from the dispatcher to the verifier and once
+# from the verifier to the pairing precompile. On native ethrex 247e2dd2 a withdrawal
+# uses 254,814 but needs a limit of 261,521 (261,520 fails). Below that the verifier
+# runs out of gas and the dispatcher reports an invalid proof.
+MIN_WORKING_VERIFY_FRAME_GAS = 261_521
 # The pool grammar permits exactly one 72-byte recent-root tuple, pinned by the
 # dispatcher's `frameParam(0, 0x04) == 72`. The measured verifier-frame execution cost
-# for that shape was 5,579 gas, so the pinned 30,000-gas limit covers it.
+# for that shape was 5,579 gas, so the 8,000-gas wallet default covers it.
 #
 # This figure says nothing about a frame carrying the sixteen tuples EIP-8272 allows.
 # An earlier revision claimed it did, on a measurement that repeated ONE tuple sixteen
 # times: identical (source_id, slot) pairs share a storage key, so that run paid one
 # cold SLOAD and fifteen warm ones. Sixteen distinct roots are sixteen cold SLOADs,
-# 33,600 gas before the rest of the verifier runs, which does not fit 30,000 at all.
+# 33,600 gas before the rest of the verifier runs, which did not fit the old 30,000 budget.
 MAX_OBSERVED_RECENT_ROOT_FRAME_GAS = 5_579
 CONSERVATIVE_VERIFY_STATE_BOUND = (
     SPEND_NONCE_KEY_COUNT * KEYED_NONCE_FIRST_USE_STATE_GAS
@@ -84,6 +93,7 @@ CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND = (_WITH_WRITE_MARGIN * 64 * 64 + 63 * 6
 CONSERVATIVE_SETTLEMENT_STATE_BOUND = MAX_NEW_STORAGE_SLOTS * EIP_8037_NEW_SLOT_STATE_GAS
 
 # What the frozen profile had to declare for the same work, as one number.
+FROZEN_VERIFY_FRAME_GAS = 320_000
 FROZEN_SETTLE_FRAME_GAS = 2_000_000
 
 
@@ -106,14 +116,23 @@ def check_tree_shapes():
     return {"no_rollover": maxima[False], "rollover": maxima[True]}
 
 
+def check_deployment_record(cfg):
+    assert cfg["recentRootGas"] == RECENT_ROOT_FRAME_GAS
+    assert cfg["verifyGas"] == VERIFY_FRAME_GAS
+    assert cfg["verifyStateGas"] == VERIFY_FRAME_STATE_GAS
+    assert cfg["settleGas"] == SETTLE_FRAME_GAS
+    assert cfg["settleStateGas"] == SETTLE_FRAME_STATE_GAS
+    assert cfg["claimGas"] == CLAIM_FRAME_GAS
+    assert cfg["claimStateGas"] == CLAIM_FRAME_STATE_GAS
+
+
 def main():
     tree_shapes = check_tree_shapes()
-    # Historical measurements bound the unchanged verifier shape. The exact
-    # position-notes deployment is checked by devnet/native_occurrence.
-    assert PRE_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS < VERIFY_FRAME_GAS
-    # The measured figures must fit the budgets the dispatcher pins, or a spend that
-    # simulates fine halts mid-frame on a chain with slightly different access costs.
+    # The pre-PR 12279 figure charged keyed-nonce creation as execution gas and no
+    # longer applies. The measured figures must fit the wallet defaults, or a spend
+    # that simulates fine halts mid-frame on a chain with slightly different costs.
     assert POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS < VERIFY_FRAME_GAS
+    assert MIN_WORKING_VERIFY_FRAME_GAS < VERIFY_FRAME_GAS
     assert MAX_OBSERVED_RECENT_ROOT_FRAME_GAS < RECENT_ROOT_FRAME_GAS
     assert CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND < SETTLE_FRAME_GAS
     assert CONSERVATIVE_SETTLEMENT_STATE_BOUND < SETTLE_FRAME_STATE_GAS
@@ -128,29 +147,31 @@ def main():
     assert VERIFY_FRAME_STATE_GAS == CONSERVATIVE_VERIFY_STATE_BOUND
     # EIP-8272: the recent-root verifier frame joins the public mempool's verify budget
     # and the prefix's state budgets stay under EIP-8141's MAX_VERIFY_STATE_GAS. One
-    # tuple costs the predeploy's cold entry plus two keccaks and a cold SLOAD, well
-    # under the pinned frame budget.
+    # tuple costs the predeploy's cold entry plus two keccaks and a cold SLOAD, under
+    # the wallet default.
     assert REQUIRED_VERIFY_BUDGET == RECENT_ROOT_FRAME_GAS + VERIFY_FRAME_GAS + 2_800
     assert REQUIRED_VERIFY_BUDGET <= HEGOTA_TESTNET_MAX_VERIFY_GAS
     assert VERIFY_FRAME_STATE_GAS <= MAX_VERIFY_STATE_GAS
 
     declared_split = (VERIFY_FRAME_GAS + VERIFY_FRAME_STATE_GAS
                    + SETTLE_FRAME_GAS + SETTLE_FRAME_STATE_GAS)
-    declared_single = VERIFY_FRAME_GAS + FROZEN_SETTLE_FRAME_GAS
+    declared_single = FROZEN_VERIFY_FRAME_GAS + FROZEN_SETTLE_FRAME_GAS
     extra_over_frozen = declared_split - declared_single
     # Execution pin returned to 2M because 1.4M missed long-carry. The extra
-    # versus the frozen single-dimension 2M budget is the two state dimensions.
-    assert extra_over_frozen == VERIFY_FRAME_STATE_GAS + SETTLE_FRAME_STATE_GAS
+    # versus the frozen single-dimension budget is the two state dimensions,
+    # less what the proof frame's lower wallet default saves.
+    assert extra_over_frozen == (VERIFY_FRAME_STATE_GAS + SETTLE_FRAME_STATE_GAS
+                                 - (FROZEN_VERIFY_FRAME_GAS - VERIFY_FRAME_GAS))
     assert EIP7825_TX_GAS_CAP == 16_777_216
 
     # The dispatcher must enforce the same settlement pins the wallet emits. Yul
     # cannot import the Python module, so check its unavoidable literals here.
     # The optional DEFAULT tail has no pool-specific gas or calldata ceiling.
     dispatcher = (ROOT / "devnet" / "ShieldedPoolDispatcher.yul").read_text()
+    # The validation frames' limits are wallet defaults, not dispatcher pins.
+    for unpinned in ("frameParam(0, 0x01)", "frameParam(1, 0x01)", "frameParam(1, 0x09)"):
+        assert unpinned not in dispatcher, f"dispatcher pins {unpinned}"
     dispatcher_pins = (
-        f"if iszero(eq(frameParam(0, 0x01), {RECENT_ROOT_FRAME_GAS})) {{ fail(errShape()) }}",
-        f"if iszero(eq(frameParam(1, 0x01), {VERIFY_FRAME_GAS})) {{ fail(errShape()) }}",
-        f"if iszero(eq(frameParam(1, 0x09), {VERIFY_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
         f"if iszero(eq(frameParam(2, 0x01), {SETTLE_FRAME_GAS})) {{ fail(errShape()) }}",
         f"if iszero(eq(frameParam(2, 0x09), {SETTLE_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
     )
@@ -160,18 +181,15 @@ def main():
     assert "if gt(frameParam(3, 0x09)," not in dispatcher
     assert "if gt(frameParam(3, 0x04)," not in dispatcher
 
-    # The deployment record is a fresh deployment of this dispatcher. The
-    # builder also checks the deployed pool's domain before shielding or
-    # spending, since a profile label alone does not prove the deployed code.
+    # The deployment record describes a deployment of this profile, or still the
+    # previous one until this profile is deployed; the spend CLI refuses the latter.
     cfg = json.loads((ROOT / "devnet" / "deploy_config.json").read_text())
-    assert cfg["profile"] == POOL_PROFILE
-    assert cfg["recentRootGas"] == RECENT_ROOT_FRAME_GAS
-    assert cfg["verifyGas"] == VERIFY_FRAME_GAS
-    assert cfg["verifyStateGas"] == VERIFY_FRAME_STATE_GAS
-    assert cfg["settleGas"] == SETTLE_FRAME_GAS
-    assert cfg["settleStateGas"] == SETTLE_FRAME_STATE_GAS
-    assert cfg["claimGas"] == CLAIM_FRAME_GAS
-    assert cfg["claimStateGas"] == CLAIM_FRAME_STATE_GAS
+    if cfg["profile"] == PREVIOUS_POOL_PROFILE:
+        cfg = None
+    else:
+        assert cfg["profile"] == POOL_PROFILE
+    if cfg is not None:
+        check_deployment_record(cfg)
 
     print(json.dumps({
         "verify": {
@@ -180,6 +198,7 @@ def main():
             "pre_pr_12279_observed_execution": PRE_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS,
             "pre_pr_12279_keyed_nonce_execution_gas": PRE_PR_12279_KEYED_NONCE_EXECUTION_GAS,
             "post_pr_12279_observed_execution": POST_PR_12279_MAX_OBSERVED_VERIFY_EXECUTION_GAS,
+            "min_working_execution_limit": MIN_WORKING_VERIFY_FRAME_GAS,
             "keyed_nonce_state_bound": CONSERVATIVE_VERIFY_STATE_BOUND,
         },
         "recent_root": {

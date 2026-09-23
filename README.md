@@ -50,8 +50,8 @@ second spend of either note. A spend has three frames and an optional fourth:
    `(source_id, slot, root)` the proof uses. The slot comes from EIP-7843
    `slotNumber`.
 2. `VERIFY(pool, proof)`: the pool checks the proof, binds it to that tuple,
-   and checks the frame layout and pinned gas limits. It then approves
-   execution and payment.
+   and checks the frame layout and the settlement frame's gas limits. It then
+   approves execution and payment.
 3. `SENDER(pool, settle(Spend))`: settlement inserts the outputs and records
    any withdrawal as a credit for `recipient`. It never publishes a root or
    calls the recipient, and the pool's `VERIFY` rejects anything settlement
@@ -61,15 +61,27 @@ second spend of either note. A spend has three frames and an optional fourth:
    and flags. Only a withdrawal may target the pool; its usual call is
    `claimWithdrawal(recipient)`.
 
-The dispatcher pins the first three frames exactly:
+The dispatcher pins the data length of the first three frames and the
+settlement frame's gas limits. The validation frames' gas limits are wallet
+defaults, except the recent-root frame's state limit, which EIP-8272 requires
+to be zero. A limit that is too low only makes the transaction invalid, and
+the proof's fee covers whatever is declared. Wallets can therefore raise these
+limits after a gas repricing without a new pool, as long as the proof check
+still fits the 500,000 gas the pool forwards to the verifier. Settlement's
+limits are pinned, so a repricing that makes settlement more expensive needs a
+new pool. Wallets should keep the defaults, since a spend with different limits
+stands out.
 
 | Frame | Execution gas | State gas | Data |
 |---|---:|---:|---:|
-| Recent root | 30,000 | 0 | 72 bytes |
-| Proof | 320,000 | 195,840 | 256 bytes |
-| Settlement | 2,000,000 | 550,000 | 388 bytes |
+| Recent root | 8,000 default (uses 5,579) | 0 pinned | 72 bytes |
+| Proof | 270,000 default (uses about 255,000) | 195,840 default | 256 bytes |
+| Settlement | 2,000,000 pinned | 550,000 pinned | 388 bytes |
 
-The proof frame's state gas pays for creating the two nullifier keys.
+The proof frame needs a limit of about 262,000, although it uses about
+255,000, because each nested call keeps back 1/64 of its gas (EIP-150). Below
+that, the verifier runs out of gas and the pool reports an invalid proof. The
+proof frame's state gas pays for creating the two nullifier keys.
 
 The proof names a fresh secp256k1 authorizer, and its signature covers the
 whole transaction, including the proof, the recent-root tuple and the fourth
@@ -78,9 +90,9 @@ part stays in the pool.
 
 The wallet chooses the fourth frame's limits. Intrinsic gas plus every frame's
 execution limit, or the calldata floor when larger, must fit EIP-7825's `2^24`
-cap, of which the pool's own frames use 2.35M; state gas is budgeted
-separately. The encoded transaction must also fit ethrex's 128 KiB mempool
-limit.
+cap, of which the pool's own frames use 2.28M by default; state gas is
+budgeted separately. The encoded transaction must also fit ethrex's 128 KiB
+mempool limit.
 
 If the fourth frame fails or is left out, settlement still stands, and a
 withdrawal remains as a credit that anyone can pay out later with
@@ -115,25 +127,33 @@ wallet/gen_smoke.py
 
 ## Deployment
 
-This is pool profile `position-notes-v1`. It follows current EIP-8141,
+This is pool profile `position-notes-v2`. It follows current EIP-8141,
 EIP-8250 at `f3079a09e8` and EIP-8272 at `824cbc0b0e`: an eight-field envelope
 with separate execution and state gas limits for each frame. Because the EIPs
 are drafts, each supported combination is a separate profile, and profiles are
 not wire compatible. The previous chain-8141 dialect is archived byte for byte
 under `devnet/vectors/2026-09-01-hegota-final-profile/`.
 
-The profile needs its own deployment, since its nullifiers and storage differ
-from earlier pools. Replacing the verifier under an old pool could make spent
-notes spendable again. `devnet/deploy_config.json` records the deployment on
-chain 8141 (pool `0xac01…b100`, commit `c26b8e4`), which completed shield,
-transfer, withdrawal and fourth-frame calls on September 22, 2026. Before
-shielding or spending, the CLI checks that the RPC is on the configured chain
-and that the pool's `domain(uint64)` matches this profile.
+Each profile needs its own deployment. Replacing the verifier under an old pool
+could make spent notes spendable again, and a `position-notes-v1` pool rejects
+this profile's validation limits. `devnet/deploy_config.json` still records the
+`position-notes-v1` deployment on chain 8141 (pool `0xac01…b100`, commit
+`c26b8e4`), which completed shield, transfer, withdrawal and fourth-frame calls
+on September 22, 2026. The CLI refuses to shield into or spend from that pool.
 
-Validation needs 352,800 execution gas, well above EIP-8141's published
-100,000 public-mempool default. The chain 8141 testnet admits it; other
-networks need a policy that does. [EIP-8369](https://eips.ethereum.org/EIPS/eip-8369)
-has not settled a per-transaction budget.
+Before shielding or spending, the CLI requires the config to name this profile
+and checks the pool itself: the RPC must be on the configured chain, the pool's
+code must be exactly what this profile's dispatcher deploys when linked to the
+logic and verifier the config records, and its `domain(uint64)` must match the
+profile's formula. The code check matters because both profiles share the
+domain formula.
+
+The public mempool counts the two validation frames' declared limits plus
+2,800 gas for the signature: 280,800 by default, while a spend uses about
+263,000. That is well above EIP-8141's published default of 100,000. The chain
+8141 testnet admits it; other networks need a policy that does.
+[EIP-8369](https://eips.ethereum.org/EIPS/eip-8369) has not settled a
+per-transaction budget.
 
 ## Test
 
