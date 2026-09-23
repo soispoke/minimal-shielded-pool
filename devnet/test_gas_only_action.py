@@ -188,6 +188,11 @@ def main():
     checked += rejects(
         lambda: spend_tail_frame(POOL, settlement(public_amount=0, recipient=ACCOUNT)), "both be zero")
     checked += rejects(lambda: spend_tail_frame(POOL, settlement()[:-1], action), "canonical")
+    for stranded in (POOL, 0xAA, 0x8250, 0x8272):
+        stuck = settlement(public_amount=1, recipient=stranded)
+        checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s), "cannot receive the claim")
+        checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s, omit=True), "cannot receive the claim")
+        checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s, action), "cannot receive the claim")
 
     modest = spend_tail_frame(POOL, settlement(), action)
     check_tx_resource_limits(_spend_tx(modest))

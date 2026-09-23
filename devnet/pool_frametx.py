@@ -306,6 +306,17 @@ def check_tx_resource_limits(tx):
         )
 
 
+# A withdrawal credit is paid by an empty-calldata call to its recipient, and
+# there is no claim to another address. The pool has no receive path and these
+# system contracts revert on value, so a credit to any of them is stranded.
+# Nobody controls the entry point, so a claim to it would lose the ETH.
+UNCLAIMABLE_RECIPIENTS = {
+    0xAA: "EIP-8141 entry point",
+    0x8250: "EIP-8250 nonce manager",
+    0x8272: "EIP-8272 recent root contract",
+}
+
+
 def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     """Derive the optional fourth DEFAULT frame from a canonical settlement.
 
@@ -326,6 +337,9 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
         raise ValueError("invalid pool, recipient, or public amount")
     if (amount == 0) != (recipient == 0):
         raise ValueError("public amount and recipient must both be zero or both nonzero")
+    if amount and (recipient == pool or recipient in UNCLAIMABLE_RECIPIENTS):
+        what = UNCLAIMABLE_RECIPIENTS.get(recipient, "the pool itself")
+        raise ValueError(f"withdrawal recipient cannot receive the claim: {what}")
     if omit:
         if action is not None:
             raise ValueError("omit cannot be combined with a custom action")
