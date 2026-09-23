@@ -130,10 +130,14 @@ could make spent notes spendable again, and a `position-notes-v1` pool rejects
 this profile's validation limits. `devnet/deploy_config.json` still records the
 `position-notes-v1` deployment on chain 8141 (pool `0xac01…b100`, commit
 `c26b8e4`), which completed shield, transfer, withdrawal and fourth-frame calls
-on September 22, 2026; the CLI refuses to shield into or spend from it until
-this profile is deployed. Before shielding or spending, the CLI also checks
-that the RPC is on the configured chain and that the pool's `domain(uint64)`
-matches the profile's formula.
+on September 22, 2026. The CLI refuses to shield into or spend from that pool.
+
+Before shielding or spending, the CLI requires the config to name this profile
+and checks the pool itself: the RPC must be on the configured chain, the pool's
+code must be exactly what this profile's dispatcher deploys when linked to the
+logic and verifier the config records, and its `domain(uint64)` must match the
+profile's formula. The code check matters because both profiles share the
+domain formula.
 
 Wallets declare 280,800 gas for validation by default, and a spend uses about
 263,000, still well above EIP-8141's published 100,000 public-mempool default. The chain 8141 testnet admits it; other
