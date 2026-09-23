@@ -90,7 +90,8 @@ def common_mutations(tx):
     add("verify_state_gas", lambda x: setattr(
         x.frames[1], "state_limit", VERIFY_FRAME_STATE_GAS - 1))
     add("verify_value", lambda x: setattr(x.frames[1], "value", 1))
-    for word in range(8):
+    # Eight proof words, then hybrid compression's beta.
+    for word in range(9):
         add(f"proof_word_{word}", lambda x, w=word: setattr(
             x.frames[1], "data", x.frames[1].data[:w * 32] +
             bytes([x.frames[1].data[w * 32] ^ 1]) + x.frames[1].data[w * 32 + 1:]))

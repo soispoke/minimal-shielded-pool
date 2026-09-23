@@ -93,9 +93,10 @@ contract VerifierCanonicalTest {
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[10] memory s, uint256 beta) =
             _vector();
         for (uint256 i; i < 10; i++) {
-            uint256[10] memory mutated = s;
-            mutated[i] = addmod(s[i], 1, P);
-            require(!verifier.verifyProof(a, b, c, _compress(mutated, beta)), "statement mutation accepted");
+            uint256 original = s[i];
+            s[i] = addmod(original, 1, P);
+            require(!verifier.verifyProof(a, b, c, _compress(s, beta)), "statement mutation accepted");
+            s[i] = original;
         }
     }
 

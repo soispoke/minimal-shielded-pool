@@ -17,7 +17,7 @@ from pathlib import Path
 from eth_hash.auto import keccak
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "reference"))
-from poseidon_bn254 import P, p2, tagged, TAG_PK, TAG_LEAF  # noqa: E402
+from poseidon_bn254 import P, p2, poseidon, tagged, TAG_PK, TAG_LEAF  # noqa: E402
 
 DEPTH = 20
 MAX_VALUE = 1 << 128
@@ -239,6 +239,12 @@ def compression_alpha(stmt):
     32-byte words, reduced into the scalar field. The pool computes the same."""
     assert len(stmt) == 10 and all(0 <= x < P for x in stmt)
     return int.from_bytes(keccak(b"".join(x.to_bytes(32, "big") for x in stmt)), "big") % P
+
+
+def compression_beta(stmt):
+    """Hybrid compression's circuit-side hash: circomlib Poseidon of the ten values."""
+    assert len(stmt) == 10
+    return poseidon(stmt)
 
 
 def fingerprint(sigma, stmt):

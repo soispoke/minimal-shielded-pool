@@ -90,7 +90,7 @@ entries = {}
 KEY_HASH = hashlib.sha256((REPO / "build/spend_final.zkey").read_bytes()).hexdigest()
 WASM_HASH = hashlib.sha256((REPO / "build/spend_js/spend.wasm").read_bytes()).hexdigest()
 
-def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=SLOT):
+def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=SLOT, alias=None):
     outputs = w.sink_outputs() if outputs is None else outputs
     public = n["value"] - FEE - sum(v for _, v in outputs)
     assert public >= 0
@@ -99,6 +99,14 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
     private_key, authorizer = w.new_authorizer()
     domain = w.domain_scalar(CHAIN, addr(POOL), epoch)
     witness = w.build_witness(tree, inputs, outputs, domain, authorizer=authorizer, public_amount=public, fee=FEE, recipient=addr(recipient))
+    if alias is not None:
+        # An honest witness proved against alpha over an aliased word: the
+        # statement value plus p. gamma reduces the word modulo p, so only the
+        # pool's range checks can tell the two encodings apart.
+        words = w.statement(*w.input_nullifiers(domain, inputs), *w.output_commitments(outputs),
+                            tree.root(), domain, public, FEE, recipient, authorizer)
+        words[alias] += w.P
+        witness["alpha"] = str(int.from_bytes(keccak(b"".join(x.to_bytes(32, "big") for x in words)), "big") % w.P)
     cache = OUT / f"{name}-proof.json"
     digest = keccak(json.dumps(witness, sort_keys=True).encode() + KEY_HASH.encode() + WASM_HASH.encode()).hex()
     if cache.exists() and json.loads(cache.read_text()).get("witness_hash") == digest:
@@ -108,9 +116,24 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
         print("proving", name, flush=True)
         publics, proof = smoke.prove(witness, name)
         cache.write_text(json.dumps({"witness_hash": digest, "publics": publics, "proof": proof}, indent=2) + "\n")
+    if alias is not None:
+        honest = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer,
+                                   private_key, prove_publics_honest(inputs, outputs, tree, domain, public, recipient,
+                                                                     authorizer, publics), proof, root_slot=str(root_slot))
+        entries[name] = honest
+        return honest
     entry = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer, private_key, publics, proof, root_slot=str(root_slot))
     entries[name] = entry
     return entry
+
+def prove_publics_honest(inputs, outputs, tree, domain, public, recipient, authorizer, publics):
+    """The (beta, gamma, alpha) an honest statement would have, so spend_entry's
+    wallet checks pass for an entry whose proof actually binds an aliased alpha."""
+    stmt = w.statement(*w.input_nullifiers(domain, inputs), *w.output_commitments(outputs),
+                       tree.root(), domain, public, FEE, recipient, authorizer)
+    beta = publics[0]
+    alpha = w.compression_alpha(stmt)
+    return [beta, w.fingerprint((alpha + beta) % w.P, stmt), alpha]
 
 def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2):
     source = keccak(POOL.to_bytes(20, "big") + word(int(entry["epoch"])))
@@ -394,8 +417,22 @@ for label, change in [("recent-root-execution", limits(0, execution=100_000)),
 # Hybrid compression: the proof binds the ten statement values through alpha
 # and gamma, which the pool recomputes from the settlement calldata, and
 # through beta, which follows the proof in frame 1. Changing any one statement
-# value, or beta, makes the withdrawal invalid in the pool's VERIFY frame; a
-# beta outside the field is refused before the verifier runs.
+# value, or beta, makes the withdrawal invalid in the pool's VERIFY frame.
+# nf1 and nf2 change in the entry so the EIP-8250 keys follow, and the
+# authorizer case re-signs someone else's proof with an attacker's key, so all
+# three reach the proof check. root and domain are refused earlier by the
+# exact tuple and domain checks; old-branch-proof-current-root-rejected and
+# old-proof-rebound-epoch take a changed root and domain to the verifier. A
+# beta outside the field is refused by the dispatcher and by the verifier.
+ATTACKER = keys.PrivateKey((0xA77AC4E5).to_bytes(32, "big"))
+def changed_entry(field):
+    e = copy.deepcopy(initial)
+    if field in ("nf1", "nf2"):
+        e[field] = "0x" + word(int(e[field], 16) + 1).hex()
+    else:
+        e["authorizer"] = "0x" + ATTACKER.public_key.to_canonical_address().hex()
+        e["authorizer_private_key"] = "0x" + ATTACKER.to_bytes().hex()
+    return e
 def bump_word(frame, offset, delta=1):
     def change(frames):
         data = bytearray(frames[frame].data)
@@ -406,8 +443,11 @@ def bump_word(frame, offset, delta=1):
 SETTLE_WORDS = {"nf1": 132, "nf2": 164, "out-cm1": 196, "out-cm2": 228, "root": 4, "domain": 100,
                 "public-amount": 260, "fee": 292, "recipient": 324, "authorizer": 356}
 for field, offset in SETTLE_WORDS.items():
-    case(f"compression-statement-{field}-changed-rejected", spend(f"changed-{field}", initial,
-         rejected=True, error=POOL_VERIFY, mutate=bump_word(2, offset)))
+    if field in ("nf1", "nf2", "authorizer"):
+        step = spend(f"changed-{field}", changed_entry(field), rejected=True, error=POOL_VERIFY)
+    else:
+        step = spend(f"changed-{field}", initial, rejected=True, error=POOL_VERIFY, mutate=bump_word(2, offset))
+    case(f"compression-statement-{field}-changed-rejected", step)
 case("compression-beta-changed-rejected", spend("changed-beta", initial, rejected=True,
      error=POOL_VERIFY, mutate=bump_word(1, 256)))
 case("compression-beta-outside-field-rejected", spend("beta-outside-field", initial, rejected=True,
@@ -470,6 +510,27 @@ case("tail-publishing-input-epoch-after-rollover-misses-outputs", rolled_state,
     spend("output-root-not-published", output_next_slot, 103, rejected=True, error="VERIFY frame 0"),
     publish("publish-epoch-one-later", NEXT+1, epoch=1, slot=103),
     spend("withdraw-output-after-later-publication", epoch_output, 104, paid=OUT1["value"]-FEE))
+
+# The pool's range checks are load-bearing: the verifier no longer sees the ten
+# values. Each case proves an honest withdrawal against alpha over one value
+# plus p, with the nonce keys following, so the proof and gamma pass and only
+# the range check can refuse it before approval. root, domain and authorizer
+# are pinned by exact equality checks and are not aliased here.
+ALIASES = {"nf1": 0, "nf2": 1, "out-cm1": 2, "out-cm2": 3, "public-amount": 6, "fee": 7, "recipient": 8}
+ENTRY_FIELD = {"nf1": "nf1", "nf2": "nf2", "out-cm1": "out_cm1", "out-cm2": "out_cm2"}
+for field, index in ALIASES.items():
+    aliased = prove(f"alias-{field}", BASE, NA, 0, alias=index)
+    mutate = None
+    if field in ENTRY_FIELD:
+        key = ENTRY_FIELD[field]
+        aliased[key] = "0x" + word(int(aliased[key], 16) + w.P).hex()
+    elif field in ("public-amount", "fee"):
+        key = field.replace("-", "_")
+        aliased[key] = str(int(aliased[key]) + w.P)
+    else:
+        mutate = bump_word(2, SETTLE_WORDS["recipient"], w.P)
+    case(f"compression-{field}-aliased-by-p-rejected", spend(f"aliased-{field}", aliased,
+         rejected=True, error=POOL_VERIFY, mutate=mutate))
 
 (OUT / "rejector-runtime.hex").write_text("0x60006000fd\n")
 (OUT / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")

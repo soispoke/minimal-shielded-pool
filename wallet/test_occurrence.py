@@ -7,6 +7,7 @@ the native integration tests cover those boundaries separately.
 """
 import copy
 import json
+import struct
 import subprocess
 import time
 from pathlib import Path
@@ -54,14 +55,83 @@ def witness_case(name, witness, expected=True, nullifiers=None):
         must(["npx", "snarkjs", "wtns", "export", "json", target, exported])
         # Wire 0 is the constant; then the outputs beta and gamma, then alpha.
         beta, gamma, alpha = (int(x) for x in json.loads(exported.read_text())[1:4])
-        # The statement is private. gamma matches the expected statement only
-        # if the circuit computed exactly these ten values.
+        # The statement is private. beta and gamma match the expected statement
+        # only if the circuit computed exactly these ten values; this is the
+        # check that binds the circuit's nullifiers to the ones passed in.
         publics = statement_for(witness, nullifiers)
+        assert beta == w.compression_beta(publics), name
         assert gamma == w.fingerprint((alpha + beta) % w.P, publics), name
     RESULTS.append({"name": name, "accepted": expected,
                     "seconds": round(time.monotonic() - start, 4)})
     print("PASS", name, "accepted" if expected else "rejected", flush=True)
     return publics
+
+
+def wire_names(names):
+    """Wire indices of named signals, from a symbol file compiled from the same
+    source as the committed R1CS."""
+    sym_dir = WORK / "sym"
+    sym = sym_dir / "spend.sym"
+    if not sym.exists():
+        sym_dir.mkdir(exist_ok=True)
+        must(["npx", "circom2", ROOT / "circuits/spend.circom", "--r1cs", "--sym",
+              "-l", ROOT / "tooling/node_modules", "-o", sym_dir])
+        assert (sym_dir / "spend.r1cs").read_bytes() == (BUILD / "spend.r1cs").read_bytes(), \
+            "symbol file does not come from the committed R1CS"
+    found = {}
+    for line in sym.read_text().splitlines():
+        _, wire, _, name = line.split(",", 3)
+        if name in names:
+            found[name] = int(wire)
+    return found
+
+
+def patched_wtns(source, target, values):
+    """Copy a .wtns file with some witness values replaced (section 2 holds the
+    values, n8 bytes each, little endian)."""
+    data = bytearray(source.read_bytes())
+    assert data[:4] == b"wtns"
+    _, sections = struct.unpack_from("<II", data, 4)
+    pos, offsets = 12, {}
+    for _ in range(sections):
+        kind, size = struct.unpack_from("<IQ", data, pos)
+        offsets[kind] = pos + 12
+        pos += 12 + size
+    n8 = struct.unpack_from("<I", data, offsets[1])[0]
+    for index, value in values.items():
+        start = offsets[2] + index * n8
+        data[start:start + n8] = (value % w.P).to_bytes(n8, "little")
+    target.write_bytes(data)
+
+
+def constraints_bind_compression(name, statement):
+    """A malicious prover cannot pick beta or gamma: forge a witness whose beta is
+    not Poseidon of the statement, recompute sigma, the Horner accumulators and
+    gamma to match, and require the R1CS to reject it. This fails if beta or
+    gamma is ever assigned without a constraint (<-- instead of <==)."""
+    wires = json.loads((WORK / (name + ".witness.json")).read_text())
+    beta, gamma, alpha = (int(x) for x in wires[1:4])
+    acc_names = [f"main.acc[{i}]" for i in range(10)]
+    index = wire_names(["main.sigma"] + acc_names)
+    forged_beta = (beta + 1) % w.P
+    sigma = (alpha + forged_beta) % w.P
+    acc = [0] * 10
+    acc[9] = statement[9]
+    for i in range(9, 0, -1):
+        acc[i - 1] = (acc[i] * sigma + statement[i - 1]) % w.P
+    values = {1: forged_beta, 2: acc[0]}
+    if index.get("main.sigma", -1) >= 0:
+        values[index["main.sigma"]] = sigma
+    for i, n in enumerate(acc_names):
+        if index.get(n, -1) >= 0:
+            values[index[n]] = acc[i]
+    for label, patch in [("forged-beta", values), ("forged-gamma", {2: gamma + 1})]:
+        forged = WORK / f"{name}-{label}.wtns"
+        patched_wtns(WORK / (name + ".wtns"), forged, patch)
+        result = run(["npx", "snarkjs", "wtns", "check", BUILD / "spend.r1cs", forged])
+        assert result.returncode != 0, (label, result.stdout)
+    RESULTS.append({"name": "r1cs-rejects-forged-beta-and-gamma", "passed": True})
+    print("PASS r1cs rejects a forged beta and a forged gamma", flush=True)
 
 
 def main():
@@ -94,8 +164,6 @@ def main():
     public_second = witness_case("identical-second-occurrence", second,
                                  nullifiers=w.input_nullifiers(domain0, [duplicate, dummy]))
     assert public_first[0] != public_second[0]
-    assert public_first[:2] == w.input_nullifiers(domain0, [real, dummy])
-    assert public_second[:2] == w.input_nullifiers(domain0, [duplicate, dummy])
     public_pair = witness_case("both-identical-funded-occurrences", make([real, duplicate]),
                                nullifiers=w.input_nullifiers(domain0, [real, duplicate]))
     assert public_pair[:2] == [public_first[0], public_second[0]]
@@ -155,7 +223,6 @@ def main():
     public_rebuilt = witness_case("reorg-rebuilt-tree-and-index", rebuilt,
                                   nullifiers=w.input_nullifiers(domain0, [rebuilt_input, dummy]))
     assert public_rebuilt[0] != public_first[0]
-    assert public_rebuilt[:2] == w.input_nullifiers(domain0, [rebuilt_input, dummy])
 
     same_secrets_dummy = {"sk": sk, "rho": rho, "value": 0, "idx": None}
     public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]),
@@ -166,7 +233,6 @@ def main():
     max_dummy_nf = w.nullifier(domain0, sk, w.commitment(sk, rho, 0), (1 << w.DEPTH) - 1)
     public_dummy_max = witness_case("dummy-arbitrary-maximum-position", dummy_at_max,
                                     nullifiers=[public_dummy[0], max_dummy_nf])
-    assert public_dummy_max[1] == w.nullifier(domain0, sk, w.commitment(sk, rho, 0), (1 << w.DEPTH) - 1)
     assert public_dummy_max[1] != public_later[0]
 
     # Epoch and index range checks in the reference helper must agree with
@@ -184,6 +250,8 @@ def main():
         except ValueError:
             pass
     RESULTS.append({"name": "reference-canonical-epoch-and-index-bounds", "passed": True})
+
+    constraints_bind_compression("first-occurrence", public_first)
 
     proof = WORK / "proof.json"
     publics = WORK / "public.json"

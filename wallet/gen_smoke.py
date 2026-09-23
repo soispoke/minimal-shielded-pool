@@ -97,6 +97,7 @@ def spend_entry(
                        public_amount, fee, recipient, authorizer)
     beta, gamma, alpha = publics
     assert alpha == w.compression_alpha(stmt), "proof alpha does not hash the wallet's statement"
+    assert beta == w.compression_beta(stmt), "proof beta is not Poseidon of the wallet's statement"
     assert gamma == w.fingerprint((alpha + beta) % w.P, stmt), \
         "proof gamma does not fingerprint the wallet's statement"
     e = {"root": hex32(root), "epoch": str(epoch),
