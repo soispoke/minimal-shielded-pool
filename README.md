@@ -129,14 +129,16 @@ testbed activation manifest, pool profile `position-notes-v1`.
 
 This profile requires a fresh deployment. Its nullifier formula, verifier
 and storage layout differ from `recipient-pull-v1`; replacing the verifier
-under an old pool could make spent notes spendable again. The recorded
-`devnet/deploy_config.json` remains historical and the spend CLI rejects it
-until a new deployment writes the new profile and addresses.
+under an old pool could make spent notes spendable again.
+`devnet/deploy_config.json` records the fresh deployment of this profile on
+chain 8141 (pool `0xac01…b100`, commit `c26b8e4`). Before shielding or
+spending, the CLI calls the pool's `domain(uint64)` and refuses a pool whose
+domain differs from this profile's formula, so a relabeled older pool is
+rejected.
 
-This profile targets the chain 8141 testnet's next re-genesis, which moves the
-node to those revisions; the chain launched on September 3 runs the older
-EIP-8250 gas rule and the envelope-field form of EIP-8272 and cannot decode
-these transactions. The dialect deployed on the pre-relaunch chain-8141 testnet
+Shield, transfer, withdrawal and fourth-frame transactions of this profile
+were mined against that deployment on the chain 8141 testnet (ethrex
+`bdfc5d8f`) on September 22, 2026. The dialect deployed on the pre-relaunch chain-8141 testnet
 (11-field envelope, one gas limit per frame) is archived byte-exact under
 `devnet/vectors/2026-09-01-hegota-final-profile/`, the auditable record of that
 deployment.
@@ -189,14 +191,14 @@ reviewed artifact set rather than routine dependency maintenance.
 
 | Dependency | Status |
 |---|---|
-| Ethrex v23 Hegotá FrameTx ABI | Earlier profiles mined the lifecycle on a devnet; this circuit change uses local native VM tests |
+| Ethrex v23 Hegotá FrameTx ABI | This profile mined the lifecycle on the chain 8141 testnet; native VM tests use the pinned `247e2dd2` snapshot |
 | Current EIP-8141 wire format | Frame grammar unchanged; the new circuit and storage layout require a fresh deployment |
 | EIP-8141 published 100k public mempool budget | Not compatible: the two validation frames and the signature need 352.8k execution gas |
 | EIP-8250 keyed nonces | The pool follows PR 12279: two fresh keys cost `195,840` state gas in the proof frame |
 | EIP-8272 recent roots | The pool follows `824cbc0b0e`: the root travels in the canonical verifier frame that leads the transaction |
 | EIP-7843 slot number | Implemented: wallet requires the RPC `slotNumber` field |
 | EIP-8369 | The open draft does not set a final per-transaction budget; the devnet used for this profile admits the 352.8k budget |
-| Current ethrex privacy testnet | The live chain runs the older EIP-8250 gas rule and the envelope form of EIP-8272, so it cannot decode these transactions; this profile needs the chain's next re-genesis |
+| Current ethrex privacy testnet | Accepts this profile: the deployment in `devnet/deploy_config.json` completed the live lifecycle on September 22, 2026 |
 
 Earlier testnet evidence is in
 [`devnet/vectors/2026-08-14-tight-gas-profile.md`](devnet/vectors/2026-08-14-tight-gas-profile.md).

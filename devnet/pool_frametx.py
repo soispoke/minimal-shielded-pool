@@ -252,8 +252,8 @@ def recent_root_tuple(url, cfg, e):
     `source_id(32) || uint64_be(slot) || root(32)`.
 
     The slot is the consensus `slotNumber` returned by EIP-7843. It is never
-    reconstructed from timestamps. The epoch selects the pool's deterministic
-    EIP-8272 source while the nullifier domain remains stable across epochs.
+    reconstructed from timestamps. The epoch selects both the pool's
+    deterministic EIP-8272 source and the nullifier domain.
     """
     slot = int(e["root_slot"])
     epoch = int(e["epoch"])

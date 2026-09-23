@@ -109,6 +109,13 @@ cannot target the pool. A withdrawal tail may target the pool so
 always pays `who`. Anyone can still call `claimWithdrawal` later. The authorizer
 does not have to pull the credit in the tail; a later standalone claim remains.
 
+Credits are one balance per recipient address. Withdrawals to the same account
+accumulate, and anyone can push the whole balance to it at any time, so an
+account shared by several users must not attribute a claimed balance change to
+one withdrawal. The wallet refuses recipients that could never receive the
+claim: the pool itself, the EIP-8250 nonce manager, the EIP-8272 recent root
+contract and the EIP-8141 entry point.
+
 The account sees EIP-8141's shared entry point (`0xaa`) as its caller, not
 the pool or the account owner. Trusting that caller alone would let any frame
 transaction operate the account. The account must independently authenticate
@@ -166,7 +173,9 @@ secrets and one-time authorizer keys are not durably backed up.
 
 ## Evidence
 
-The Forge suite covers actual Poseidon runtimes, a 2M-capped worst-shape
+The Forge suite runs the via-IR Poseidon builds, which cost about 11% less
+gas per hash than the deployed `libsmall` builds, so the binding settlement
+bound comes from the native suite below. It covers a 2M-capped
 rollover with two outputs and a new credit, long-carry at 262,143 and 524,287
 leaves under EIP-150 forwarding of that 2M budget, pre-insert rollover, full-tree
 exit, sink rules, separate publication failure/retry, pull-credit failure,
@@ -177,10 +186,11 @@ zero authorizers, and recipient mismatches. The envelope vector mutates 48
 signed transfer components, 56 signed withdrawal components, 57 signed
 gas-only tails, and 57 signed custom withdrawal tails.
 
-The position-bound note suite passes 20 native scenarios using 23 real Groth16
-proofs, plus two client-policy tests. It covers duplicate deposits and outputs,
-replay, epoch binding, database rollback and proof rebuilding, and settlement
-gas boundaries. The highest measured settlement execution cost is 1,423,709;
+The position-bound note suite passes 30 native scenarios using 23 real Groth16
+proofs, plus two client-policy tests, against the current dispatcher. It covers
+duplicate deposits and outputs, replay, epoch binding, database rollback and
+proof rebuilding, settlement gas boundaries, and the fourth-frame rules,
+including rejection of a `SENDER` tail that repeats settlement. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
 additional margin, not a formal proof of a universal bound. See
 [`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
@@ -188,9 +198,12 @@ additional margin, not a formal proof of a universal bound. See
 The earlier profile's gas derivation is recorded in
 [`devnet/vectors/2026-08-14-tight-gas-profile.md`](devnet/vectors/2026-08-14-tight-gas-profile.md).
 
-The 2026-08-14 ethrex run completed shield, transfer, root refresh, withdrawal,
-claim, and replay rejection. It proves compatibility with that one testnet
-configuration, not production readiness or cross-client interoperability.
+On 2026-09-22 the deployment recorded in `devnet/deploy_config.json`
+completed shield, transfer, root refresh, withdrawal, claim, a fourth-frame
+claim and call, an intentional tail revert with later credit recovery, and
+replay rejection on the chain 8141 testnet. It proves compatibility with that
+one testnet configuration, not production readiness or cross-client
+interoperability.
 
 ## Reporting
 

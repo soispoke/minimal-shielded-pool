@@ -40,7 +40,7 @@
     "devnet/build/shielded_pool_dispatcher_init.hex": "9deb225693e36199caf52c6b21268abd40442415c6986c514ed6f0efb0da0548",
     "devnet/frametx.py": "c935e732b58c8a8bf04dfe7c6f2fed497e415b5f3d9e7eb66a01b3580b502a16",
     "devnet/gas_profile.py": "9d1026ebdc8930aa06b0d2da05ceffc4e6a16c2b789c52da7b68a839fedea7be",
-    "devnet/pool_frametx.py": "f17fc7b20c40743dbd0a95e68047a5b2632a1627a1caf75473caca681c0399c0",
+    "devnet/pool_frametx.py": "bcda30bfb0159518761f17751be07d57e3d23c7b50a5f7a3f94fb827f1394849",
     "tooling/check_gas_profile.py": "dbe8fcfec399a20b132a0463981f279bc1ec1fe2863751e85b6df2c4ac6395ae"
   }
 }
