@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import struct
 import sys
 from pathlib import Path
 
@@ -85,6 +86,40 @@ PROFILES["position-notes-v1"] = {
 }
 
 
+# Every active artifact must be pinned. A manifest that omits one would
+# otherwise pass without its hash being checked.
+REQUIRED_ARTIFACTS = (
+    "build/spend.r1cs",
+    "build/spend_final.zkey",
+    "build/spend_js/spend.wasm",
+    "circuits/spend.circom",
+    "contracts/src/Groth16Verifier.sol",
+    "contracts/src/ShieldedPoolLogic.sol",
+    "devnet/ShieldedPoolDispatcher.yul",
+    "devnet/build/shielded_pool_dispatcher_init.hex",
+    "devnet/frametx.py",
+    "devnet/gas_profile.py",
+    "devnet/pool_frametx.py",
+    "tooling/check_gas_profile.py",
+)
+ZKEY = "build/spend_final.zkey"
+
+
+def zkey_contributions(path):
+    """The phase-2 contribution count a snarkjs zkey records in section 10."""
+    data = path.read_bytes()
+    if data[:4] != b"zkey":
+        raise SystemExit(f"{path} is not a zkey")
+    offset, sections = 12, struct.unpack_from("<I", data, 8)[0]
+    for _ in range(sections):
+        kind, size = struct.unpack_from("<IQ", data, offset)
+        offset += 12
+        if kind == 10:
+            return struct.unpack_from("<I", data, offset + 64)[0]
+        offset += size
+    raise SystemExit(f"{path} has no contribution section")
+
+
 def sha256(path):
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -100,7 +135,13 @@ def main():
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text())
 
-    for rel, expected in manifest["artifacts"].items():
+    artifacts = manifest["artifacts"]
+    if not isinstance(artifacts, dict):
+        raise SystemExit("artifacts must be a JSON object")
+    missing = [rel for rel in REQUIRED_ARTIFACTS if rel not in artifacts]
+    if missing:
+        raise SystemExit(f"manifest does not pin required artifacts: {', '.join(missing)}")
+    for rel, expected in artifacts.items():
         actual = sha256(ROOT / rel)
         if actual != expected:
             raise SystemExit(f"artifact hash mismatch: {rel}\nexpected {expected}\nactual   {actual}")
@@ -164,11 +205,24 @@ def main():
     elif profile.get("verify_frame_state_gas") != expected["verify_frame_state_gas"]:
         raise SystemExit("VERIFY state gas does not match the immutable dispatcher profile")
 
+    # Truthiness would read the JSON string "false" as true, so require real
+    # types, and take the contribution count from the pinned proving key.
     ceremony = manifest["ceremony"]
-    if not manifest["production"]:
+    production = manifest["production"]
+    contributions = ceremony["phase2_contributions"]
+    verified = ceremony["independent_verification"]
+    if type(production) is not bool:
+        raise SystemExit("production must be a JSON boolean")
+    if type(contributions) is not int:
+        raise SystemExit("phase2_contributions must be a JSON integer")
+    if verified is not None and type(verified) is not bool:
+        raise SystemExit("independent_verification must be a JSON boolean or null")
+    if contributions != zkey_contributions(ROOT / ZKEY):
+        raise SystemExit("phase2_contributions does not match the proving key")
+    if not production:
         if not args.allow_testbed:
             raise SystemExit("activation blocked: manifest is testbed-only")
-    elif ceremony["phase2_contributions"] < 2 or not ceremony["independent_verification"]:
+    elif contributions < 2 or verified is not True:
         raise SystemExit("activation blocked: production ceremony evidence is incomplete")
 
     print(json.dumps({"artifacts": "match", "profile": "match",
