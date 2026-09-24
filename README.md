@@ -93,7 +93,8 @@ call keeps back 1/64 of its gas (EIP-150). Below
 that, the verifier runs out of gas and the pool reports an invalid proof. The
 proof frame's state gas pays for creating the two nullifier keys.
 
-The proof names a fresh secp256k1 authorizer, and its signature covers the
+The proof names a secp256k1 authorizer, which the wallet makes fresh for each
+spend. Its signature covers the
 whole transaction, including the proof, the recent-root tuple and the fourth
 frame. The proof's `fee` must cover the transaction's maximum cost; any unused
 part stays in the pool.

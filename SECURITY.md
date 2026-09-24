@@ -29,7 +29,8 @@ The pool holds native ETH. Notes, fees, withdrawals, and payer costs are all
 wei-denominated. The pool is the EIP-8141 sender and payer. There is no
 external paymaster or caller-selected fee recipient.
 
-The circuit selects a fresh nonzero secp256k1 authorizer. EIP-8141 validates
+The wallet chooses a fresh secp256k1 authorizer for each spend, and the
+circuit requires it to be nonzero. EIP-8141 validates
 its canonical low-s signature over the complete FrameTx hash. The dispatcher
 requires that recovered signer through `SIGPARAM`, one signature, a three- or
 four-frame spend grammar, the complete two-key
@@ -168,8 +169,8 @@ extension neither repairs that blocker nor provides full-spend atomicity.
 
 ## Assumptions and remaining gates
 
-- Groth16 soundness, BN254 pairing security, Poseidon collision resistance,
-  Keccak collision resistance, and secp256k1 unforgeability.
+- Groth16 knowledge soundness, BN254 pairing security, Poseidon collision
+  resistance, Keccak collision resistance, and secp256k1 unforgeability.
 - Joint UHF hardness of Keccak-mod-p and circomlib Poseidon(10), the
   assumption under which eprint 2025/1500 proves hybrid compression binds the
   ten statement values to the proof's three public signals.
