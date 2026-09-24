@@ -151,6 +151,11 @@ def main():
             recipient = f"0x{w.address_scalar(recipient):040x}"
         elif arg.startswith("--output="):
             output_path = Path(arg.split("=", 1)[1]).expanduser().resolve()
+    # The fixed seed is public, so anyone could rebuild these notes and spend
+    # them. Keep it for the committed fixture's test chain and pool.
+    if "--random" not in sys.argv and (chain_id, int(pool_address, 16)) != (TEST_CHAIN_ID, int(TEST_POOL, 16)):
+        raise SystemExit("the fixed seed is public, so anyone could spend these notes; "
+                         "pass --random for another chain or pool")
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # notes: Alice's deposit, Bob's payment target, Alice's change target

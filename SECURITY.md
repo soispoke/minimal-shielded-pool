@@ -207,7 +207,9 @@ does not change circuit outputs. A direct compiler upgrade requires a new
 artifact set, ceremony, activation manifest, and circuit review.
 
 The wallet is a fixture generator, not a production keystore. Random note
-secrets and one-time authorizer keys are not durably backed up.
+secrets and one-time authorizer keys are not durably backed up. The fixture
+generators' fixed seed is public, so they refuse it outside the local test
+chain.
 
 ## Evidence
 

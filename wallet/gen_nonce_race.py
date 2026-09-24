@@ -17,8 +17,11 @@ two transfers under the keys `transfer` (A) and a second entry the harness
 reads directly. Both carry the same recent-root reference (R at R's slot).
 
 Run from wallet/: python3 gen_nonce_race.py --chain-id=N --pool-address=0x...
-                   --root-slot=N [--epoch=N]
+                   --root-slot=N [--epoch=N] [--random]
                    [--output=PATH]
+
+The fixed seed is public, so it is refused outside the local test chain:
+pass --random for any other chain.
 """
 import json
 import sys
@@ -107,8 +110,13 @@ def main():
         raise SystemExit("--pool-address=0x... and --root-slot=N are required")
     if (rpc_url is None) != (pool is None):
         raise SystemExit("--rpc= and --pool= must be given together (seed the live tree)")
+    if "--random" not in sys.argv:
+        # Anyone could rebuild notes made from the public seed and spend them.
+        if chain_id != 31337:
+            raise SystemExit("the fixed seed is public, so anyone could spend these notes; "
+                             "pass --random for another chain")
+        w.set_seed(20260712)
     WORK.mkdir(exist_ok=True)
-    w.set_seed(20260712)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # Two deposits, into one tree. Root R is fixed after both inserts. Against a
