@@ -280,6 +280,28 @@ def main():
     assert missing_calls.count("eth_sendRawTransaction") == 1
     checked += 1
 
+    # The send gates: a spend whose simulation does not show settlement
+    # succeeding is never broadcast, since mining it would consume the keys
+    # without creating the outputs.
+    withdrawal = settlement(public_amount=5, recipient=ACCOUNT)
+    ok, bad = {"succeeded": True}, {"succeeded": False}
+    for label, simulation, action_used, calldata, text in [
+            ("no simulation", None, action, None, "without a pre-send simulation"),
+            ("settlement failed", {"valid": True, "frames": [ok, ok, bad, ok]}, action, None,
+             "settlement frame 2 did not explicitly succeed"),
+            ("outcomes missing", {"valid": True, "frames": [ok, ok]}, action, None,
+             "settlement frame 2 did not explicitly succeed"),
+            ("another frame failed", {"valid": True, "frames": [ok, bad, ok, ok]}, action, None,
+             "another frame failed"),
+            ("invalid prefix", {"valid": False, "violation": "prefix", "frames": []}, action, None,
+             "INVALID"),
+            ("claim failed", {"valid": True, "frames": [ok, ok, ok, bad]}, None, withdrawal,
+             "claim frame failed; not sending")]:
+        calls = []
+        checked += exits(lambda: run_broadcast_case(simulation, None, action_used, calls, calldata=calldata), text)
+        assert "eth_sendRawTransaction" not in calls, label
+        checked += 1
+
     print(json.dumps({
         "checked_cases": checked,
         "default_transfer_frames_added": 0,
