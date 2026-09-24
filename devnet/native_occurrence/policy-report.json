@@ -15,8 +15,8 @@
     "deploy-verifier.hex": "0x1cc5e979e6f058f05d65a29fa90442920f1a6635412dc144c9fd294da778d237",
     "deposit-a.hex": "0xfda8d78c33aef5183567e6616129306c56a8b4291a2bd23876dcc44a9b84d1f6",
     "deposit-b.hex": "0x5b14aeaa2fad64674df3ad29ce7c2a372790b17258715953893bd534e1c1842d",
-    "policy-first.hex": "0xf215fe908ea97993e0ff6dcc504ae0688894ac21cd5be1384089c1355b8a5d15",
-    "policy-second.hex": "0x1703f4818a1f77e078c79a186eb23b3e3bc692388684841cb3e2cf9aabd648b1",
+    "policy-first.hex": "0x675453e796eb4fad2139253375047c84d69b0881ef8b49b67cde7de95fba75a2",
+    "policy-second.hex": "0x3a621c7a69b008d7822faf49858c4bffc5c9539275c89fac843c3f9796d5d955",
     "publish-initial.hex": "0xcbd9ce5d16ee34a128902a7a9b95ccd44bb69b296e1f10ea1a877352fad34c2c"
   },
   "results": [
