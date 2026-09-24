@@ -102,6 +102,23 @@ contract RejectEther {
     }
 }
 
+/// Re-enters the claim of its own credit from its receive hook.
+contract ReentrantClaimer {
+    IPool immutable pool;
+    uint256 public payouts;
+
+    constructor(IPool pool_) {
+        pool = pool_;
+    }
+
+    receive() external payable {
+        payouts++;
+        if (payouts < 3) {
+            try pool.claimWithdrawal(payable(address(this))) {} catch {}
+        }
+    }
+}
+
 contract DispatcherPoolTest {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     bytes32 constant EMPTY_ROOT = 0x2134e76ac5d21aab186c2be1dd8f84ee880a1e46eaf712f9d371b6df22191f3e;
@@ -358,6 +375,32 @@ contract DispatcherPoolTest {
         pool.claimWithdrawal(payable(address(rejecter)));
         require(pool.withdrawalCredit(address(rejecter)) == 0, "credit remained");
         require(address(rejecter).balance == before + 2 ether, "payout missing");
+    }
+
+    function test_reentrant_recipient_is_paid_its_credit_once() public {
+        ReentrantClaimer claimer = new ReentrantClaimer(pool);
+        _settle(_spend(SINK_0, SINK_1, 2 ether, address(claimer)));
+        uint256 poolBefore = address(proxy).balance;
+        pool.claimWithdrawal(payable(address(claimer)));
+        require(address(claimer).balance == 2 ether && claimer.payouts() == 1, "credit paid twice");
+        require(address(proxy).balance == poolBefore - 2 ether, "pool paid more than the credit");
+        require(pool.withdrawalCredit(address(claimer)) == 0, "credit remained");
+    }
+
+    function test_withdrawal_credits_to_one_recipient_accumulate() public {
+        _settle(_spend(SINK_0, SINK_1, 2 ether, address(0xB0B)));
+        _settle(_spend(SINK_0, SINK_1, 3 ether, address(0xB0B)));
+        require(pool.withdrawalCredit(address(0xB0B)) == 5 ether, "a later withdrawal replaced a credit");
+    }
+
+    function test_second_output_alone_moves_the_root() public {
+        _settle(_spend(SINK_0, bytes32(uint256(91)), 0, address(0)));
+        LogicProxy other = new LogicProxy(address(logic));
+        ShieldedPoolLogic.Spend memory first = _spend(bytes32(uint256(91)), SINK_1, 0, address(0));
+        first.domain = IPool(address(other)).domain(0);
+        other.settleAsSelf(first);
+        require(pool.nextIndex() == 1, "second output not inserted");
+        require(pool.currentRoot() == IPool(address(other)).currentRoot(), "root not recomputed");
     }
 
     function test_input_epoch_domains_are_distinct() public view {
