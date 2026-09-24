@@ -288,15 +288,16 @@ rollover with two outputs and a new credit, long-carry at 262,143 and 524,287
 leaves under EIP-150 forwarding of that 2M budget, pre-insert rollover, full-tree
 exit, sink rules, separate publication failure/retry, pull-credit failure, a
 reentrant recipient paid once, credits that accumulate, a root recomputed when
-only the second output is new, direct-call rejection, valid proof verification, coordinate aliases, infinity,
+only the second output is new, the full tree's root kept when the last leaf
+fills, direct-call rejection, valid proof verification, coordinate aliases, infinity,
 and mutation of each statement value, `beta` and `gamma`. The circuit generator
 rejects same-note inputs, duplicate outputs, dummy-only spends, wrong sinks,
 sink-valued positive outputs, zero authorizers, and recipient mismatches. The
 circuit test checks `beta` against an independent Poseidon(10) and rejects a
 forged witness whose `beta` or `gamma` does not follow from the statement, and
 witnesses that each break only one constraint: value conservation, the 128-bit
-ranges of the fee and of each output, path-bit booleanity at several depths,
-and the sink rules. Each rejection is checked against the committed R1CS, not
+ranges of the fee and of each output, including an output of exactly 2^128,
+path-bit booleanity at several depths, and the sink rules. Each rejection is checked against the committed R1CS, not
 only the witness generator, using a complete witness from a circuit without
 that constraint, so a constraint that became a runtime-only check would fail
 the test. The

@@ -346,6 +346,18 @@ def main():
         values = [str(w.P - 10**21), str(100 + 10**21)]
         bad["out_value"] = values if position == 0 else values[::-1]
         witness_case(f"output-{position}-below-zero", bad, False, variant=f"range-{2 + position}")
+    # The width itself, without a wrap: two funded inputs of 2^128 - 1 and 1
+    # paying one output of exactly 2^128.
+    wide = [{"sk": s_, "rho": r_, "value": v, "idx": i}
+            for i, ((s_, r_), v) in enumerate([(w.new_note(), 2**128 - 1), (w.new_note(), 1)])]
+    wide_tree = w.Tree()
+    for n in wide:
+        wide_tree.append(w.commitment(n["sk"], n["rho"], n["value"]))
+    bad = w.build_witness(wide_tree, wide, [w.sink_outputs()[0], (w.inner(*w.new_note()), 2**128 - 1)],
+                          domain0, authorizer=authorizer, public_amount=1, recipient="0x" + "34" * 20)
+    bad.update(public_amount="0", recipient="0")
+    bad["out_value"][1] = str(2**128)
+    witness_case("output-of-exactly-2^128", bad, False, variant="range-3")
 
     same_secrets_dummy = {"sk": sk, "rho": rho, "value": 0, "idx": None}
     public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]),

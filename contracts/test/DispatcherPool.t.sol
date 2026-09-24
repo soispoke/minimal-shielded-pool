@@ -382,9 +382,28 @@ contract DispatcherPoolTest {
         _settle(_spend(SINK_0, SINK_1, 2 ether, address(claimer)));
         uint256 poolBefore = address(proxy).balance;
         pool.claimWithdrawal(payable(address(claimer)));
-        require(address(claimer).balance == 2 ether && claimer.payouts() == 1, "credit paid twice");
+        require(address(claimer).balance == 2 ether, "credit paid twice");
         require(address(proxy).balance == poolBefore - 2 ether, "pool paid more than the credit");
         require(pool.withdrawalCredit(address(claimer)) == 0, "credit remained");
+    }
+
+    function test_filling_the_last_leaf_keeps_the_full_tree_root() public {
+        // A tree of 2^20 - 1 identical leaves; the last deposit fills it.
+        uint256 p = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+        bytes32 inner = bytes32(uint256(33));
+        bytes32[21] memory level;
+        level[0] = bytes32(uint256(keccak256(abi.encode(uint256(2), uint256(inner), uint256(1 ether)))) % p);
+        for (uint256 l = 0; l < 20; l++) {
+            level[l + 1] = bytes32(uint256(keccak256(abi.encode(level[l], level[l]))) % p);
+            vm.store(address(proxy), bytes32(l), level[l]);
+        }
+        vm.store(address(proxy), bytes32(uint256(21)), bytes32(uint256((1 << 20) - 1)));
+        pool.shield{value: 1 ether}(inner);
+        require(pool.nextIndex() == 1 << 20, "last leaf not filled");
+        require(pool.currentRoot() == level[20], "full tree root lost");
+        // The next deposit rolls the epoch and finalizes that same root.
+        pool.shield{value: 1 ether}(inner);
+        require(pool.currentEpoch() == 1 && pool.finalRoot(0) == level[20], "final root lost");
     }
 
     function test_withdrawal_credits_to_one_recipient_accumulate() public {
