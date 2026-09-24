@@ -96,8 +96,9 @@ PROFILES["position-notes-v2"] = {
 
 
 # Every active artifact must be pinned. A manifest that omits one would
-# otherwise pass without its hash being checked. foundry.toml fixes the compiler
-# settings, so the deployment checks compare the chain with reviewed bytecode.
+# otherwise pass without its hash being checked. foundry.toml is pinned here;
+# check_forge_config.py compares the settings forge actually resolves, which
+# environment variables, .env files and the global config can also change.
 REQUIRED_ARTIFACTS = (
     "build/spend.r1cs",
     "build/spend_final.zkey",

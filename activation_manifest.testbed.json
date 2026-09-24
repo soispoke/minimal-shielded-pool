@@ -45,5 +45,35 @@
     "devnet/gas_profile.py": "4771bc7e251a14cc2a0ea806c0d804d6eae8cfdeec11cce8d42aab6c0fd2755a",
     "devnet/pool_frametx.py": "b8c13ab304b9d7269fd760f2c166cfe41e1c006a54acaf357bfc03ae09084ab2",
     "tooling/check_gas_profile.py": "e0a9679d2ed26e20103775808d7b2df5b24e0f52db9241e1de0e50609a71531a"
+  },
+  "compiler": {
+    "default": {
+      "solc": "0.8.30",
+      "optimizer": true,
+      "optimizer_runs": 5000,
+      "optimizer_details": null,
+      "via_ir": true,
+      "evm_version": "osaka",
+      "bytecode_hash": "ipfs",
+      "cbor_metadata": true,
+      "use_literal_content": false,
+      "revert_strings": null,
+      "libraries": [],
+      "remappings": []
+    },
+    "libsmall": {
+      "solc": "0.8.30",
+      "optimizer": true,
+      "optimizer_runs": 1,
+      "optimizer_details": null,
+      "via_ir": false,
+      "evm_version": "osaka",
+      "bytecode_hash": "ipfs",
+      "cbor_metadata": true,
+      "use_literal_content": false,
+      "revert_strings": null,
+      "libraries": [],
+      "remappings": []
+    }
   }
 }

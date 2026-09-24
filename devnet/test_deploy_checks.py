@@ -9,6 +9,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -70,35 +71,70 @@ def call_sites():
                 calls += 1
     assert calls == 4, calls
     assert not re.search(r"\[\[ *\$\(.*\) *== *\$\(", source), "inline comparison of two reads"
+    # The dispatcher deployed is the pinned initcode, not a fresh compile.
+    assert 'DISP_INIT="$(cat build/shielded_pool_dispatcher_init.hex)' in source, "dispatcher not from the pinned hex"
+    assert "dispatcher.py --initcode" not in source, "dispatcher compiled at deploy time"
     return calls
 
 
 def early_guards():
-    """The script stops before calling cast or forge when a FOUNDRY_* variable
-    would change what forge builds, or when its fixture path already exists."""
+    """The script stops before calling cast, or building with forge, when its
+    fixture path already exists or forge would build with unpinned settings."""
     checked = 0
+    manifest = json.loads((SCRIPT.parent.parent / "activation_manifest.testbed.json").read_text())
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp, "bin")
         bin_dir.mkdir()
+        (bin_dir / "cast").write_text("#!/bin/sh\necho REACHED >&2\nexit 99\n")
+        # forge answers `config` from FAKE_CONFIG_<profile> and fails any build.
+        (bin_dir / "forge").write_text(
+            "#!/bin/sh\n"
+            'if [ "$1" = config ]; then eval cat "\\$FAKE_CONFIG_${FOUNDRY_PROFILE:-default}"; exit 0; fi\n'
+            "echo REACHED >&2\nexit 99\n")
         for tool in ("cast", "forge"):
-            fake = bin_dir / tool
-            fake.write_text("#!/bin/sh\necho REACHED >&2\nexit 99\n")
-            fake.chmod(0o755)
+            (bin_dir / tool).chmod(0o755)
+        configs = {}
+        for profile, pins in manifest["compiler"].items():
+            for label, settings in (("pinned", pins), ("drifted", dict(pins, via_ir=not pins["via_ir"]))):
+                path = Path(tmp, f"{profile}-{label}.json")
+                path.write_text(json.dumps(settings))
+                configs[(profile, label)] = str(path)
         base = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "RPC_URL": "offline",
-                "DEPLOYER_PK": "0x01", "ALLOW_TESTBED_SETUP": "1", "SMOKE_OUTPUT": str(Path(tmp, "new.json"))}
+                "DEPLOYER_PK": "0x01", "ALLOW_TESTBED_SETUP": "1", "SMOKE_OUTPUT": str(Path(tmp, "new.json")),
+                "FAKE_CONFIG_default": configs[("default", "pinned")],
+                "FAKE_CONFIG_libsmall": configs[("libsmall", "pinned")]}
         existing = Path(tmp, "existing.json")
         existing.write_text("{}")
         for extra, expected in (({"SMOKE_OUTPUT": str(existing)}, "may hold the only secrets"),
-                                ({"FOUNDRY_VIA_IR": "false"}, "unset FOUNDRY_VIA_IR"),
-                                ({"DAPP_SRC": "src"}, "unset DAPP_SRC")):
-            env = {k: v for k, v in base.items() if not k.startswith(("FOUNDRY_", "DAPP_"))}
+                                ({"FAKE_CONFIG_default": configs[("default", "drifted")]}, "profile default differently"),
+                                ({"FAKE_CONFIG_libsmall": configs[("libsmall", "drifted")]}, "profile libsmall differently")):
+            env = {k: v for k, v in base.items() if not k.lower().startswith(("foundry_", "dapp_"))}
             result = subprocess.run(["bash", str(SCRIPT)], env={**env, **extra},
                                     capture_output=True, text=True)
-            assert result.returncode == 1 and expected in result.stderr, (extra, result.stderr[-400:])
+            assert result.returncode != 0 and expected in result.stderr, (extra, result.stderr[-400:])
             assert "REACHED" not in result.stderr, extra
             checked += 1
+        # With pinned settings the guards pass and the script goes on to cast.
+        result = subprocess.run(["bash", str(SCRIPT)], env={k: v for k, v in base.items()
+                                if not k.lower().startswith(("foundry_", "dapp_"))}, capture_output=True, text=True)
+        assert "REACHED" in result.stderr, result.stderr[-400:]
+        checked += 1
     return checked
 
+
+def real_forge_settings():
+    """Against the real forge, a lowercase variable that changes the build is caught."""
+    checker = SCRIPT.parent.parent / "tooling/check_forge_config.py"
+    manifest = SCRIPT.parent.parent / "activation_manifest.testbed.json"
+    contracts = SCRIPT.parent.parent / "contracts"
+    clean = {k: v for k, v in os.environ.items() if not k.lower().startswith(("foundry_", "dapp_"))}
+    ok = subprocess.run([sys.executable, str(checker), str(manifest), str(contracts)],
+                        env=clean, capture_output=True, text=True)
+    assert ok.returncode == 0, ok.stderr
+    bad = subprocess.run([sys.executable, str(checker), str(manifest), str(contracts)],
+                         env={**clean, "foundry_via_ir": "false"}, capture_output=True, text=True)
+    assert bad.returncode != 0 and "via_ir" in bad.stderr, bad.stderr
+    return 2
 
 def main():
     with tempfile.TemporaryDirectory() as tmp:
@@ -137,10 +173,10 @@ def main():
         for kind, env, expected in cases:
             assert accepts(calls[kind], env) == expected, (kind, env)
     calls = call_sites()
-    guards = early_guards()
+    guards = early_guards() + real_forge_settings()
     print(f"PASS: {len(cases)} deployment-check cases; mismatched code, wrong Poseidon addresses "
           "and failed reads are rejected even when an earlier line fails and a later one passes; "
-          f"{calls} call sites refuse on failure; {guards} early guards stop before cast or forge")
+          f"{calls} call sites refuse on failure; {guards} early-guard checks stop before cast or an unpinned build")
 
 
 if __name__ == "__main__":
