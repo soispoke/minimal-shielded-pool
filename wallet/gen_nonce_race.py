@@ -119,6 +119,7 @@ def main():
                              "pass --random for another chain or a live tree")
         w.set_seed(20260712)
     refuse_overwrite(output_path)
+    new_output = not output_path.exists()
     if rpc_url is not None and int(_rpc(rpc_url, "eth_chainId", []), 16) != chain_id:
         raise SystemExit("--chain-id does not match the chain --rpc reads")
     WORK.mkdir(exist_ok=True)
@@ -208,7 +209,7 @@ def main():
         "transfer_c": ec,
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    write_private(output_path, json.dumps(fixture, indent=1))
+    write_private(output_path, json.dumps(fixture, indent=1), exclusive=new_output)
     print("two independent transfers proven against one root, disjoint nullifiers")
     print(f"  root R      {hex32(root_R)[:18]}...")
     print(f"  transfer A  nf {ea['nf1'][:14]}.. {ea['nf2'][:14]}..")

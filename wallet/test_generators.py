@@ -64,8 +64,16 @@ def main():
         fresh = Path(tmp, "fresh.json")
         gen_smoke.write_private(fresh, "secret")
         assert stat.S_IMODE(fresh.stat().st_mode) == 0o600
+        # An exclusive write refuses a file that appeared since the check.
+        try:
+            gen_smoke.write_private(fresh, "other", exclusive=True)
+        except SystemExit as error:
+            assert "appeared while generating" in str(error)
+        else:
+            raise AssertionError("exclusive write replaced an existing fixture")
+        assert fresh.read_text() == "secret"
         assert not [n for n in os.listdir(tmp) if n.startswith(".")], "temporary file left behind"
-        checked += 2
+        checked += 3
     print(f"PASS: {checked} generator refusals and secret-file checks")
 
 

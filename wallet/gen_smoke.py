@@ -47,19 +47,28 @@ TEST_CHAIN_ID = 31337
 TEST_POOL = "0xf62849f9a0b5bf2913b396098f7c7019b51a820a"
 
 
-def write_private(path, text):
+def write_private(path, text, exclusive=False):
     """Witnesses and fixtures hold note secrets and authorizer keys, so only the
     owner may read them. The text goes to a new owner-only file that then
     replaces the old one, so a reader holding an earlier, world-readable copy
-    open never sees it."""
+    open never sees it. With exclusive, the file must not exist yet, so a
+    concurrent run cannot write over a fixture this one just created."""
     path = Path(path)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(text)
-        os.replace(tmp, path)
+        if exclusive:
+            try:
+                os.link(tmp, path)
+            except FileExistsError:
+                raise SystemExit(f"{path} appeared while generating; move it and run again") from None
+            os.unlink(tmp)
+        else:
+            os.replace(tmp, path)
     except BaseException:
-        os.unlink(tmp)
+        if os.path.exists(tmp):
+            os.unlink(tmp)
         raise
 
 
@@ -211,6 +220,7 @@ def main():
                              f"{RECIPIENT} is a test placeholder")
     refuse_recipient(recipient, pool_address)
     refuse_overwrite(output_path)
+    new_output = not output_path.exists()
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # notes: Alice's deposit, Bob's payment target, Alice's change target
@@ -335,7 +345,7 @@ def main():
                                 auth_w, auth_w_key, pub_w, proof_w),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    write_private(output_path, json.dumps(fixture, indent=1))
+    write_private(output_path, json.dumps(fixture, indent=1), exclusive=new_output)
     print("real join-split proofs generated and verified off-chain; compressed public signals bind the wallet statement")
     print(f"wrote {output_path}")
     print(f"  transfer  nf1 {fixture['transfer']['nf1'][:18]}... nf2 {fixture['transfer']['nf2'][:18]}... fee {v_fee}")
