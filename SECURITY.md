@@ -289,7 +289,9 @@ and mutation of each statement value, `beta` and `gamma`. The circuit generator
 rejects same-note inputs, duplicate outputs, dummy-only spends, wrong sinks,
 sink-valued positive outputs, zero authorizers, and recipient mismatches. The
 circuit test checks `beta` against an independent Poseidon(10) and rejects a
-forged witness whose `beta` or `gamma` does not follow from the statement. The
+forged witness whose `beta` or `gamma` does not follow from the statement, and
+witnesses that each break only one constraint: value conservation, the 128-bit
+ranges, path-bit booleanity at several depths, and the sink rules. The
 envelope vector checks that changing any of 49 transfer components, 57
 withdrawal components, 58 gas-only tail components or 58 custom withdrawal tail
 components, including `beta`, changes the signed hash.

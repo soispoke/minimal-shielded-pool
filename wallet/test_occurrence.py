@@ -224,6 +224,32 @@ def main():
                                   nullifiers=w.input_nullifiers(domain0, [rebuilt_input, dummy]))
     assert public_rebuilt[0] != public_first[0]
 
+    # Each witness below breaks exactly one constraint, so deleting or weakening
+    # that constraint alone would let it through.
+    bad = copy.deepcopy(first)
+    bad["public_amount"] = "101"
+    witness_case("outputs-exceed-inputs", bad, False)
+    bad["public_amount"] = "99"
+    witness_case("inputs-exceed-outputs", bad, False)
+    bad = copy.deepcopy(first)
+    bad["public_amount"], bad["fee"] = "101", str(w.P - 1)  # conserved mod p only
+    witness_case("value-wraps-the-field", bad, False)
+    # A dummy's membership is gated off by its zero value, so a non-boolean
+    # path bit there breaks only the booleanity constraint, at any depth.
+    for depth in (0, 10, 19):
+        bad = copy.deepcopy(first)
+        bad["in_bits"][1][depth] = "2"
+        witness_case(f"nonboolean-dummy-path-bit-{depth}", bad, False)
+    transfer = w.build_witness(tree, [real, dummy], [(w.inner(*w.new_note()), 60), (w.inner(*w.new_note()), 40)],
+                               domain0, authorizer=authorizer, public_amount=0)
+    for position in (0, 1):
+        bad = copy.deepcopy(transfer)
+        bad["out_value"] = ["0", "100"] if position == 0 else ["100", "0"]
+        witness_case(f"zero-output-{position}-without-its-sink", bad, False)
+    bad = copy.deepcopy(transfer)
+    bad["out_inner"][0] = "2"
+    witness_case("positive-output-with-the-second-sink", bad, False)
+
     same_secrets_dummy = {"sk": sk, "rho": rho, "value": 0, "idx": None}
     public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]),
                                 nullifiers=w.input_nullifiers(domain0, [real, same_secrets_dummy]))
