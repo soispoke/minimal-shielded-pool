@@ -135,7 +135,7 @@ def prove_publics_honest(inputs, outputs, tree, domain, public, recipient, autho
     alpha = w.compression_alpha(stmt)
     return [beta, w.fingerprint((alpha + beta) % w.P, stmt), alpha]
 
-def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2):
+def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2, nonce_seq=0):
     source = keccak(POOL.to_bytes(20, "big") + word(int(entry["epoch"])))
     recent = source + int(entry["root_slot"]).to_bytes(8, "big") + word(int(entry["root"], 16))
     settle = builder.cast_calldata(f"settle({builder.SPEND_TUPLE})", builder.spend_args(entry))
@@ -145,7 +145,7 @@ def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2):
     if int(entry["public_amount"]):
         frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, keccak(b"claimWithdrawal(address)")[:4] + word(int(entry["recipient"], 16)), CLAIM_FRAME_STATE_GAS))
     if mutate is not None: mutate(frames)
-    tx = FrameTx(CHAIN, sorted([int(entry["nf1"], 16), int(entry["nf2"], 16)]), 0, POOL, frames,
+    tx = FrameTx(CHAIN, sorted([int(entry["nf1"], 16), int(entry["nf2"], 16)]), nonce_seq, POOL, frames,
         [FrameSig(1, int(entry["authorizer"], 16), b"", b"")], 1, max_fee)
     sig = keys.PrivateKey(bytes.fromhex(entry["authorizer_private_key"].removeprefix("0x"))).sign_msg_hash(tx.sig_hash())
     tx.signatures[0].signature = bytes([sig.v]) + word(sig.r) + word(sig.s)
@@ -158,7 +158,7 @@ def mapping(key, slot): return "0x" + keccak(word(key) + word(slot)).hex()
 def key_slots(entry, value):
     return {"0x" + keccak(word(POOL) + word(int(entry[k], 16))).hex(): str(value) for k in ("nf1", "nf2")}
 def spend(name, entry, slot=101, rejected=False, failed_claim=False, paid=None, expected_tree=None,
-          mutate=None, statuses=None, error=None, max_fee=2):
+          mutate=None, statuses=None, error=None, max_fee=2, raw=None):
     storage = {addr(0x8250): key_slots(entry, 0 if rejected else 1)}
     credit = int(entry["public_amount"]) if failed_claim else 0
     storage[addr(POOL)] = {mapping(int(entry["recipient"], 16), 23): str(credit)}
@@ -173,7 +173,7 @@ def spend(name, entry, slot=101, rejected=False, failed_claim=False, paid=None, 
         if paid is not None: expect["balances"] = {addr(EOA): str(paid)}
         if statuses is not None: expect["statuses"] = statuses
     if error is not None: expect["error_contains"] = error
-    return save(name, signed(entry, mutate=mutate, max_fee=max_fee), **expect)
+    return save(name, raw or signed(entry, mutate=mutate, max_fee=max_fee), **expect)
 
 cases = []
 def case(name, *steps): cases.append({"name": name, "transactions": list(steps)})
@@ -531,6 +531,37 @@ for field, index in ALIASES.items():
         mutate = bump_word(2, SETTLE_WORDS["recipient"], w.P)
     case(f"compression-{field}-aliased-by-p-rejected", spend(f"aliased-{field}", aliased,
          rejected=True, error=POOL_VERIFY, mutate=mutate))
+
+# Four dispatcher checks stop theft or a burn, yet with any one of them deleted
+# every case above still passed. Each case below breaks one of them in an
+# otherwise valid spend, and the pool must refuse it in its VERIFY frame, before
+# approval. A spent key set replayed at nonce_seq 1 would pay out again.
+seq_replay = spend("replay-spent-keys-at-seq-one", initial, 102, rejected=True, error=POOL_VERIFY,
+                   raw=frame_tx(initial, nonce_seq=1).raw())
+seq_replay["storage"][addr(0x8250)] = key_slots(initial, 1)
+case("spent-keys-replayed-at-seq-one-rejected", spend("spend-before-seq-replay", initial, paid=ETH-FEE), seq_replay)
+# The victim's signature over the transaction hash, re-sent as an explicit
+# message in a transaction with another fourth frame, is valid under EIP-8141.
+victim = frame_tx(initial)
+rewrap = frame_tx(initial, mutate=set_tail)
+rewrap.signatures[0] = FrameSig(1, int(initial["authorizer"], 16), victim.sig_hash(), victim.signatures[0].signature)
+case("signature-rewrapped-as-explicit-message-rejected",
+    spend("signature-explicit-message", initial, rejected=True, error=POOL_VERIFY, raw=rewrap.raw()))
+# A DEFAULT settlement frame would run after approval, revert on its sender
+# check and leave the input keys consumed.
+case("settlement-default-mode-rejected",
+    spend("settlement-default-mode", initial, rejected=True, error=POOL_VERIFY, mutate=settle_field("mode", 0)))
+# Frame 0 must be the recent-root verifier. The identity precompile echoes any
+# tuple, so a root of the attacker's own tree, holding a note nobody deposited,
+# would withdraw other users' deposits. Proved last so earlier proofs keep
+# their witnesses.
+def frame0_target(frames): frames[0].target = 4
+case("recent-root-frame-to-identity-precompile-rejected",
+    spend("recent-root-identity", initial, rejected=True, error=POOL_VERIFY, mutate=frame0_target))
+UNDEPOSITED = note(19 * ETH // 10)
+forged = prove("forged-root", tree_of(NA, NB, UNDEPOSITED), UNDEPOSITED, 2)
+case("forged-root-through-identity-precompile-rejected",
+    spend("forged-root-identity", forged, rejected=True, error=POOL_VERIFY, mutate=frame0_target))
 
 (OUT / "rejector-runtime.hex").write_text("0x60006000fd\n")
 (OUT / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")

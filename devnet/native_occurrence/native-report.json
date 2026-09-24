@@ -230,18 +230,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654829,
+            "gas_spent": 654805,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fbda",
+            "amount": "0x13fbaa",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-first-deposit.hex",
-          "raw_hash": "0x06200be371e97f05de83d8af9b73487808c94d57822b744931a83eaef0cfca92",
+          "raw_hash": "0x14c1bb7bdc6464aeaec41da604e1c812bf97152ccc72f6d64d38dc9d56e146aa",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -271,18 +271,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 471253,
+            "gas_spent": 471217,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 195840,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0xe61aa",
+            "amount": "0xe6162",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-second-deposit.hex",
-          "raw_hash": "0xd3292ac82fe3e16ed3a74de706898f91d34ae73f67db920d91d510222d5701fa",
+          "raw_hash": "0x66e3a930017586415734b7bdae456d06db1724e48cc38aa6273a0eda52329e2e",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 103
         }
@@ -483,7 +483,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "create-private-copy.hex",
-          "raw_hash": "0xf215fe908ea97993e0ff6dcc504ae0688894ac21cd5be1384089c1355b8a5d15",
+          "raw_hash": "0x675453e796eb4fad2139253375047c84d69b0881ef8b49b67cde7de95fba75a2",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         },
@@ -533,18 +533,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654826,
+            "gas_spent": 654778,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fbd4",
+            "amount": "0x13fb74",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-original-private.hex",
-          "raw_hash": "0xb7e1aac9635ddfba1e3a42ce5bf21ab0e554dfcc8092b1a187a6ba008a49f179",
+          "raw_hash": "0x87163ebbce76857fc39c18480f18c6efa56ae2e93d89536155c40e78045751bb",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 103
         },
@@ -574,18 +574,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 471205,
+            "gas_spent": 471193,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 195840,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0xe614a",
+            "amount": "0xe6132",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-created-private.hex",
-          "raw_hash": "0x087d87b9aca1e841da47aadfc1090aa5d6b38c7115932be8dfd2ef5027fa5db8",
+          "raw_hash": "0xcab02032345f52c929ec22224326a7c03a9a253e92ff85e2690fe991ea8555f4",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 104
         }
@@ -791,7 +791,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "first-a-withdrawal.hex",
-          "raw_hash": "0x09db197484ddafc78ea4db842fda9b672efed2655bf2e0da61926e5c1a874e3b",
+          "raw_hash": "0xde5cf96f66fbf1304a7695709b7c2ad92b63b1cde27c4317cf3b34477c94d37a",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         },
@@ -844,7 +844,7 @@
           },
           "paid_fee": null,
           "raw": "replay-later-root.hex",
-          "raw_hash": "0xea31a89e074482abbaa244d66257bc519bcac310ce9fbb4f9892a97bb180939b",
+          "raw_hash": "0xdbcc39b38bb0d70e3d24d557a741386f4b7291f2e99b1114141f3eb6d658c09e",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 103
         }
@@ -1022,7 +1022,7 @@
           },
           "paid_fee": null,
           "raw": "mutated-domain.hex",
-          "raw_hash": "0x9d5e06817ff6d6d5ed1b60097510c80d31aa6aaf34037d4638701dcfa66d29e5",
+          "raw_hash": "0xa500d9bfd47059968f87857e1accf109825c14841f7de3191deddf9ccd79c440",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -1200,7 +1200,7 @@
           },
           "paid_fee": null,
           "raw": "mutated-epoch.hex",
-          "raw_hash": "0x1da7197798ee997edbcb2637c384b4097439bd25ea1cc141f3f0c7670345a9b3",
+          "raw_hash": "0x54a5fea5706336f6548a327d996018736426055809c702f94925d7e01b3cbae9",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -1460,18 +1460,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654790,
+            "gas_spent": 654802,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fb8c",
+            "amount": "0x13fba4",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "spend-on-old-branch.hex",
-          "raw_hash": "0xd0869c29634d3ad5aee41c18e5e35a76b76aa721a3046c7c36523b4a9c99ebd7",
+          "raw_hash": "0xedf73637b05524bae9dd10c19b4056a1d6b767cbf8041e8149757892201621cb",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -1549,7 +1549,7 @@
           },
           "paid_fee": null,
           "raw": "old-branch-proof-rejected.hex",
-          "raw_hash": "0xd0869c29634d3ad5aee41c18e5e35a76b76aa721a3046c7c36523b4a9c99ebd7",
+          "raw_hash": "0xedf73637b05524bae9dd10c19b4056a1d6b767cbf8041e8149757892201621cb",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -1562,7 +1562,7 @@
           },
           "paid_fee": null,
           "raw": "old-branch-proof-current-root-rejected.hex",
-          "raw_hash": "0x79b42d0a4fdabb0fe53bd62a7cfdffa16b713b19a27d90f0325c91a7abe96cbd",
+          "raw_hash": "0xb4837fe7e4802fd6ece25bbc0d4fc28a4fd087171e1cb59e315746fbd3cde8d5",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -1603,7 +1603,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "rebuilt-branch-proof.hex",
-          "raw_hash": "0xf8980d4e5aa69907ef058eacafcd3b8f451c4644bde7d717a47c3dfc23c196b8",
+          "raw_hash": "0x4ed338c6ac02a16260ff358659698bfd2c4ca003b0955d602157bf26f6c01f0e",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -1798,18 +1798,18 @@
                 "status": 0
               }
             ],
-            "gas_spent": 579110,
+            "gas_spent": 579098,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Revert(RevertOpcode)",
             "state_gas_used": 293760,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x11ac4c",
+            "amount": "0x11ac34",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "rejecting-recipient.hex",
-          "raw_hash": "0xd35d15c67a0cf507ea7b56a67fe2f52303b3cb52a8212bbae2fcc8e716f2999d",
+          "raw_hash": "0xaadd792eabc6a96a492c9949ca88369eb07202e770bd1b7ebaeaa0904b8c3d70",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -2050,18 +2050,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 1947780,
+            "gas_spent": 1947804,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 293760,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x3b7108",
+            "amount": "0x3b7138",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-long-carry.hex",
-          "raw_hash": "0x1ca4caa44ac0e63f39f68e8b219efd317b9b8d792182c9a525456ce200a98432",
+          "raw_hash": "0x706080e573dd488cb24cae07ec5102a49851ee2505886df69d0888271d5e1ba8",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -2313,7 +2313,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-long-carry-even.hex",
-          "raw_hash": "0xbb8bdf75269ff69335c0850aaec7ecc8f52e57c7b9eb158a26a8978b00b40e68",
+          "raw_hash": "0x585c7301e7e3d1fa19261b441615f43aba6206d8a95671cf84162a7358c2e86f",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -2559,18 +2559,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 2150857,
+            "gas_spent": 2150869,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 477360,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x41a392",
+            "amount": "0x41a3aa",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-long-carry-new-credit.hex",
-          "raw_hash": "0xc2340528299bc0698307cd00fb6c3d19e4e90d6bee282be14fa906a8e26187c9",
+          "raw_hash": "0x6db0084a8e17f25d24f71d94f8a161d6fd57642c122cc5ab60f1e3daeff4d11f",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -2827,7 +2827,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-long-carry-retained-credit.hex",
-          "raw_hash": "0x05ace73ad21203beb76e918b803b1a6c28116cc84db5e2ab8b81c0c16af07870",
+          "raw_hash": "0x297d2b7dde83cb6a9e0e4dfa847379b65bd89e1bbf3d906821c5d13065088e57",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -3084,7 +3084,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-long-carry-one-output-new-credit.hex",
-          "raw_hash": "0xb3153cde1fea1388a19fec22de82bb4e762c29cf93d9fd9d52c05b0831ec3556",
+          "raw_hash": "0xc7cc057dd024a63f1c91a9cc79bac5ad4f0b7f69ac56be8db678a514a2732543",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -3325,18 +3325,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 1447138,
+            "gas_spent": 1447186,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 391680,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x2c29c4",
+            "amount": "0x2c2a24",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-rollover.hex",
-          "raw_hash": "0x4a71163ab86202299c47de0c57f3ba05a85ebe81a4e1f39bf03f88ff555cb3c7",
+          "raw_hash": "0xb67bf0155db31558c64b004fa69feb54087df01422ac5d973cd23d21211690bd",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -3397,7 +3397,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-rolled-epoch-output.hex",
-          "raw_hash": "0x0a83daaee72fe07b0c7e43b4cb85e8b515d056cb3991952783384be6da6179ea",
+          "raw_hash": "0x70b0afeb1eece642c44fe20f799f700891f6b12d110898f193d31fb0ef3c96d8",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 104
         }
@@ -3643,18 +3643,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 1650239,
+            "gas_spent": 1650263,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 575280,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x325c7e",
+            "amount": "0x325cae",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-rollover-new-credit.hex",
-          "raw_hash": "0x55cb789374ec7d2792597037b55abbca18a918fcce4cc404d18e7a93884f8a86",
+          "raw_hash": "0x11b6448500104868fa7cb34969c62c2bb419a31e330146c6bb3d0a386c5076bd",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -3911,7 +3911,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-rollover-retained-credit.hex",
-          "raw_hash": "0x7747b7cd688df1ac960e9394154bbb6b3f1c7690ebe9d1ab56764c8ac525d845",
+          "raw_hash": "0xd2217a57b738d6c7620c24e813e217665b16218b3d57736d3b239fa7b33de9bc",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -4152,18 +4152,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 1445546,
+            "gas_spent": 1445558,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 391680,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x2c1d54",
+            "amount": "0x2c1d6c",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "settle-full-tree-rollover.hex",
-          "raw_hash": "0xd0f82084141100bec1225b3df681ecb3d37768496b745686d836c95011617158",
+          "raw_hash": "0x1c1ecdfd3ad46d06e25efdd2f611b2a97767999a5c56c37d80f9aeec3d33b98d",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -4404,18 +4404,18 @@
                 "status": 0
               }
             ],
-            "gas_spent": 1818021,
+            "gas_spent": 1818045,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Revert(RevertOpcode)",
             "state_gas_used": 195840,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x377b4a",
+            "amount": "0x377b7a",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "old-limit-settlement-failure.hex",
-          "raw_hash": "0x1166d916934c0c2e9c86d5998819cc0bd3655256818c315479b7a8431672d931",
+          "raw_hash": "0x1894ad14244602f7e8f26ce35e6ddc8fe415787574488ac77684d02d13d82443",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -4663,18 +4663,18 @@
                 "status": 0
               }
             ],
-            "gas_spent": 1632784,
+            "gas_spent": 1632772,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Revert(RevertOpcode)",
             "state_gas_used": 587520,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x31d420",
+            "amount": "0x31d408",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "fresh-epoch-retained-credit.hex",
-          "raw_hash": "0xc2e1373575d83fca10b3c978dd48cb16d16eb985e9ebaba8d74863eaec7ede5e",
+          "raw_hash": "0x6ee169330d225d41b97beea143d027a8b9d27ac5b35df39525b892272b207ce1",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -4920,18 +4920,18 @@
                 "status": 0
               }
             ],
-            "gas_spent": 1799487,
+            "gas_spent": 1799475,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Revert(RevertOpcode)",
             "state_gas_used": 685440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x36ea7e",
+            "amount": "0x36ea66",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "fresh-epoch-retained-credit.hex",
-          "raw_hash": "0xc2e1373575d83fca10b3c978dd48cb16d16eb985e9ebaba8d74863eaec7ede5e",
+          "raw_hash": "0x6ee169330d225d41b97beea143d027a8b9d27ac5b35df39525b892272b207ce1",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -5139,7 +5139,7 @@
           },
           "paid_fee": null,
           "raw": "old-proof-rebound-epoch.hex",
-          "raw_hash": "0x7cecdd81cc3485b59d9c02489275256bec04cf91c4e92c9cbc6ac0c25a60f878",
+          "raw_hash": "0xb66ae70cc5790a9770a7dc0a4a74c65a9aa3a96736cf7d40c658a1721e230ec2",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -5169,18 +5169,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654877,
+            "gas_spent": 654841,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fc3a",
+            "amount": "0x13fbf2",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "epoch-one-proof.hex",
-          "raw_hash": "0x1d671cd4164beba6c6f8da29ced141458211574a829f77035b2d0bbe691ac052",
+          "raw_hash": "0x2c9d104e1665e044540d17da43b76c097e228b251ba0e542925daa25d2f40cbb",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -5370,18 +5370,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 563606,
+            "gas_spent": 563594,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 293760,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x11332c",
+            "amount": "0x113314",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdrawal-without-tail.hex",
-          "raw_hash": "0x176a603c4de3497662aec087dac8dccf0c03696924adc4fc9e8a5cbbf6139812",
+          "raw_hash": "0x88757d5a97872082d191891a4cf5ec34f2f3f7e1a8294da6fb8c61c5750c1e4a",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -5576,18 +5576,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 567203,
+            "gas_spent": 567191,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 293760,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x114f46",
+            "amount": "0x114f2e",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdrawal-account-tail.hex",
-          "raw_hash": "0xba61aa382262f5a09195bc7e2e66e891924a99b6acdb2e3d782ec82783bff84e",
+          "raw_hash": "0x61a5ede49bac72bc270bfb0bb5a0a0a1cceb7c5692026b76ceed7c6b7807f118",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -5793,7 +5793,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "transfer-account-tail.hex",
-          "raw_hash": "0x8cf172150a92a00a02a53032e46ad446be70da8d21e54c659d164658c1948406",
+          "raw_hash": "0x2035243078b54817f63b6cf29c4beed34905a394c3f5ea938cc1fa92a689b6a2",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -5971,7 +5971,7 @@
           },
           "paid_fee": null,
           "raw": "tail-sender-mode-second-settlement.hex",
-          "raw_hash": "0xb4e9c1f0195d5388e837db2fde6126f603570a4eb748974a281aefa4c2e369fb",
+          "raw_hash": "0xeeb96909c9b49ae3bef7eae3f11a50db69f093a08fcd6ba29ec9b1f07fe81b09",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -6149,7 +6149,7 @@
           },
           "paid_fee": null,
           "raw": "tail-zero-target.hex",
-          "raw_hash": "0xef66bd62bad80ee34f5bb0c2a0803ffa7043091feb0718e3a04f474f3e0507b2",
+          "raw_hash": "0xccd39e0dfe58bffdb7aef4097134a0ef622af0cbcc1b4b8768ceef101c44b680",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -6327,7 +6327,7 @@
           },
           "paid_fee": null,
           "raw": "tail-approval-flag.hex",
-          "raw_hash": "0x6379c3f49d823018c6b89a98e1b587683f788c791a3e16a3c2605f6083929a1d",
+          "raw_hash": "0x0f4ecf1205d4567e99aa037bb138536fdd09dfbb1e1696f91baafe392fd3aa47",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -6505,7 +6505,7 @@
           },
           "paid_fee": null,
           "raw": "tail-settlement-atomic-batch-with-tail.hex",
-          "raw_hash": "0xbbb869b805f57816c56dcae628e5ac543456b84de4535448655b36e6138d4f11",
+          "raw_hash": "0x7c0e51710edc87c888d6bcc4c750e9f333dd573c4868d04cd4db5b63b2fbf5b7",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -6683,7 +6683,7 @@
           },
           "paid_fee": null,
           "raw": "tail-fifth-frame.hex",
-          "raw_hash": "0xafb2977446dde63db9a28f53551eaf9b71fe0584edd4f53629c2d69e545a9ac5",
+          "raw_hash": "0xda4a00efefcbdc16a9836461f87a6e2aec2f7b3fb43870809999bd05c2be2013",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -6889,7 +6889,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "transfer-pool-tail-settlement.hex",
-          "raw_hash": "0xa2091f82abfde4fda7a7109d8d2d53f152148fbce1ab1463630f7fd9fc47aff1",
+          "raw_hash": "0x143d7b34cbbe09b79637fb97ffca38d9ba8fe9dd3d6caca6e5c96f744f6e9539",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -7084,18 +7084,18 @@
                 "status": 0
               }
             ],
-            "gas_spent": 1170875,
+            "gas_spent": 1170851,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Revert(RevertOpcode)",
             "state_gas_used": 195840,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x23bb76",
+            "amount": "0x23bb46",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "transfer-pool-tail-verify-entry.hex",
-          "raw_hash": "0x41e1320822db9ec47f4dde690200590539e945e0dd0005506d6f5637940374ba",
+          "raw_hash": "0x63048ea456b68d4c50bd3106dcf6e76a867f878aecbc1538b90058e482a12e0f",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -7273,7 +7273,7 @@
           },
           "paid_fee": null,
           "raw": "tail-nonzero-value.hex",
-          "raw_hash": "0x895607d650e37329bac8d226082acfad84d931d02614db9f58fa33bb5834992c",
+          "raw_hash": "0x45a3c8306ec0d5698837c0039ac381a897a812cff02bd36ec4e55e78f4d0747e",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -7468,18 +7468,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654841,
+            "gas_spent": 654817,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fbf2",
+            "amount": "0x13fbc2",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "validation-limits-raised.hex",
-          "raw_hash": "0xdd8dc4014e7f5a4e2afbbfdf74a70309cca36bafff0fc03a52e855eca82a7437",
+          "raw_hash": "0xd991ec2260a5cd6584eac9036d76df41522d504431c551c50d26a0bc7563fc6f",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -7657,7 +7657,7 @@
           },
           "paid_fee": null,
           "raw": "too-low-recent-root-execution.hex",
-          "raw_hash": "0x01d18eeb364c86fb01399e6dfa99c853839c6539a2a16810562296cb38e5f27a",
+          "raw_hash": "0xbad3f835873c8c3566f489195ea6bcbb982499012683db1824499b4ccbc36c35",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -7835,7 +7835,7 @@
           },
           "paid_fee": null,
           "raw": "too-low-proof-execution.hex",
-          "raw_hash": "0x9f7fe8e4e0c2f0b05a4b6527110ed8ee608d9ee509ee1563a6e9a219893a8f0c",
+          "raw_hash": "0x6ba19ae7491fd574cfa82fc736bcbf1453b634773f61d072ec8185f989f6eb3b",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -8013,7 +8013,7 @@
           },
           "paid_fee": null,
           "raw": "too-low-proof-state.hex",
-          "raw_hash": "0xcdf9cb418b4d4b2a6e5ecfd24ce5658ec6533ce197e48915924af95523829a3e",
+          "raw_hash": "0x221e8fe07588ff27506aab63880524537ded2f08c1a0464d9973a6bbb1d92e3e",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -8208,18 +8208,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654793,
+            "gas_spent": 654817,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fb92",
+            "amount": "0x13fbc2",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "fee-covers-defaults.hex",
-          "raw_hash": "0xd6b730ce79c9a4653113168a408d6cde4bfcc1bbbb7bd78b80fd9383529f3ca1",
+          "raw_hash": "0xa4a78527dc709e62f96ffc4ebf2b85e3f6196f193f0489dd97ef780107270223",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -8397,7 +8397,7 @@
           },
           "paid_fee": null,
           "raw": "beyond-fee-recent-root-execution.hex",
-          "raw_hash": "0x026329a24e59d4a0824dbe8435267cb070147ffc4de625f87fd5c86e37dce7f9",
+          "raw_hash": "0xa0ad7515b57fa1dd676acc2191adc2dcd4d48398585d4049933bac9e8a8651ba",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -8575,7 +8575,7 @@
           },
           "paid_fee": null,
           "raw": "beyond-fee-proof-state.hex",
-          "raw_hash": "0x154c5b207ff60ff22c0203b4c343784547a6324c2caaf2d48f7d01000c176afa",
+          "raw_hash": "0x9cd31958738ee60389e92fbc83ba9e1c3dc3a6dd2ec662693302c6a886869302",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -8753,7 +8753,7 @@
           },
           "paid_fee": null,
           "raw": "changed-nf1.hex",
-          "raw_hash": "0x57b9861b5a9724ab06f34c296fedf1f003a367c5bef3b52d5b60a1ace246fa90",
+          "raw_hash": "0x1ec8bd853af5c2443102c5a4dcf991cbf640f52769e87fa4af6d6e61fa7f142c",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -8931,7 +8931,7 @@
           },
           "paid_fee": null,
           "raw": "changed-nf2.hex",
-          "raw_hash": "0x43823a2cc1632861479a77864ad77fec37d99729c3017e39891878b5a9ec9fb7",
+          "raw_hash": "0x6101cdc40ae6552ed737f01bad3f0bba9ddbbb1a5886a72e958759f7eadc3129",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -9109,7 +9109,7 @@
           },
           "paid_fee": null,
           "raw": "changed-out-cm1.hex",
-          "raw_hash": "0x2b11adfbfb8ea10645506171cd01006a23c25aa0098aa43116115910ad64ee1f",
+          "raw_hash": "0x3e9a2fda4bdf7007ede1a4514883ef514f79188ae28482595676ab154d313eb7",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -9287,7 +9287,7 @@
           },
           "paid_fee": null,
           "raw": "changed-out-cm2.hex",
-          "raw_hash": "0x5c4dde78f4d55020e97a421d94dacc4ea3b7aa4a53349c8d0b61345d135875c7",
+          "raw_hash": "0xf145378f260158b938668a433e2a0e7fd28b50ec499e3722e62a96da151f6e86",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -9465,7 +9465,7 @@
           },
           "paid_fee": null,
           "raw": "changed-root.hex",
-          "raw_hash": "0xde06119e1d5cce5819bc15d408b4e8d3db4f5b10271e31514931c55990ed326a",
+          "raw_hash": "0xb750cda94a023f7346708400289f256dc7c42e77f042a50b3256ab93a206c596",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -9643,7 +9643,7 @@
           },
           "paid_fee": null,
           "raw": "changed-domain.hex",
-          "raw_hash": "0x8df3762780857c717c35a7b4fe0ad8c4b7d97e594c541218dbf35b44dfa53a45",
+          "raw_hash": "0xc84e20146028c593f4ff9e28dccdc9ca07dcd2410fc1071f5cee169e3f0639b3",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -9821,7 +9821,7 @@
           },
           "paid_fee": null,
           "raw": "changed-public-amount.hex",
-          "raw_hash": "0xce6afaac759da7663aa505576c1e2e678f19827dda1521381352fa890f4fae75",
+          "raw_hash": "0x147ab742e1395857798775c51720469fd38886b816839b6fb714fbeede240809",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -9999,7 +9999,7 @@
           },
           "paid_fee": null,
           "raw": "changed-fee.hex",
-          "raw_hash": "0xc3de256731595c1abb6b290ed93b265027cea5e22509e4b24adc0a644cfc593e",
+          "raw_hash": "0x3933f9aca63de652c526dc5e4b415829babb4c24b5bb34d38fc0459bccb29245",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -10177,7 +10177,7 @@
           },
           "paid_fee": null,
           "raw": "changed-recipient.hex",
-          "raw_hash": "0x3b50102ac2ab4982f9bf2452b2622ade6df0a22aedf19c54ec996f1507dd308d",
+          "raw_hash": "0x5fec5106ca707782d9adac720b67e96b31a744e3ed38c05b72e5d465e379aa3f",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -10355,7 +10355,7 @@
           },
           "paid_fee": null,
           "raw": "changed-authorizer.hex",
-          "raw_hash": "0xb78855e5db348d66fcc1ea074d44cfeeb3b278f9c03af1584da0e8017554ef2b",
+          "raw_hash": "0xd6fa967160e5409a37e96274058423e2548f0d734e77cd8713f3b9e11c918cab",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -10533,7 +10533,7 @@
           },
           "paid_fee": null,
           "raw": "changed-beta.hex",
-          "raw_hash": "0x2167130a4320474db98132049bce48c4c7c46cf077ea1b6f0552e3336a67ab52",
+          "raw_hash": "0x6ef17081fd90e0fda199c07d9195c9344023c2ee9a98ba1db714831dd3530492",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -10711,7 +10711,7 @@
           },
           "paid_fee": null,
           "raw": "beta-outside-field.hex",
-          "raw_hash": "0x73e95660e12ab0e17d3614c371c966caba616f097745476393a8eb4065076991",
+          "raw_hash": "0x401c18d822e40c9379042e2da02b7ba208c8168f28fa33184e31dc9f5dafcc13",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -10906,18 +10906,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 1280152,
+            "gas_spent": 1280140,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 293760,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x271130",
+            "amount": "0x271118",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "transfer-publishes-root.hex",
-          "raw_hash": "0x4b3abd6af4b46fa456b9c3200efb208e814132cec041887341b66c7fd0a8a782",
+          "raw_hash": "0x48030cacb7fe2a72d9c9dcd8a64ea98564c4381d8c215e171b23f5bb2cf2b6af",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         },
@@ -10947,18 +10947,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654853,
+            "gas_spent": 654865,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fc0a",
+            "amount": "0x13fc22",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-note-from-tail-root.hex",
-          "raw_hash": "0x6897fa44b1af75f3672b791287ce66423319153cfb8a1e62c3fedfb13983b04f",
+          "raw_hash": "0xe3af401d712d3238c8fccc8338704b11cc6970c680eb6fc12ca553e0e660eb1f",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         }
@@ -11164,7 +11164,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "transfer-publication-fails.hex",
-          "raw_hash": "0xe7fa0b4c3ff52e337a87500f01d58f86975d83dfce1fb38f8c8a7c76bc843c54",
+          "raw_hash": "0x1610be960147408bd7a42ae38033a8c3b9ed0cb21805438280669eebdebb029c",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         },
@@ -11214,18 +11214,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 654829,
+            "gas_spent": 654865,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 379440,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x13fbda",
+            "amount": "0x13fc22",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-after-retried-publication.hex",
-          "raw_hash": "0x2f1eca070161058cc0143e1bc501f608f02e94e46abeb4273875821dbcbd6eab",
+          "raw_hash": "0xdf53df6217f4add022a26b5ace558629b12256112a545cf2f045d49b87df93ef",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 103
         }
@@ -11471,18 +11471,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 1561861,
+            "gas_spent": 1561885,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 489600,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x2faa0a",
+            "amount": "0x2faa3a",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "rollover-tail-publishes-epoch-one.hex",
-          "raw_hash": "0xa6839abbfca2984f163b0da79414b669cd831b429b54fe40480cb8192aff6283",
+          "raw_hash": "0xcb5d301663380ecda29e211c025e531806edc3f0c7b6548e8fa52bae5bd533f9",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -11523,7 +11523,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-output-from-tail-root.hex",
-          "raw_hash": "0xf60e31bda6b67f087c0192cca41f03b244a1f6433bca565383a183e36f2235ee",
+          "raw_hash": "0xc68d6c8edaba4433211a6abee1b28f9f63a5c9abc4834c5a6e87b6186014fdcd",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 103
         }
@@ -11769,18 +11769,18 @@
                 "status": 1
               }
             ],
-            "gas_spent": 1561930,
+            "gas_spent": 1561954,
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
             "result": "Success",
             "state_gas_used": 489600,
             "valid": true
           },
           "paid_fee": {
-            "amount": "0x2faa94",
+            "amount": "0x2faac4",
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "rollover-tail-publishes-epoch-zero.hex",
-          "raw_hash": "0xf364da0184809899128048a86caea6a194f8999eea1cf0dd318f6e757347cac8",
+          "raw_hash": "0x03ed41fe9763ff20b601fae1863c75c53161dc84168b1f22fe75dd23850c8c50",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 102
         },
@@ -11793,7 +11793,7 @@
           },
           "paid_fee": null,
           "raw": "output-root-not-published.hex",
-          "raw_hash": "0xf60e31bda6b67f087c0192cca41f03b244a1f6433bca565383a183e36f2235ee",
+          "raw_hash": "0xc68d6c8edaba4433211a6abee1b28f9f63a5c9abc4834c5a6e87b6186014fdcd",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 103
         },
@@ -11854,7 +11854,7 @@
             "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
           },
           "raw": "withdraw-output-after-later-publication.hex",
-          "raw_hash": "0x0a83daaee72fe07b0c7e43b4cb85e8b515d056cb3991952783384be6da6179ea",
+          "raw_hash": "0x70b0afeb1eece642c44fe20f799f700891f6b12d110898f193d31fb0ef3c96d8",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 104
         }
@@ -12032,7 +12032,7 @@
           },
           "paid_fee": null,
           "raw": "aliased-nf1.hex",
-          "raw_hash": "0xb6d2ea705753d54fbea00c9c04d796c40a43b3ef895afa75f538b5efcc037fe3",
+          "raw_hash": "0x3351b3cf10f6e6b9226eace593b4acb6c398a50ea700ac034e942be5a17cff7d",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -12210,7 +12210,7 @@
           },
           "paid_fee": null,
           "raw": "aliased-nf2.hex",
-          "raw_hash": "0x1ec1e4a7c7dbbb9188eee9be1cbeb723b3f25dc819eed7928c56b1aadc9e6b06",
+          "raw_hash": "0xcef5847cab13309276c3f31223be2880debfeb378c82293b5c072e3332569449",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -12388,7 +12388,7 @@
           },
           "paid_fee": null,
           "raw": "aliased-out-cm1.hex",
-          "raw_hash": "0x9d66ed17e136e7346cd30fbd896c90e04f6df409cad086a3ab21718e8ecb3199",
+          "raw_hash": "0x39f0f875b2570fcd3f4734b50fee923f60dc071f465b66d932696bb018023d35",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -12566,7 +12566,7 @@
           },
           "paid_fee": null,
           "raw": "aliased-out-cm2.hex",
-          "raw_hash": "0x3c44a8faaddd4ab8396ec5447e7d6f09dfee430ef1625a127a0a8f9ad16dc9f4",
+          "raw_hash": "0x7325b071d3ce51538dc97a0eadc79388b04f08a639d08dbbc289bbae7632e316",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -12744,7 +12744,7 @@
           },
           "paid_fee": null,
           "raw": "aliased-public-amount.hex",
-          "raw_hash": "0x1ae16b6e38e9d0f67b14ac75c2de2cd913463829117bc20c9ea498edc5dc62a1",
+          "raw_hash": "0x6099624dd38dd94ffeda2ec2ae2c92b2493dfe15b587ee2230b5301e4537880f",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -12922,7 +12922,7 @@
           },
           "paid_fee": null,
           "raw": "aliased-fee.hex",
-          "raw_hash": "0xa22b54ddc7c2cc18da9a86f7959384115b397401500889ef043dc958c9480dfc",
+          "raw_hash": "0xba3a561f9b8fe475283469c722bb2a862e98a4aa3a514f25e0c9e80956aac6fd",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
@@ -13100,7 +13100,938 @@
           },
           "paid_fee": null,
           "raw": "aliased-recipient.hex",
-          "raw_hash": "0xc0b291f8e1873d93c66edf1c2ef68c3c30c32c607e25384da3f1d5d7e7a916be",
+          "raw_hash": "0xba901d8b4b048c2cadf32b7cfc7d5fcce01f4e5daeeca4dfb7c2d5498a7eca33",
+          "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+          "slot_number": 101
+        }
+      ]
+    },
+    {
+      "name": "spent-keys-replayed-at-seq-one-rejected",
+      "steps": [
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11026765,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 10887480,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x150829a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon3.hex",
+          "raw_hash": "0x22cd9c557847e26caca99b3bf9af2b1494819dd4e9ea80437157069b0297dcd5",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 14530874,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 14354460,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1bb7274",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon4.hex",
+          "raw_hash": "0xdcc1e6b8c328e532fe2dabc48179a6eaa11277a9592fe31c2240c89a46cfc07b",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2818147,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2766240,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x5600c6",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-verifier.hex",
+          "raw_hash": "0x1cc5e979e6f058f05d65a29fa90442920f1a6635412dc144c9fd294da778d237",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11384203,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 11242440,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x15b6b16",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-logic.hex",
+          "raw_hash": "0xb2b0f405824a271c2ccc32d9f55e3405afe97a85d31c506ead3b682204069cee",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2837325,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2773890,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x56969a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-pool.hex",
+          "raw_hash": "0x9408b9807a559f26c57e20a069acf72cfe4d4c1e5f926d9b728f373f3e08fd48",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 985581,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 195840,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1e13da",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-a.hex",
+          "raw_hash": "0xfda8d78c33aef5183567e6616129306c56a8b4291a2bd23876dcc44a9b84d1f6",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 923113,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1c2bd2",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-b.hex",
+          "raw_hash": "0x5b14aeaa2fad64674df3ad29ce7c2a372790b17258715953893bd534e1c1842d",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 138822,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x43c8c",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "publish-initial.hex",
+          "raw_hash": "0xcbd9ce5d16ee34a128902a7a9b95ccd44bb69b296e1f10ea1a877352fad34c2c",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": [
+              {
+                "execution_gas": 5579,
+                "state_gas": 0,
+                "status": 1
+              },
+              {
+                "execution_gas": 210166,
+                "state_gas": 195840,
+                "status": 1
+              },
+              {
+                "execution_gas": 25526,
+                "state_gas": 0,
+                "status": 1
+              },
+              {
+                "execution_gas": 14738,
+                "state_gas": 183600,
+                "status": 1
+              }
+            ],
+            "gas_spent": 654829,
+            "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+            "result": "Success",
+            "state_gas_used": 379440,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x13fbda",
+            "payer": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf"
+          },
+          "raw": "spend-before-seq-replay.hex",
+          "raw_hash": "0xde5cf96f66fbf1304a7695709b7c2ad92b63b1cde27c4317cf3b34477c94d37a",
+          "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+          "slot_number": 101
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1629 bytes of code) failed: RevertOpcode\"))",
+            "valid": false
+          },
+          "paid_fee": null,
+          "raw": "replay-spent-keys-at-seq-one.hex",
+          "raw_hash": "0x4fb20c8df74d04766a9e22a4299369fbaf6d5eb214b1b06b3e536f69a53d688c",
+          "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+          "slot_number": 102
+        }
+      ]
+    },
+    {
+      "name": "signature-rewrapped-as-explicit-message-rejected",
+      "steps": [
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11026765,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 10887480,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x150829a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon3.hex",
+          "raw_hash": "0x22cd9c557847e26caca99b3bf9af2b1494819dd4e9ea80437157069b0297dcd5",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 14530874,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 14354460,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1bb7274",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon4.hex",
+          "raw_hash": "0xdcc1e6b8c328e532fe2dabc48179a6eaa11277a9592fe31c2240c89a46cfc07b",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2818147,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2766240,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x5600c6",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-verifier.hex",
+          "raw_hash": "0x1cc5e979e6f058f05d65a29fa90442920f1a6635412dc144c9fd294da778d237",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11384203,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 11242440,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x15b6b16",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-logic.hex",
+          "raw_hash": "0xb2b0f405824a271c2ccc32d9f55e3405afe97a85d31c506ead3b682204069cee",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2837325,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2773890,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x56969a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-pool.hex",
+          "raw_hash": "0x9408b9807a559f26c57e20a069acf72cfe4d4c1e5f926d9b728f373f3e08fd48",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 985581,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 195840,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1e13da",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-a.hex",
+          "raw_hash": "0xfda8d78c33aef5183567e6616129306c56a8b4291a2bd23876dcc44a9b84d1f6",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 923113,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1c2bd2",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-b.hex",
+          "raw_hash": "0x5b14aeaa2fad64674df3ad29ce7c2a372790b17258715953893bd534e1c1842d",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 138822,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x43c8c",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "publish-initial.hex",
+          "raw_hash": "0xcbd9ce5d16ee34a128902a7a9b95ccd44bb69b296e1f10ea1a877352fad34c2c",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1629 bytes of code) failed: RevertOpcode\"))",
+            "valid": false
+          },
+          "paid_fee": null,
+          "raw": "signature-explicit-message.hex",
+          "raw_hash": "0xf324d4ddfb180547c9bcab8c23401d75e408cce09def6966eff03ed3a80b9d0c",
+          "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+          "slot_number": 101
+        }
+      ]
+    },
+    {
+      "name": "settlement-default-mode-rejected",
+      "steps": [
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11026765,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 10887480,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x150829a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon3.hex",
+          "raw_hash": "0x22cd9c557847e26caca99b3bf9af2b1494819dd4e9ea80437157069b0297dcd5",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 14530874,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 14354460,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1bb7274",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon4.hex",
+          "raw_hash": "0xdcc1e6b8c328e532fe2dabc48179a6eaa11277a9592fe31c2240c89a46cfc07b",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2818147,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2766240,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x5600c6",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-verifier.hex",
+          "raw_hash": "0x1cc5e979e6f058f05d65a29fa90442920f1a6635412dc144c9fd294da778d237",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11384203,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 11242440,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x15b6b16",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-logic.hex",
+          "raw_hash": "0xb2b0f405824a271c2ccc32d9f55e3405afe97a85d31c506ead3b682204069cee",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2837325,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2773890,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x56969a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-pool.hex",
+          "raw_hash": "0x9408b9807a559f26c57e20a069acf72cfe4d4c1e5f926d9b728f373f3e08fd48",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 985581,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 195840,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1e13da",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-a.hex",
+          "raw_hash": "0xfda8d78c33aef5183567e6616129306c56a8b4291a2bd23876dcc44a9b84d1f6",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 923113,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1c2bd2",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-b.hex",
+          "raw_hash": "0x5b14aeaa2fad64674df3ad29ce7c2a372790b17258715953893bd534e1c1842d",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 138822,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x43c8c",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "publish-initial.hex",
+          "raw_hash": "0xcbd9ce5d16ee34a128902a7a9b95ccd44bb69b296e1f10ea1a877352fad34c2c",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1629 bytes of code) failed: RevertOpcode\"))",
+            "valid": false
+          },
+          "paid_fee": null,
+          "raw": "settlement-default-mode.hex",
+          "raw_hash": "0xcac476b315a67ca1e49db2d6913d276a9de5ace3796c4fd1bcea077c91717918",
+          "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+          "slot_number": 101
+        }
+      ]
+    },
+    {
+      "name": "recent-root-frame-to-identity-precompile-rejected",
+      "steps": [
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11026765,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 10887480,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x150829a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon3.hex",
+          "raw_hash": "0x22cd9c557847e26caca99b3bf9af2b1494819dd4e9ea80437157069b0297dcd5",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 14530874,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 14354460,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1bb7274",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon4.hex",
+          "raw_hash": "0xdcc1e6b8c328e532fe2dabc48179a6eaa11277a9592fe31c2240c89a46cfc07b",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2818147,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2766240,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x5600c6",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-verifier.hex",
+          "raw_hash": "0x1cc5e979e6f058f05d65a29fa90442920f1a6635412dc144c9fd294da778d237",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11384203,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 11242440,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x15b6b16",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-logic.hex",
+          "raw_hash": "0xb2b0f405824a271c2ccc32d9f55e3405afe97a85d31c506ead3b682204069cee",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2837325,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2773890,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x56969a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-pool.hex",
+          "raw_hash": "0x9408b9807a559f26c57e20a069acf72cfe4d4c1e5f926d9b728f373f3e08fd48",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 985581,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 195840,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1e13da",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-a.hex",
+          "raw_hash": "0xfda8d78c33aef5183567e6616129306c56a8b4291a2bd23876dcc44a9b84d1f6",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 923113,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1c2bd2",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-b.hex",
+          "raw_hash": "0x5b14aeaa2fad64674df3ad29ce7c2a372790b17258715953893bd534e1c1842d",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 138822,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x43c8c",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "publish-initial.hex",
+          "raw_hash": "0xcbd9ce5d16ee34a128902a7a9b95ccd44bb69b296e1f10ea1a877352fad34c2c",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1629 bytes of code) failed: RevertOpcode\"))",
+            "valid": false
+          },
+          "paid_fee": null,
+          "raw": "recent-root-identity.hex",
+          "raw_hash": "0x023beb93c739797ba4c0f34eb3e5ed588c856b4f734f1b3e5731b7d71386960b",
+          "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
+          "slot_number": 101
+        }
+      ]
+    },
+    {
+      "name": "forged-root-through-identity-precompile-rejected",
+      "steps": [
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11026765,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 10887480,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x150829a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon3.hex",
+          "raw_hash": "0x22cd9c557847e26caca99b3bf9af2b1494819dd4e9ea80437157069b0297dcd5",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 14530874,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 14354460,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1bb7274",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-poseidon4.hex",
+          "raw_hash": "0xdcc1e6b8c328e532fe2dabc48179a6eaa11277a9592fe31c2240c89a46cfc07b",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2818147,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2766240,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x5600c6",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-verifier.hex",
+          "raw_hash": "0x1cc5e979e6f058f05d65a29fa90442920f1a6635412dc144c9fd294da778d237",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 11384203,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 11242440,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x15b6b16",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-logic.hex",
+          "raw_hash": "0xb2b0f405824a271c2ccc32d9f55e3405afe97a85d31c506ead3b682204069cee",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 2837325,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 2773890,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x56969a",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deploy-pool.hex",
+          "raw_hash": "0x9408b9807a559f26c57e20a069acf72cfe4d4c1e5f926d9b728f373f3e08fd48",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 985581,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 195840,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1e13da",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-a.hex",
+          "raw_hash": "0xfda8d78c33aef5183567e6616129306c56a8b4291a2bd23876dcc44a9b84d1f6",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 923113,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x1c2bd2",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "deposit-b.hex",
+          "raw_hash": "0x5b14aeaa2fad64674df3ad29ce7c2a372790b17258715953893bd534e1c1842d",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "frames": null,
+            "gas_spent": 138822,
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+            "result": "Success",
+            "state_gas_used": 97920,
+            "valid": true
+          },
+          "paid_fee": {
+            "amount": "0x43c8c",
+            "payer": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a"
+          },
+          "raw": "publish-initial.hex",
+          "raw_hash": "0xcbd9ce5d16ee34a128902a7a9b95ccd44bb69b296e1f10ea1a877352fad34c2c",
+          "sender": "0x2f6e5427e34f345fada1656a9ad4fcdfe3611e0a",
+          "slot_number": 100
+        },
+        {
+          "effective_gas_price": "0x2",
+          "errors": [],
+          "execution": {
+            "error": "TxValidation(InvalidFrameTransaction(\"VERIFY frame 1 (target 0x87ee85741a55f01b01caf9c2eafd5b14af8028cf, 1629 bytes of code) failed: RevertOpcode\"))",
+            "valid": false
+          },
+          "paid_fee": null,
+          "raw": "forged-root-identity.hex",
+          "raw_hash": "0x90c035032d60cbf4d7590595a77bbb057a626767c2a8bba862042f167e721e06",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }

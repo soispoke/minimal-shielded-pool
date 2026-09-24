@@ -17,8 +17,8 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 61 native scenarios and two client-policy tests, using
-31 real Groth16 proofs. The highest measured settlement execution cost is
+The recorded run passes 66 native scenarios and two client-policy tests, using
+32 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
 each transaction hash and per-frame results.
@@ -69,6 +69,16 @@ dispatcher and the verifier. Seven more prove an honest withdrawal against
 `alpha` over one value plus the field modulus, so the proof and `gamma` pass
 and only the dispatcher's range checks can refuse it. Deleting those checks
 makes exactly these seven fail.
+
+Five scenarios cover dispatcher checks that stop theft or a burn and that no
+other scenario reaches. A spent key set replayed at `nonce_seq` 1 would pay out
+again. The victim's signature, re-sent as an explicit message in a transaction
+with another fourth frame, is valid under EIP-8141. A `DEFAULT` settlement frame
+would revert after approval and leave the inputs spent. A recent-root frame sent
+to the identity precompile echoes any tuple, including the root of an
+attacker's own tree holding a note nobody deposited. The pool refuses each in
+its `VERIFY` frame, and deleting any one of the four checks makes exactly its
+scenarios fail.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one
 branch, restores the checkpoint, and reverses two deposit transactions. The
