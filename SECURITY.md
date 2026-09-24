@@ -167,6 +167,33 @@ The existing settlement-failure blocker above is unchanged. An account that
 requires settlement to succeed must verify that status before acting. This
 extension neither repairs that blocker nor provides full-spend atomicity.
 
+## Privacy limits
+
+The proof hides which notes a spend consumes. The rest of the statement is
+public calldata, and these patterns can still link a spend to a deposit or to
+other spends:
+
+- A spend whose two outputs are both sinks creates no private output, so its
+  inputs total exactly `publicAmount + fee`. A full withdrawal of a note with
+  an unusual amount is then linked to that deposit. A change output hides the
+  total.
+- An output commitment is `Poseidon(2, inner, value)`, with no randomness
+  beyond `inner`. Anyone who knows an `inner` can test amounts against it, so
+  a wallet must use a fresh `inner` for every payment and never publish one as
+  an address.
+- A spend names the slot of the root it proves against, and root publication
+  is an ordinary transaction. Publishing that root from the depositor's
+  account links the spend to it. Prove against a root someone else published,
+  or publish from an unrelated account or from a spend's fourth frame.
+- The authorizer is public. The wallet makes a fresh one for each spend;
+  reusing one, or signing with a key tied to the depositor, links spends.
+- A spend reveals its input epoch, so notes in different epochs never share an
+  anonymity set. Anyone can force a new epoch by filling the tree: `2^20`
+  deposits at about 0.8 million gas each, roughly 800 ETH at 1 gwei and almost
+  nothing at the testnet's base fee.
+- Fees, gas limits, fee caps and fourth-frame choices differ between wallets
+  and make their spends recognizable.
+
 ## Assumptions and remaining gates
 
 - Groth16 knowledge soundness, BN254 pairing security, Poseidon collision
@@ -194,7 +221,32 @@ extension neither repairs that blocker nor provides full-spend atomicity.
   at the previous 1,400,000 execution pin. Changing the dispatcher pin and
   signed frame limit to 2,000,000 makes those cases succeed; 2M is not by
   itself a proof of every settlement shape. Unsupported repricing forks
-  require a new immutable profile.
+  require a new immutable profile. The pins cannot change and the pool has no
+  migration path, so holders should exit before such a fork. Spends that
+  insert outputs are the first to stop fitting; a full withdrawal to two sinks
+  writes at most one new slot and fits unless the state price per slot rises
+  more than fivefold.
+- No chain that keeps this pool's state changes its chain ID, as the minority
+  side of a contentious fork might. The nullifier domain uses the chain ID at
+  spend time, so on such a chain every spent note gets a fresh nullifier and
+  can be spent again, draining that chain's copy of the pool. A future profile
+  could bind the deployment chain ID instead.
+- Mempool policy that admits concurrent spends. Every spend has the pool as
+  sender, so per-sender limits apply to all users at once. EIP-8141's
+  conservative rule keeps one pending frame transaction per sender; both
+  ethrex revisions relax it for spends with disjoint keys. The pinned
+  revision's MATCHA, on by default, charges every pending spend beyond the
+  first, replacements included, to one width budget for the pool. On a node
+  that admits the pool's validation budget, one note holder who keeps
+  replacing a spend can exhaust it and delay everyone else's. The live chain's
+  client has no such budget. A wallet that raises a pending spend's fee beyond
+  its proof's fee must re-prove with the same dummy input, since a new dummy
+  changes the key set and the mempool refuses it while the first spend is
+  pending.
+- Client capacity for pending spends. Both ethrex revisions revalidate every
+  pending spend, Groth16 pairing included, on each forkchoiceUpdated, at about
+  a millisecond each, so roughly 7,000 pending spends would exceed the Engine
+  API's 8-second limit. This and the width budget limit liveness, not safety.
 - Independent circuit, Solidity, Yul, wallet, and deployment review.
 
 EIP-8369 is a Draft Informational EIP. Its current `2^20` per-IL

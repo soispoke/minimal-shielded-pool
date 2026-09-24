@@ -220,7 +220,8 @@ other clients or FOCIL.
   and Poseidon contracts.
 - Rerun the signature, capacity, reorg, gas and cross-client tests on the
   activation fork. Recheck the settlement gas limits under every supported gas
-  schedule, and deactivate the profile before an unsupported repricing fork.
+  schedule. The pool cannot be changed, so holders must exit before an
+  unsupported repricing fork.
 - Obtain an independent contract and circuit audit.
 
 See [SECURITY.md](SECURITY.md) for trust and failure boundaries.
