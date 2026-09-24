@@ -634,7 +634,8 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         if settled and tail_kind == "action":
             raise SystemExit(
                 "  simulate: settlement would succeed but the gas-only action frame would fail; "
-                "not sending. Fix the account calldata or limits and rebuild from the unspent notes.")
+                "not sending. Fix the account calldata or limits and rebuild. The RPC has seen this "
+                "signed spend, so check that its nonce keys are unused before sending another.")
         if settled and tail_kind == "claim" and allow_failed_claim:
             print(f"  simulate: valid={sim.get('valid')} violation={sim.get('violation')}; "
                   "settlement succeeded and failed claim is allowed")
@@ -658,7 +659,8 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         if tail_failed and tail_kind == "action":
             raise SystemExit(
                 "  simulate: settlement succeeded but the gas-only action frame failed; not sending. "
-                "Fix the account calldata or limits and rebuild from the unspent notes.")
+                "Fix the account calldata or limits and rebuild. The RPC has seen this signed spend, "
+                "so check that its nonce keys are unused before sending another.")
         if tail_failed and tail_kind == "claim" and not allow_failed_claim:
             raise SystemExit("  simulate: settlement succeeded but the claim frame failed; "
                              "not sending. The credit would remain and can be claimed later.")

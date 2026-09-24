@@ -158,7 +158,10 @@ code must be exactly what this profile's dispatcher deploys when linked to the
 logic and verifier the config records, and its `domain(uint64)` must match the
 profile's formula. The code check matters because both profiles share the
 domain formula. A shield also refuses a fixture made for another chain, pool or
-epoch, or one whose note would not land at the leaf its proofs expect.
+epoch, or one whose note would not land at the leaf its proofs expect. Before
+sending, and with `--dry-run`, the CLI gives the RPC the fully signed
+transaction for simulation, and the RPC could broadcast it. Use an RPC you
+trust.
 
 The public mempool counts the two validation frames' declared limits plus
 2,800 gas for the signature: 235,800 by default, while a spend uses about
