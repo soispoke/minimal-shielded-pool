@@ -27,6 +27,7 @@ for disposable devnet deployments and envelope boundary tests; defaults remain
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -130,32 +131,45 @@ def run(cmd, cwd=TOOLING):
     return r
 
 
+def private_workdir(tag):
+    """A fresh owner-only directory per proof, so concurrent runs never read
+    each other's witness or proof, and the witness, which holds note secrets,
+    goes away afterwards; the fixture keeps the openings."""
+    return Path(tempfile.mkdtemp(dir=WORK, prefix=f"{tag}-"))
+
+
 def prove(witness, tag):
-    wpath = WORK / f"witness_{tag}.json"
-    proofpath = WORK / f"proof_{tag}.json"
-    pubpath = WORK / f"public_{tag}.json"
-    write_private(wpath, json.dumps(witness))
-    run(["npx", "snarkjs", "groth16", "fullprove", wpath,
-         BUILD / "spend_js" / "spend.wasm", BUILD / "spend_final.zkey",
-         proofpath, pubpath])
-    # the real proof check, against the committed verification key
-    run(["npx", "snarkjs", "groth16", "verify",
-         HERE.parent / "contracts" / "vectors" / "spend_vkey.json", pubpath, proofpath])
-    call = run(["npx", "snarkjs", "zkey", "export", "soliditycalldata", pubpath, proofpath])
-    pa, pb, pc, _pub = json.loads("[" + call.stdout.strip() + "]")
-    publics = [int(x) for x in json.loads(pubpath.read_text())]
-    return publics, {"pA": pa, "pB": pb, "pC": pc}
+    work = private_workdir(tag)
+    try:
+        wpath, proofpath, pubpath = work / "witness.json", work / "proof.json", work / "public.json"
+        write_private(wpath, json.dumps(witness))
+        run(["npx", "snarkjs", "groth16", "fullprove", wpath,
+             BUILD / "spend_js" / "spend.wasm", BUILD / "spend_final.zkey",
+             proofpath, pubpath])
+        # the real proof check, against the committed verification key
+        run(["npx", "snarkjs", "groth16", "verify",
+             HERE.parent / "contracts" / "vectors" / "spend_vkey.json", pubpath, proofpath])
+        call = run(["npx", "snarkjs", "zkey", "export", "soliditycalldata", pubpath, proofpath])
+        pa, pb, pc, _pub = json.loads("[" + call.stdout.strip() + "]")
+        publics = [int(x) for x in json.loads(pubpath.read_text())]
+        return publics, {"pA": pa, "pB": pb, "pC": pc}
+    finally:
+        shutil.rmtree(work)
 
 
 def assert_unprovable(witness, tag):
     """Assert witness generation rejects a circuit-level attack."""
-    wpath = WORK / f"review_{tag}.json"
-    out = WORK / f"review_{tag}.wtns"
-    write_private(wpath, json.dumps(witness))
-    result = subprocess.run(
-        ["npx", "snarkjs", "wtns", "calculate", BUILD / "spend_js" / "spend.wasm", wpath, out],
-        capture_output=True, text=True, cwd=TOOLING,
-    )
+    work = private_workdir(f"review-{tag}")
+    try:
+        wpath = work / "witness.json"
+        write_private(wpath, json.dumps(witness))
+        result = subprocess.run(
+            ["npx", "snarkjs", "wtns", "calculate", BUILD / "spend_js" / "spend.wasm", wpath,
+             work / "witness.wtns"],
+            capture_output=True, text=True, cwd=TOOLING,
+        )
+    finally:
+        shutil.rmtree(work)
     if result.returncode == 0:
         raise SystemExit(f"UNSOUND: circuit accepted {tag}")
 

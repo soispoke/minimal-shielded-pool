@@ -101,9 +101,14 @@ def main():
         # A nonce-race fixture records what recovery and the shield check need:
         # each transfer's output openings and each shield's prior root.
         race_out = Path(tmp, "race.json")
+        gen_smoke.WORK.mkdir(exist_ok=True)
+        work_before = set(os.listdir(gen_smoke.WORK))
         result = subprocess.run([sys.executable, str(HERE / "gen_nonce_race.py"), "--chain-id=31337", *race,
                                  f"--output={race_out}"], cwd=HERE, capture_output=True, text=True)
         assert result.returncode == 0, result.stderr[-500:]
+        # Each proof ran in its own directory, removed afterwards with the
+        # witness it held, so concurrent runs cannot swap proofs.
+        assert set(os.listdir(gen_smoke.WORK)) == work_before, "proving left files behind"
         fixture = json.loads(race_out.read_text())
         for name in ("transfer", "transfer_c"):
             entry = fixture[name]
