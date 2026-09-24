@@ -96,12 +96,14 @@ PROFILES["position-notes-v2"] = {
 
 
 # Every active artifact must be pinned. A manifest that omits one would
-# otherwise pass without its hash being checked.
+# otherwise pass without its hash being checked. foundry.toml fixes the compiler
+# settings, so the deployment checks compare the chain with reviewed bytecode.
 REQUIRED_ARTIFACTS = (
     "build/spend.r1cs",
     "build/spend_final.zkey",
     "build/spend_js/spend.wasm",
     "circuits/spend.circom",
+    "contracts/foundry.toml",
     "contracts/src/Groth16Verifier.sol",
     "contracts/src/PoseidonT3.sol",
     "contracts/src/PoseidonT4.sol",
