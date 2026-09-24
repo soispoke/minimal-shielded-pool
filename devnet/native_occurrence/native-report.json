@@ -14989,7 +14989,7 @@
       ]
     },
     {
-      "name": "settlement-execution-limit-below-profile-rejected",
+      "name": "settlement-execution-limit-that-runs-out-rejected",
       "steps": [
         {
           "effective_gas_price": "0x2",
@@ -15159,15 +15159,15 @@
             "valid": false
           },
           "paid_fee": null,
-          "raw": "settle-execution-below-profile.hex",
-          "raw_hash": "0xc8dc1d2b9c5ff9f5ff4b3de6eda334d6b11c3efadf16d4043d58dff9e811a48a",
+          "raw": "settle-execution-runs-out.hex",
+          "raw_hash": "0x31332f991fac875485855f4f0f959c692733a569f309cbc84fb28bfd57d37e69",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }
       ]
     },
     {
-      "name": "settlement-state-limit-below-profile-rejected",
+      "name": "settlement-state-limit-that-runs-out-rejected",
       "steps": [
         {
           "effective_gas_price": "0x2",
@@ -15337,8 +15337,8 @@
             "valid": false
           },
           "paid_fee": null,
-          "raw": "settle-state-below-profile.hex",
-          "raw_hash": "0x159ce8ecbcf1cca1c12978e511e4b7715fb300314875bf0dfb877172fdee851e",
+          "raw": "settle-state-runs-out.hex",
+          "raw_hash": "0x3d31a3cbc0ae3ef2b9fd7657842d164f48ac845f76132153ccba0c117b2854ce",
           "sender": "0x87ee85741a55f01b01caf9c2eafd5b14af8028cf",
           "slot_number": 101
         }

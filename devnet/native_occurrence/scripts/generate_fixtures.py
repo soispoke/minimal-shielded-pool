@@ -604,11 +604,12 @@ case("spent-note-with-fresh-keys-rejected", spend("spend-before-fresh-keys", ini
 foreign_domain = dict(epoch1, epoch="0", root_slot=str(SLOT))
 case("proof-over-another-epochs-domain-rejected",
     spend("foreign-domain", foreign_domain, rejected=True, error=POOL_VERIFY))
-# Settlement's limits are pinned: less gas could run out after approval.
-for label, change in [("execution", settle_field("gas_limit", SETTLE_FRAME_GAS - 1)),
-                      ("state", settle_field("state_limit", SETTLE_FRAME_STATE_GAS - 1))]:
-    case(f"settlement-{label}-limit-below-profile-rejected",
-         spend(f"settle-{label}-below-profile", initial, rejected=True, error=POOL_VERIFY, mutate=change))
+# Settlement's limits are pinned. These would run out after approval and leave
+# the inputs spent with nothing paid or credited.
+for label, change in [("execution", settle_field("gas_limit", 20_000)),
+                      ("state", settle_field("state_limit", 0))]:
+    case(f"settlement-{label}-limit-that-runs-out-rejected",
+         spend(f"settle-{label}-runs-out", initial, rejected=True, error=POOL_VERIFY, mutate=change))
 
 (OUT / "rejector-runtime.hex").write_text("0x60006000fd\n")
 (OUT / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")
