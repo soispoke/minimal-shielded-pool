@@ -330,7 +330,10 @@ completed shield, transfer, root refresh, withdrawal, claim, a fourth-frame
 claim and call, an intentional tail revert with later credit recovery, and
 replay rejection on the chain 8141 testnet. It proves compatibility with that
 one testnet configuration, not production readiness or cross-client
-interoperability.
+interoperability. That deployment is the previous profile, `position-notes-v1`
+at `c26b8e4`: it predates hybrid compression, the unpinned validation limits
+and pool-calling tails, and the current CLI refuses it. No `position-notes-v2`
+pool has been deployed yet.
 
 ## Reporting
 
