@@ -83,7 +83,8 @@ recent-root frame would let a note nobody deposited withdraw other users'
 funds. A valid proof over another epoch's domain would pass the proof check and
 revert in settlement at the pool's expense. The pool refuses each in its
 `VERIFY` frame, and deleting any one of these checks makes exactly its
-scenarios fail.
+scenarios fail. Deleting the settlement execution pin also stops the old-limit
+regression, which patches that literal, from building.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one
 branch, restores the checkpoint, and reverses two deposit transactions. The

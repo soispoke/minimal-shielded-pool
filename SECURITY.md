@@ -183,8 +183,9 @@ other spends:
   an address.
 - A spend names the slot of the root it proves against, and root publication
   is an ordinary transaction. Publishing that root from the depositor's
-  account links the spend to it. Prove against a root someone else published,
-  or publish from an unrelated account or from a spend's fourth frame.
+  account, or from a spend's fourth frame, links the later spend to that
+  account or that spend. Prove against a root someone else published, or
+  publish from an unrelated account.
 - The authorizer is public. The wallet makes a fresh one for each spend;
   reusing one, or signing with a key tied to the depositor, links spends.
 - A spend reveals its input epoch, so notes in different epochs never share an
@@ -236,18 +237,21 @@ other spends:
   sender, so per-sender limits apply to all users at once. EIP-8141's
   conservative rule keeps one pending frame transaction per sender; both
   ethrex revisions relax it for spends with disjoint keys. The pinned
-  revision's MATCHA, on by default, charges every pending spend beyond the
-  first, replacements included, to one width budget for the pool. On a node
-  that admits the pool's validation budget, one note holder who keeps
-  replacing a spend can exhaust it and delay everyone else's. The live chain's
-  client has no such budget. A wallet that raises a pending spend's fee beyond
+  revision's MATCHA, on by default, charges each pending spend beyond the
+  first to one width budget for the pool, at admission and again at every
+  forkchoiceUpdated, and evicts spends it can no longer pay for. The budget
+  refills only from the pool's own finalized gas, so on a node that admits the
+  pool's validation budget, a few concurrent spends, or one note holder
+  replacing a spend while another is pending, can exhaust it and delay
+  everyone else's. The live chain's client has no such budget. A wallet that raises a pending spend's fee beyond
   its proof's fee must re-prove with the same dummy input, since a new dummy
   changes the key set and the mempool refuses it while the first spend is
   pending.
 - Client capacity for pending spends. Both ethrex revisions revalidate every
   pending spend, Groth16 pairing included, on each forkchoiceUpdated, at about
-  a millisecond each, so roughly 7,000 pending spends would exceed the Engine
-  API's 8-second limit. This and the width budget limit liveness, not safety.
+  a millisecond each. On the live client, which has no width budget, roughly
+  7,000 pending spends would exceed the Engine API's 8-second limit. These
+  limit liveness, not safety.
 - Independent circuit, Solidity, Yul, wallet, and deployment review.
 
 EIP-8369 is a Draft Informational EIP. Its current `2^20` per-IL

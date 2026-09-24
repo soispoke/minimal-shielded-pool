@@ -400,9 +400,10 @@ def recent_root_tuple(url, cfg, e):
             f"  recent-root ref self-check failed at consensus slot {slot}. The "
             f"fixture root differs from the root committed at that slot, or the wrong epoch/slot "
             f"was supplied. Either would be rejected as FrameTxRecentRootNotCommitted. If another "
-            f"deposit changed the tree, the notes are safe but this proof is not: prove the spend "
-            f"again against a published root from the openings in its fixture entry's `inputs`, "
-            f"and keep this fixture, because regenerating it replaces those secrets.")
+            f"deposit changed the tree, the notes are safe but this proof is not: prove again "
+            f"against a published root, at the leaves the notes occupy, from the openings in the "
+            f"fixture entries' `inputs`, and keep this fixture, because regenerating it replaces "
+            f"those secrets.")
     return source_id + slot.to_bytes(8, "big") + root
 
 
@@ -667,10 +668,9 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         else:
             msg = f"  simulate: INVALID ({sim.get('violation')}); not sending"
             if protocol_nonces and "Nonce mismatch" in str(sim.get("violation", "")):
-                msg += ("\n  a nullifier keyed nonce was already consumed. If this spend comes from a"
-                        "\n  second deterministic fixture against an already-used deployment, the fixed"
-                        "\n  seed reuses the dummy note and its nullifier collides; regenerate with"
-                        "\n  gen_smoke.py --random or deploy a fresh pool.")
+                msg += ("\n  a nullifier key is already consumed: this spend, or another spend of the"
+                        "\n  same note or dummy, may already have settled. Check the notes before"
+                        "\n  building another spend.")
             raise SystemExit(msg)
 
     # Require frame 2 itself to succeed. A failed DEFAULT tail does not undo
