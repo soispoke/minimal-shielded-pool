@@ -40,7 +40,93 @@ def must(args):
     return result
 
 
-def witness_case(name, witness, expected=True, nullifiers=None):
+# The generated WASM asserts every constraint while computing a witness, so a
+# rejection there alone would not notice a constraint that became a runtime-only
+# check and left the R1CS. A variant circuit without the targeted constraints
+# computes a complete witness that breaks only them; mapped by signal name onto
+# the committed wire layout (the optimizer merges signals differently once
+# constraints are removed), the committed R1CS must reject it. Each range check
+# gets its own variant so its case stays isolated from the other ranges.
+UNCHECKED = [
+    "    in_value[0] + in_value[1] === out_value[0] + out_value[1] + public_amount + fee;\n",
+    "        bits[i] * (bits[i] - 1) === 0;\n",
+    "    (cur[DEPTH] - root) * value === 0;\n",
+    "            (out_inner[k] - SINK_INNER_0) * outIsZero[k].out === 0;\n",
+    "            (out_inner[k] - SINK_INNER_1) * outIsZero[k].out === 0;\n",
+    "        outEqSink0[k].out * (1 - outIsZero[k].out) === 0;\n",
+    "        outEqSink1[k].out * (1 - outIsZero[k].out) === 0;\n",
+    "    sameNullifier.out === 0;\n",
+    "    sameOutput.out === 0;\n",
+]
+RANGE = "        rc[k].in <== vals[k];\n"
+
+
+def sym_wires(sym):
+    wires = {}
+    for line in sym.read_text().splitlines():
+        _, wire, _, name = line.split(",", 3)
+        wires[name] = int(wire)
+    return wires
+
+
+def compile_variant(variant):
+    """WASM and symbols of the circuit without the constraints the variant names."""
+    out = WORK / f"variant-{variant}"
+    if not (out / "spend.sym").exists():
+        source = (ROOT / "circuits/spend.circom").read_text()
+        if variant == "unchecked":
+            for line in UNCHECKED:
+                assert source.count(line) == 1, line
+                source = source.replace(line, "")
+        else:
+            k = int(variant.removeprefix("range-"))
+            assert source.count(RANGE) == 1
+            source = source.replace(RANGE, f"        if (k == {k}) {{ rc[k].in <== 0; }} else {{ rc[k].in <== vals[k]; }}\n")
+        (out / "circuits").mkdir(parents=True, exist_ok=True)
+        (out / "circuits/spend.circom").write_text(source)
+        must(["npx", "circom2", out / "circuits/spend.circom", "--wasm", "--sym",
+              "-l", ROOT / "tooling/node_modules", "-o", out])
+    return out / "spend_js/spend.wasm", out / "spend.sym"
+
+
+def committed_layout(variant, input_json, target, r1cs=None, sym=None, template=None, strict=True):
+    """The variant's witness for input_json, placed on another build's wires by
+    signal name (the committed build by default). Strict mapping requires every
+    wire to have a value from the variant; otherwise the template's stays."""
+    wasm, variant_sym = compile_variant(variant)
+    raw = WORK / f"{target.stem}.variant.wtns"
+    result = run(["npx", "snarkjs", "wtns", "calculate", wasm, input_json, raw])
+    assert result.returncode == 0, f"variant {variant} did not compute a witness\n{result.stderr}"
+    exported = WORK / f"{target.stem}.variant.json"
+    must(["npx", "snarkjs", "wtns", "export", "json", raw, exported])
+    values_by_wire = [int(x) for x in json.loads(exported.read_text())]
+    source = sym_wires(variant_sym)
+    wire_names([])  # compiles the committed symbol file if missing
+    names = sym_wires(sym or WORK / "sym/spend.sym")
+    values = {0: 1}
+    for name, wire in names.items():
+        if wire >= 0 and source.get(name, -1) >= 0:
+            values[wire] = values_by_wire[source[name]]
+        elif wire >= 0:
+            assert not strict, f"{name} has no wire in variant {variant}"
+    template = template or WORK / "first-occurrence.wtns"
+    patched_wtns(template, target, values)
+    return r1cs or BUILD / "spend.r1cs"
+
+
+def r1cs_rejects(name, variant):
+    """The committed R1CS rejects the complete witness the variant computes, and
+    accepts the variant's honest witness, which checks the wire mapping."""
+    for label, source, accepted in (("honest", WORK / "first-occurrence.json", True),
+                                    ("violating", WORK / (name + ".json"), False)):
+        target = WORK / f"{name}-{variant}-{label}.wtns"
+        r1cs = committed_layout(variant, source, target)
+        result = run(["npx", "snarkjs", "wtns", "check", r1cs, target])
+        ok = result.returncode == 0 and "WITNESS IS CORRECT" in result.stdout + result.stderr
+        assert ok == accepted, f"{name} ({label}): committed R1CS {'rejects' if accepted else 'accepts'} it\n{result.stdout}"
+
+
+def witness_case(name, witness, expected=True, nullifiers=None, variant=None):
     start = time.monotonic()
     source = WORK / (name + ".json")
     target = WORK / (name + ".wtns")
@@ -48,6 +134,9 @@ def witness_case(name, witness, expected=True, nullifiers=None):
     result = run(["npx", "snarkjs", "wtns", "calculate",
                   BUILD / "spend_js/spend.wasm", source, target])
     assert (result.returncode == 0) == expected, name + "\n" + result.stdout + result.stderr
+    if not expected:
+        assert variant is not None, f"{name}: a rejected case must name the constraints it breaks"
+        r1cs_rejects(name, variant)
     publics = None
     if expected:
         must(["npx", "snarkjs", "wtns", "check", BUILD / "spend.r1cs", target])
@@ -168,22 +257,22 @@ def main():
                                nullifiers=w.input_nullifiers(domain0, [real, duplicate]))
     assert public_pair[:2] == [public_first[0], public_second[0]]
 
-    witness_case("same-occurrence-twice", make([real, real]), False)
+    witness_case("same-occurrence-twice", make([real, real]), False, variant="unchecked")
     bad = make([real, duplicate])
     bad["out_inner"] = [str(w.inner(sk, rho))] * 2
     bad["out_value"] = ["100", "100"]
     bad["public_amount"] = "0"
     bad["recipient"] = "0"
-    witness_case("same-output-twice-in-one-spend", bad, False)
+    witness_case("same-output-twice-in-one-spend", bad, False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["in_bits"][0][1] = "1"  # Selects a different non-identical branch.
-    witness_case("forged-real-position", bad, False)
+    witness_case("forged-real-position", bad, False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["in_bits"][0][0] = "2"
-    witness_case("nonboolean-path-bit", bad, False)
+    witness_case("nonboolean-path-bit", bad, False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["root"] = str((int(first["root"]) + 1) % w.P)
-    witness_case("incorrect-root", bad, False)
+    witness_case("incorrect-root", bad, False, variant="unchecked")
 
     # The same input epoch, commitment and position retain their spending
     # identity when the root changes. Publication slot is intentionally absent.
@@ -215,7 +304,7 @@ def main():
                                recipient="0x" + "34" * 20)
     stale = copy.deepcopy(original)
     stale["root"] = str(branch_b.root())
-    witness_case("reorg-stale-membership-path", stale, False)
+    witness_case("reorg-stale-membership-path", stale, False, variant="unchecked")
     rebuilt_input = dict(real, idx=1)
     rebuilt = w.build_witness(branch_b, [rebuilt_input, dummy], w.sink_outputs(), domain0,
                               authorizer=authorizer, public_amount=100,
@@ -228,27 +317,27 @@ def main():
     # that constraint alone would let it through.
     bad = copy.deepcopy(first)
     bad["public_amount"] = "101"
-    witness_case("outputs-exceed-inputs", bad, False)
+    witness_case("outputs-exceed-inputs", bad, False, variant="unchecked")
     bad["public_amount"] = "99"
-    witness_case("inputs-exceed-outputs", bad, False)
+    witness_case("inputs-exceed-outputs", bad, False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["public_amount"], bad["fee"] = "101", str(w.P - 1)  # conserved mod p only
-    witness_case("value-wraps-the-field", bad, False)
+    witness_case("value-wraps-the-field", bad, False, variant="range-5")
     # A dummy's membership is gated off by its zero value, so a non-boolean
     # path bit there breaks only the booleanity constraint, at any depth.
     for depth in (0, 10, 19):
         bad = copy.deepcopy(first)
         bad["in_bits"][1][depth] = "2"
-        witness_case(f"nonboolean-dummy-path-bit-{depth}", bad, False)
+        witness_case(f"nonboolean-dummy-path-bit-{depth}", bad, False, variant="unchecked")
     transfer = w.build_witness(tree, [real, dummy], [(w.inner(*w.new_note()), 60), (w.inner(*w.new_note()), 40)],
                                domain0, authorizer=authorizer, public_amount=0)
     for position in (0, 1):
         bad = copy.deepcopy(transfer)
         bad["out_value"] = ["0", "100"] if position == 0 else ["100", "0"]
-        witness_case(f"zero-output-{position}-without-its-sink", bad, False)
+        witness_case(f"zero-output-{position}-without-its-sink", bad, False, variant="unchecked")
     bad = copy.deepcopy(transfer)
     bad["out_inner"][0] = "2"
-    witness_case("positive-output-with-the-second-sink", bad, False)
+    witness_case("positive-output-with-the-second-sink", bad, False, variant="unchecked")
     # A negative output paid for by an inflated other output conserves value
     # modulo p and breaks only that output's 128-bit range: without it, 100
     # wei of input would create a 10^21 wei note.
@@ -256,7 +345,7 @@ def main():
         bad = copy.deepcopy(transfer)
         values = [str(w.P - 10**21), str(100 + 10**21)]
         bad["out_value"] = values if position == 0 else values[::-1]
-        witness_case(f"output-{position}-below-zero", bad, False)
+        witness_case(f"output-{position}-below-zero", bad, False, variant=f"range-{2 + position}")
 
     same_secrets_dummy = {"sk": sk, "rho": rho, "value": 0, "idx": None}
     public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]),

@@ -296,7 +296,10 @@ circuit test checks `beta` against an independent Poseidon(10) and rejects a
 forged witness whose `beta` or `gamma` does not follow from the statement, and
 witnesses that each break only one constraint: value conservation, the 128-bit
 ranges of the fee and of each output, path-bit booleanity at several depths,
-and the sink rules. The
+and the sink rules. Each rejection is checked against the committed R1CS, not
+only the witness generator, using a complete witness from a circuit without
+that constraint, so a constraint that became a runtime-only check would fail
+the test. The
 envelope vector checks that changing any of 49 transfer components, 57
 withdrawal components, 58 gas-only tail components or 58 custom withdrawal tail
 components, including `beta`, changes the signed hash.
