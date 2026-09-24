@@ -249,6 +249,14 @@ def main():
     bad = copy.deepcopy(transfer)
     bad["out_inner"][0] = "2"
     witness_case("positive-output-with-the-second-sink", bad, False)
+    # A negative output paid for by an inflated other output conserves value
+    # modulo p and breaks only that output's 128-bit range: without it, 100
+    # wei of input would create a 10^21 wei note.
+    for position in (0, 1):
+        bad = copy.deepcopy(transfer)
+        values = [str(w.P - 10**21), str(100 + 10**21)]
+        bad["out_value"] = values if position == 0 else values[::-1]
+        witness_case(f"output-{position}-below-zero", bad, False)
 
     same_secrets_dummy = {"sk": sk, "rho": rho, "value": 0, "idx": None}
     public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]),
