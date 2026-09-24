@@ -26,6 +26,7 @@ for disposable devnet deployments and envelope boundary tests; defaults remain
 1.0 ETH shielded, 0.6 ETH paid privately, and a 0.05 ETH fee.
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -45,6 +46,15 @@ TEST_CHAIN_ID = 31337
 TEST_POOL = "0xf62849f9a0b5bf2913b396098f7c7019b51a820a"
 
 
+def write_private(path, text):
+    """Witnesses and fixtures hold note secrets and authorizer keys, so only the
+    owner may read them."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(text)
+
+
 def run(cmd, cwd=TOOLING):
     r = subprocess.run([str(c) for c in cmd], capture_output=True, text=True, cwd=cwd)
     if r.returncode != 0:
@@ -57,7 +67,7 @@ def prove(witness, tag):
     wpath = WORK / f"witness_{tag}.json"
     proofpath = WORK / f"proof_{tag}.json"
     pubpath = WORK / f"public_{tag}.json"
-    wpath.write_text(json.dumps(witness))
+    write_private(wpath, json.dumps(witness))
     run(["npx", "snarkjs", "groth16", "fullprove", wpath,
          BUILD / "spend_js" / "spend.wasm", BUILD / "spend_final.zkey",
          proofpath, pubpath])
@@ -74,7 +84,7 @@ def assert_unprovable(witness, tag):
     """Assert witness generation rejects a circuit-level attack."""
     wpath = WORK / f"review_{tag}.json"
     out = WORK / f"review_{tag}.wtns"
-    wpath.write_text(json.dumps(witness))
+    write_private(wpath, json.dumps(witness))
     result = subprocess.run(
         ["npx", "snarkjs", "wtns", "calculate", BUILD / "spend_js" / "spend.wasm", wpath, out],
         capture_output=True, text=True, cwd=TOOLING,
@@ -280,7 +290,7 @@ def main():
                                 auth_w, auth_w_key, pub_w, proof_w),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(fixture, indent=1))
+    write_private(output_path, json.dumps(fixture, indent=1))
     print("real join-split proofs generated and verified off-chain; compressed public signals bind the wallet statement")
     print(f"wrote {output_path}")
     print(f"  transfer  nf1 {fixture['transfer']['nf1'][:18]}... nf2 {fixture['transfer']['nf2'][:18]}... fee {v_fee}")

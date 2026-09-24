@@ -30,7 +30,7 @@ from pathlib import Path
 
 import wallet as w
 from poseidon_bn254 import hex32
-from gen_smoke import prove, spend_entry, ETH, WORK
+from gen_smoke import prove, spend_entry, write_private, ETH, WORK
 
 HERE = Path(__file__).parent
 
@@ -192,7 +192,7 @@ def main():
         "transfer_c": ec,
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(fixture, indent=1))
+    write_private(output_path, json.dumps(fixture, indent=1))
     print("two independent transfers proven against one root, disjoint nullifiers")
     print(f"  root R      {hex32(root_R)[:18]}...")
     print(f"  transfer A  nf {ea['nf1'][:14]}.. {ea['nf2'][:14]}..")
