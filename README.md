@@ -176,6 +176,7 @@ python3 devnet/test_pool_envelope_binding.py
 python3 devnet/test_gas_only_action.py
 python3 devnet/test_recent_root_window.py
 python3 devnet/test_occurrence_profile.py
+python3 devnet/test_deploy_checks.py
 python3 wallet/test_occurrence.py
 python3 wallet/test_wallet_occurrence.py
 python3 tooling/check_gas_profile.py

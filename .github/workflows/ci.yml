@@ -66,7 +66,8 @@ jobs:
             devnet/test_pool_envelope_binding.py \
             devnet/test_gas_only_action.py \
             devnet/test_recent_root_window.py \
-            devnet/test_occurrence_profile.py wallet/test_occurrence.py \
+            devnet/test_occurrence_profile.py devnet/test_deploy_checks.py \
+            wallet/test_occurrence.py \
             wallet/test_wallet_occurrence.py \
             wallet/gen_nonce_race.py wallet/gen_smoke.py wallet/wallet.py \
             reference/gen_poseidon_sol.py reference/poseidon_bn254.py \
@@ -78,6 +79,7 @@ jobs:
           python devnet/test_gas_only_action.py
           python devnet/test_recent_root_window.py
           python devnet/test_occurrence_profile.py
+          python devnet/test_deploy_checks.py
           python wallet/test_occurrence.py
           python wallet/test_wallet_occurrence.py
           python tooling/check_gas_profile.py

@@ -22,18 +22,21 @@ deployed() { grep -oE 'Deployed to: 0x[0-9a-fA-F]{40}' | awk '{print $3}'; }
 addr_of() { python3 -c 'import json,sys; print(json.load(sys.stdin)["contractAddress"])'; }
 # Cast annotates large ints as "550000000000000000 [5.5e17]". int() needs the first token.
 cast_uint() { python3 -c 'import sys; print(int(sys.argv[1].strip().split()[0], 0))' "$1"; }
+# These checks run on the left of `||`, where Bash ignores `set -e`, so every
+# read and comparison returns its own failure. Otherwise only the last line
+# would decide the result.
 verify_library_runtime() {
   local addr=$1 expected=$2 actual prefix actual_lower prefix_lower
-  actual=$(cast code "$addr" --rpc-url "$RPC")
+  actual=$(cast code "$addr" --rpc-url "$RPC") || return 1
   prefix="0x73${addr#0x}"
   actual_lower=$(printf '%s' "$actual" | tr '[:upper:]' '[:lower:]')
   prefix_lower=$(printf '%s' "$prefix" | tr '[:upper:]' '[:lower:]')
-  [[ $actual_lower == "$prefix_lower"* && ${actual:44} == ${expected:44} ]]
+  [[ $actual_lower == "$prefix_lower"* && ${actual:44} == "${expected:44}" ]]
 }
 verify_logic_runtime() {
-  local addr=$1 expected=$2 actual
-  actual=$(cast code "$addr" --rpc-url "$RPC")
-  python3 - "$actual" "$expected" "$BN/out/ShieldedPoolLogic.sol/ShieldedPoolLogic.json" <<'PY'
+  local addr=$1 expected=$2 actual t3 t4
+  actual=$(cast code "$addr" --rpc-url "$RPC") || return 1
+  python3 - "$actual" "$expected" "$BN/out/ShieldedPoolLogic.sol/ShieldedPoolLogic.json" <<'PY' || return 1
 import json, sys
 actual = bytearray.fromhex(sys.argv[1][2:])
 expected = bytearray.fromhex(sys.argv[2][2:])
@@ -47,8 +50,15 @@ for locations in refs.values():
         expected[start:start + length] = b"\0" * length
 raise SystemExit(0 if actual == expected else 1)
 PY
-  [[ $(cast call "$addr" 'POSEIDON_T3()(address)' --rpc-url "$RPC") == "$T3" ]]
-  [[ $(cast call "$addr" 'POSEIDON_T4()(address)' --rpc-url "$RPC") == "$T4" ]]
+  t3=$(cast call "$addr" 'POSEIDON_T3()(address)' --rpc-url "$RPC") || return 1
+  t4=$(cast call "$addr" 'POSEIDON_T4()(address)' --rpc-url "$RPC") || return 1
+  [[ $t3 == "$T3" && $t4 == "$T4" ]]
+}
+verify_created_runtime() {
+  local addr=$1 initcode=$2 actual expected
+  actual=$(cast code "$addr" --rpc-url "$RPC") || return 1
+  expected=$(cast call --rpc-url "$RPC" --create "$initcode") || return 1
+  [[ ${#expected} -gt 2 && $actual == "$expected" ]]
 }
 
 CHAIN_ID=$(cast chain-id --rpc-url "$RPC")
@@ -99,7 +109,7 @@ echo "==> immutable dispatcher/pool"
 DISP_INIT=$(python3 dispatcher.py --initcode "$LOGIC" "$VERIFIER")
 POOL=$(cast send --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "${PRICE[@]}" --gas-limit 4000000 \
   --create "$DISP_INIT" --json | addr_of)
-[[ $(cast code "$POOL" --rpc-url "$RPC") == $(cast call --rpc-url "$RPC" --create "$DISP_INIT") ]] || {
+verify_created_runtime "$POOL" "$DISP_INIT" || {
   echo "dispatcher runtime mismatch" >&2; exit 1;
 }
 
