@@ -17,7 +17,7 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 75 native scenarios and two client-policy tests, using
+The recorded run passes 77 native scenarios and two client-policy tests, using
 32 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
@@ -70,13 +70,14 @@ dispatcher and the verifier. Seven more prove an honest withdrawal against
 and only the dispatcher's range checks can refuse it. Deleting those checks
 makes exactly these seven fail.
 
-Twelve scenarios cover dispatcher checks that no other scenario reaches, each
-breaking one check in an otherwise valid spend. A spent key set replayed at
+Fourteen scenarios cover dispatcher checks that no other scenario reaches,
+each breaking one check in an otherwise valid spend. A spent key set replayed at
 `nonce_seq` 1, or a spent note settled again under fresh nonce keys, would pay
 out twice. The victim's signature re-sent as an explicit message, or the
 attacker's own signature over the victim's proof, would let anyone choose the
 fourth frame. A `DEFAULT` settlement frame, or settlement limits below the
-profile's, could fail after approval and leave the inputs spent. A root the
+profile's, could fail after approval and leave the inputs spent; each limit is
+tested one below its pin and at a value that does run out. A root the
 attacker published under their own source, a genuine tuple for the pool's real
 root beside a proof over another, or the identity precompile in place of the
 recent-root frame would let a note nobody deposited withdraw other users'

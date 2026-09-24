@@ -604,12 +604,15 @@ case("spent-note-with-fresh-keys-rejected", spend("spend-before-fresh-keys", ini
 foreign_domain = dict(epoch1, epoch="0", root_slot=str(SLOT))
 case("proof-over-another-epochs-domain-rejected",
     spend("foreign-domain", foreign_domain, rejected=True, error=POOL_VERIFY))
-# Settlement's limits are pinned. These would run out after approval and leave
-# the inputs spent with nothing paid or credited.
-for label, change in [("execution", settle_field("gas_limit", 20_000)),
-                      ("state", settle_field("state_limit", 0))]:
-    case(f"settlement-{label}-limit-that-runs-out-rejected",
-         spend(f"settle-{label}-runs-out", initial, rejected=True, error=POOL_VERIFY, mutate=change))
+# Settlement's limits are pinned exactly. One below each pin is the tightest
+# boundary; 20,000 execution gas or no state gas would run out after approval
+# and leave the inputs spent with nothing paid or credited.
+for label, change in [("execution-limit-one-below-profile", settle_field("gas_limit", SETTLE_FRAME_GAS - 1)),
+                      ("state-limit-one-below-profile", settle_field("state_limit", SETTLE_FRAME_STATE_GAS - 1)),
+                      ("execution-limit-that-runs-out", settle_field("gas_limit", 20_000)),
+                      ("state-limit-that-runs-out", settle_field("state_limit", 0))]:
+    case(f"settlement-{label}-rejected",
+         spend(f"settle-{label}", initial, rejected=True, error=POOL_VERIFY, mutate=change))
 
 # Checks that cover each other: each case survives deleting either check alone
 # and fails only when both go. A DEFAULT-mode frame 0 whose validation reverts

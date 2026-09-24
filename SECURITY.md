@@ -299,7 +299,7 @@ envelope vector checks that changing any of 49 transfer components, 57
 withdrawal components, 58 gas-only tail components or 58 custom withdrawal tail
 components, including `beta`, changes the signed hash.
 
-The position-bound note suite passes 75 native scenarios using 32 real Groth16
+The position-bound note suite passes 77 native scenarios using 32 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, the fourth-frame rules,
