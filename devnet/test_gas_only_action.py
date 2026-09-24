@@ -185,6 +185,7 @@ def main():
         (dict(action, data="0x00"), "calldata must be bytes"),
         (dict(action, gas_limit=0), "execution gas"),
         (dict(action, state_limit=-1), "state gas"),
+        *((dict(action, target=t), "precompile") for t in (0x01, 0x02, 0x04, 0x11, 0x100)),
     ]
     for candidate, message in invalid_actions:
         checked += rejects(lambda a=candidate: spend_tail_frame(POOL, settlement(), a), message)

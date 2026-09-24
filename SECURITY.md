@@ -124,7 +124,10 @@ admitted 10M execution plus 10M state. The pinned ethrex client applies a
 128 KiB mempool limit to the entire encoded transaction, not to the tail
 alone. Wallets default the tail to the old `claimWithdrawal` budgets (100,000
 execution / 183,600 state) and only raise gas for a custom target or
-calldata. Settlement remains the
+calldata. Both pinned ethrex revisions panic executing a top-level frame to a
+precompile after an earlier frame emitted logs, which settlement always does,
+so the CLI refuses precompile targets until the client is fixed; the pool
+cannot stop another wallet from sending one. Settlement remains the
 only `SENDER` frame. The fourth frame is optional on every spend, including
 withdrawals: omitting it leaves `withdrawalCredit`. Any tail may call the
 pool, but it can only do what any caller can: publish a root with

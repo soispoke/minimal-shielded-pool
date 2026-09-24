@@ -497,6 +497,10 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     state = action["state_limit"]
     if not isinstance(target, int) or not 0 < target < 1 << 160:
         raise ValueError("action target must be a nonzero address")
+    # Both pinned ethrex revisions panic executing a top-level frame to a
+    # precompile after an earlier frame emitted logs, as settlement does.
+    if target in PRECOMPILES:
+        raise ValueError("action target must not be a precompile")
     if not isinstance(data, bytes):
         raise ValueError("action calldata must be bytes")
     if not isinstance(execution, int) or execution <= 0:
