@@ -197,7 +197,12 @@ def check_deployed_profile(url, pool, configured_chain, logic, verifier):
     linked verifier must accept this repository's reference proof and reject it
     with gamma changed; a verifier for another circuit or interface, such as
     the previous ten-input one, fails that. A configured chain must also match
-    the RPC, so a deposit cannot land in a same-address pool elsewhere."""
+    the RPC, so a deposit cannot land in a same-address pool elsewhere.
+
+    This catches a stale or mislabeled config, not a malicious deployer. It
+    trusts the config's logic and verifier, does not authenticate their code
+    or the Poseidon libraries, and cannot see what the pool's constructor
+    wrote to storage."""
     chain_id = int(rpc(url, "eth_chainId", []), 16)
     if chain_id != configured_chain:
         raise SystemExit(f"RPC is on chain {chain_id}, but the config names chain {configured_chain}")

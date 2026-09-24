@@ -157,11 +157,17 @@ and checks the pool itself: the RPC must be on the configured chain, the pool's
 code must be exactly what this profile's dispatcher deploys when linked to the
 logic and verifier the config records, and its `domain(uint64)` must match the
 profile's formula. The code check matters because both profiles share the
-domain formula. A shield also refuses a fixture made for another chain, pool or
-epoch, or one whose note would not land at the leaf its proofs expect. Before
-sending, and with `--dry-run`, the CLI gives the RPC the fully signed
-transaction for simulation, and the RPC could broadcast it. Use an RPC you
-trust.
+domain formula. The linked verifier must also accept a reference proof and
+reject it with `gamma` changed. These checks catch a stale or mislabeled config,
+not a malicious deployer: they trust the config's logic and verifier, which the
+deployment script verified, and cannot see what a pool's constructor wrote to
+storage. Before depositing into a pool someone else deployed, check its
+deployment transactions.
+
+A shield also refuses a fixture made for another chain, pool or epoch, or one
+whose note would not land at the leaf its proofs expect. Before sending, and
+with `--dry-run`, the CLI gives the RPC the fully signed transaction for
+simulation, and the RPC could broadcast it. Use an RPC you trust.
 
 The public mempool counts the two validation frames' declared limits plus
 2,800 gas for the signature: 235,800 by default, while a spend uses about
