@@ -17,7 +17,7 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 73 native scenarios and two client-policy tests, using
+The recorded run passes 75 native scenarios and two client-policy tests, using
 32 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
@@ -85,6 +85,13 @@ revert in settlement at the pool's expense. The pool refuses each in its
 `VERIFY` frame, and deleting any one of these checks makes exactly its
 scenarios fail. Deleting the settlement execution pin also stops the old-limit
 regression, which patches that literal, from building.
+
+Two more scenarios cover checks that back each other up, so each survives
+deleting one of them and fails only when both go. A recent-root frame in
+`DEFAULT` mode whose validation reverts would be trusted on its bytes without
+both the mode and the status check. A settlement frame to another account
+carrying the pool's balance would pay that account without both the target
+and the value check.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one
 branch, restores the checkpoint, and reverses two deposit transactions. The

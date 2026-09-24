@@ -611,6 +611,20 @@ for label, change in [("execution", settle_field("gas_limit", 20_000)),
     case(f"settlement-{label}-limit-that-runs-out-rejected",
          spend(f"settle-{label}-runs-out", initial, rejected=True, error=POOL_VERIFY, mutate=change))
 
+# Checks that cover each other: each case survives deleting either check alone
+# and fails only when both go. A DEFAULT-mode frame 0 whose validation reverts
+# would pass on its bytes alone without both the mode and the status check, and
+# a settlement frame to the attacker carrying the pool's balance would pay out
+# without both the target and the value check.
+def default_recent_root(frames): frames[0].mode = 0
+case("forged-root-in-failed-default-frame-rejected",
+    spend("forged-root-default-frame", forged, rejected=True, error=POOL_VERIFY, mutate=default_recent_root))
+def settle_to_attacker(frames):
+    frames[2].target = int.from_bytes(ATTACKER.public_key.to_canonical_address(), "big")
+    frames[2].value = 19 * ETH // 10
+case("settlement-frame-paying-the-pool-to-another-account-rejected",
+    spend("settlement-to-another-account", initial, rejected=True, error=POOL_VERIFY, mutate=settle_to_attacker))
+
 (OUT / "rejector-runtime.hex").write_text("0x60006000fd\n")
 (OUT / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")
 manifest = {"chain_id": CHAIN, "slot_number": SLOT, "base_fee": 1, "block_gas_limit": 60_000_000,
