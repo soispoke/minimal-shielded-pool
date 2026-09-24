@@ -47,24 +47,39 @@ TEST_CHAIN_ID = 31337
 TEST_POOL = "0xf62849f9a0b5bf2913b396098f7c7019b51a820a"
 
 
-def write_private(path, text, exclusive=False):
+ANY = object()
+
+
+def file_identity(path):
+    """Which file sits at path, or None if nothing does."""
+    try:
+        st = os.stat(path)
+    except FileNotFoundError:
+        return None
+    return st.st_ino, st.st_mtime_ns, st.st_size
+
+
+def write_private(path, text, previous=ANY):
     """Witnesses and fixtures hold note secrets and authorizer keys, so only the
     owner may read them. The text goes to a new owner-only file that then
     replaces the old one, so a reader holding an earlier, world-readable copy
-    open never sees it. With exclusive, the file must not exist yet, so a
-    concurrent run cannot write over a fixture this one just created."""
+    open never sees it. previous is what refuse_overwrite saw: None means the
+    file must still be absent, otherwise it must still be that same file, so a
+    concurrent run cannot write over a fixture another run just created."""
     path = Path(path)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(text)
-        if exclusive:
+        if previous is None:
             try:
                 os.link(tmp, path)
             except FileExistsError:
                 raise SystemExit(f"{path} appeared while generating; move it and run again") from None
             os.unlink(tmp)
         else:
+            if previous is not ANY and file_identity(path) != previous:
+                raise SystemExit(f"{path} changed while generating; move it and run again")
             os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):
@@ -74,9 +89,11 @@ def write_private(path, text, exclusive=False):
 
 def refuse_overwrite(path):
     """A fixture for any chain but the local test chain may hold the only
-    openings of unspent notes, whatever mode the new run uses."""
-    if not path.exists():
-        return
+    openings of unspent notes, whatever mode the new run uses. Returns the
+    identity of what is there, for write_private to check again."""
+    previous = file_identity(path)
+    if previous is None:
+        return None
     try:
         chain = int(json.loads(path.read_text()).get("chain_id", -1))
     except (OSError, ValueError, AttributeError):
@@ -84,6 +101,15 @@ def refuse_overwrite(path):
     if chain != TEST_CHAIN_ID:
         raise SystemExit(f"{path} holds a fixture for chain {chain} and may hold the only secrets "
                          "of unspent notes; move it or pass another --output")
+    return previous
+
+
+def default_output(chain_id, pool_address):
+    """The committed fixture for the test chain and pool; anything else goes
+    under the ignored wallet/artifacts/, never into a tracked file."""
+    if (chain_id, int(pool_address, 16)) == (TEST_CHAIN_ID, int(TEST_POOL, 16)):
+        return HERE / "smoke_fixture.json"
+    return WORK / f"smoke_fixture.{chain_id}.json"
 
 
 def refuse_recipient(recipient, pool_address):
@@ -184,7 +210,7 @@ def main():
     shield_wei = ETH
     payment_wei = ETH * 60 // 100
     fee_wei = ETH * 5 // 100
-    output_path = HERE / "smoke_fixture.json"
+    output_path = None
     recipient = RECIPIENT
     for arg in sys.argv[1:]:
         if arg.startswith("--chain-id="):
@@ -219,8 +245,8 @@ def main():
             raise SystemExit("pass --recipient for another chain or pool; the default "
                              f"{RECIPIENT} is a test placeholder")
     refuse_recipient(recipient, pool_address)
-    refuse_overwrite(output_path)
-    new_output = not output_path.exists()
+    output_path = output_path or default_output(chain_id, pool_address)
+    previous = refuse_overwrite(output_path)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # notes: Alice's deposit, Bob's payment target, Alice's change target
@@ -345,7 +371,7 @@ def main():
                                 auth_w, auth_w_key, pub_w, proof_w),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    write_private(output_path, json.dumps(fixture, indent=1), exclusive=new_output)
+    write_private(output_path, json.dumps(fixture, indent=1), previous)
     print("real join-split proofs generated and verified off-chain; compressed public signals bind the wallet statement")
     print(f"wrote {output_path}")
     print(f"  transfer  nf1 {fixture['transfer']['nf1'][:18]}... nf2 {fixture['transfer']['nf2'][:18]}... fee {v_fee}")

@@ -274,9 +274,9 @@ fixture's proofs assume the tree its generator built, so another deposit
 landing first leaves them unusable. Each spend entry therefore keeps its
 inputs' openings, and the nonce-race transfers their outputs', from which the
 notes can be proved again at the leaves they occupy. The generators write
-secrets readable by their owner only and never over a fixture for a chain
-other than the local test chain, which must be kept as long as its notes are
-unspent.
+secrets readable by their owner only, put live fixtures under the ignored
+wallet/artifacts/, and never write over a fixture for a chain other than the
+local test chain, which must be kept as long as its notes are unspent.
 
 ## Evidence
 
