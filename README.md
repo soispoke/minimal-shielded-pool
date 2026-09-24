@@ -156,7 +156,8 @@ and checks the pool itself: the RPC must be on the configured chain, the pool's
 code must be exactly what this profile's dispatcher deploys when linked to the
 logic and verifier the config records, and its `domain(uint64)` must match the
 profile's formula. The code check matters because both profiles share the
-domain formula.
+domain formula. A shield also refuses a fixture made for another chain, pool or
+epoch, or one whose note would not land at the leaf its proofs expect.
 
 The public mempool counts the two validation frames' declared limits plus
 2,800 gas for the signature: 235,800 by default, while a spend uses about

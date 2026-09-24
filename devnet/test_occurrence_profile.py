@@ -192,17 +192,83 @@ def check_cli_runs_deployed_gate():
                 raise AssertionError(f"{operation} ran without the deployed-pool check")
 
 
+def check_shield_binds_fixture():
+    """shield refuses, before sending, a fixture made for another chain, pool, epoch
+    or leaf, and reports a note that landed somewhere its proofs cannot spend."""
+    fixture = json.loads((ROOT / "wallet/smoke_fixture.json").read_text())
+    chain_id, pool = fixture["chain_id"], int(fixture["pool_address"], 16)
+    cfg = {"rpc": "http://node", "pool": fixture["pool_address"], "chainId": chain_id,
+           "logic": "0x01", "verifier": "0x02", "profile": POOL_PROFILE}
+    epoch_call = "0x" + builder._keccak(b"currentEpoch()")[:4].hex()
+
+    def receipt(epoch, index):
+        topics = [builder.LEAF_APPENDED_TOPIC, "0x" + "11" * 32, word(epoch)]
+        return {"logs": [{"address": fixture["pool_address"], "topics": topics,
+                          "data": word(index) + "22" * 32}]}
+
+    def run(fix, state=(0, 0), landed=(0, 0), config=cfg, extra=()):
+        def rpc(url, method, params):
+            assert method == "eth_call" and int(params[0]["to"], 16) == pool, (method, params)
+            return word(state[0] if params[0]["data"] == epoch_call else state[1])
+        sent = []
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg_path, fix_path = Path(tmp, "config.json"), Path(tmp, "fixture.json")
+            cfg_path.write_text(json.dumps(config))
+            fix_path.write_text(json.dumps(fix))
+            argv = ["pool_frametx.py", "http://node", str(cfg_path), str(fix_path), "shield",
+                    "01" * 32, *extra]
+            with mock.patch.object(builder, "rpc", rpc), \
+                    mock.patch.object(builder, "check_deployed_profile"), \
+                    mock.patch.object(builder, "build_and_send",
+                                      lambda *a, **k: sent.append(a) or receipt(*landed)), \
+                    mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
+                try:
+                    builder.main()
+                except SystemExit as error:
+                    return str(error), sent
+        return None, sent
+
+    error, sent = run(fixture)
+    assert error is None and len(sent) == 1, error
+    other_pool = f"0x{pool ^ 1:040x}"
+    refused = {
+        "another chain": (fixture, (0, 0), dict(cfg, chainId=chain_id + 1), "not 0x"),
+        "another pool": (fixture, (0, 0), dict(cfg, pool=other_pool), "not 0x"),
+        "a domain for another epoch": (dict(fixture, epoch=1), (1, 0), cfg, "fixture domain"),
+        "no recorded pool": ({k: v for k, v in fixture.items() if k != "pool_address"},
+                             (0, 0), cfg, "record pool_address"),
+        "a pool that already holds a leaf": (fixture, (0, 1), cfg, "next leaf is epoch 0 leaf 1"),
+        "a pool in a later epoch": (fixture, (1, 0), cfg, "next leaf is epoch 1 leaf 0"),
+    }
+    for label, (fix, state, config, expected) in refused.items():
+        error, sent = run(fix, state, config=config)
+        assert error and expected in error and not sent, (label, error)
+    # A deposit that lands first moves the note, after the check passed.
+    error, sent = run(fixture, landed=(0, 1))
+    assert error and "landed at (epoch, leaf) (0, 1)" in error and len(sent) == 1, error
+    # The nonce-race fixture names each note's leaf.
+    race = dict(fixture, shields=[{"inner": fixture["inner_a"], "value": "1", "leaf": 3}])
+    error, sent = run(race, (0, 3), (0, 3), extra=("--note", "0"))
+    assert error is None and len(sent) == 1, error
+    error, sent = run(race, (0, 2), (0, 2), extra=("--note", "0"))
+    assert error and "leaf 3" in error and not sent, error
+    return len(refused) + 1
+
+
 def main():
     assert POOL_PROFILE == "position-notes-v2"
     runs = check_profile_labels()
     check_recorded_deployment()
     check_deployed_pool_gate()
     check_cli_runs_deployed_gate()
+    shield_cases = check_shield_binds_fixture()
     print(f"PASS: other, null and missing profile labels rejected before RPC in {runs} CLI runs; "
           "recorded deployment matches the domain formula; the previous profile's dispatcher, "
           "other logic or verifier, a verifier that does not verify this profile's proofs, "
           "codeless, wrong-domain and wrong-chain pools refused; "
-          "shield, transfer and withdraw refuse a relabeled previous-profile pool before sending")
+          "shield, transfer and withdraw refuse a relabeled previous-profile pool before sending; "
+          f"shield refuses {shield_cases} fixtures that cannot spend the note it would fund "
+          "and reports a note that landed elsewhere")
 
 
 if __name__ == "__main__":

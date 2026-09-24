@@ -231,6 +231,54 @@ def check_deployed_profile(url, pool, configured_chain, logic, verifier):
                          f"on chain {chain_id}")
 
 
+
+# LeafAppended(bytes32 indexed cm, uint64 indexed epoch, uint32 index, bytes32 newRoot)
+LEAF_APPENDED_TOPIC = "0x1c9386c619e61f45f16a19541b370266f8eb6fd22d241ff010e03cc31ea82368"
+
+
+def pool_uint(url, pool, signature):
+    data = "0x" + _keccak(signature.encode())[:4].hex()
+    return int(rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"]), 16)
+
+
+def check_shield_fixture(url, pool, chain_id, fix, leaf):
+    """Refuse to fund a note that this fixture's proofs cannot spend.
+
+    The proofs name a chain, pool and epoch through their domain, and their
+    Merkle paths assume the note lands at `leaf`. A note shielded anywhere else
+    still holds the ETH, but spending it needs a new proof from the note's
+    secrets, which the fixture does not keep. Another deposit can still take
+    the leaf before this one lands, so main() also checks where it landed."""
+    missing = [k for k in ("chain_id", "pool_address", "epoch", "domain") if k not in fix]
+    if missing:
+        raise SystemExit(f"shield requires the fixture to record {', '.join(missing)}")
+    epoch = int(fix["epoch"])
+    if int(fix["chain_id"]) != chain_id or int(fix["pool_address"], 16) != pool:
+        raise SystemExit(f"fixture was made for pool {fix['pool_address']} on chain "
+                         f"{fix['chain_id']}, not 0x{pool:040x} on chain {chain_id}")
+    if int(fix["domain"], 16) != expected_domain(chain_id, pool, epoch):
+        raise SystemExit("fixture domain does not match its chain, pool and epoch")
+    try:
+        state = (pool_uint(url, pool, "currentEpoch()"), pool_uint(url, pool, "nextIndex()"))
+    except RuntimeError as error:
+        raise SystemExit(f"could not read the pool's next leaf: {error}") from None
+    if state != (epoch, leaf):
+        raise SystemExit(f"fixture expects the note at epoch {epoch} leaf {leaf}, but the pool's "
+                         f"next leaf is epoch {state[0]} leaf {state[1]}")
+
+
+def shield_leaf(rcpt, pool):
+    """(epoch, index) from the pool's LeafAppended log in a shield receipt."""
+    logs = list(rcpt.get("logs") or [])
+    for frame in rcpt.get("frameReceipts") or []:
+        logs += frame.get("logs") or []
+    for log in logs:
+        topics = log.get("topics") or []
+        if (int(log.get("address", "0x0"), 16) == pool and len(topics) == 3
+                and topics[0].lower() == LEAF_APPENDED_TOPIC):
+            return int(topics[2], 16), int(log["data"][2:66], 16)
+    return None
+
 ACTION_OPTION_FLAGS = {
     "--action-target": "target",
     "--action-call": "data",
@@ -852,12 +900,21 @@ def main():
             if note_index is None:
                 raise SystemExit("this fixture has a 'shields' array; pass --note N (0-based)")
             s = fix["shields"][note_index]
-            value, inner = int(s["value"]), s["inner"]
+            value, inner, leaf = int(s["value"]), s["inner"], int(s["leaf"])
         else:
-            value, inner = int(fix["shield_value"]), fix["inner_a"]
+            # gen_smoke.py proves note A as the first leaf of an empty tree.
+            value, inner, leaf = int(fix["shield_value"]), fix["inner_a"], 0
+        check_shield_fixture(url, pool, cfg["chainId"], fix, leaf)
         calldata = cast_calldata("shield(bytes32)", inner)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
-        build_and_send(url, pk, pool, value, calldata, dry_run=dry)
+        rcpt = build_and_send(url, pk, pool, value, calldata, dry_run=dry)
+        if not dry and rcpt:
+            landed = shield_leaf(rcpt, pool)
+            print(f"SHIELD_LEAF {landed}", flush=True)
+            if landed != (int(fix["epoch"]), leaf):
+                raise SystemExit(f"  the note landed at (epoch, leaf) {landed}, not ({fix['epoch']}, {leaf}), "
+                                 "so the fixture's proofs cannot spend it. Keep the note's secrets "
+                                 "(the witness files in wallet/artifacts) to prove it again.")
     elif op == "publish":
         # Same SelfVerify+SENDER shape as shield. A legacy cast send can sit in
         # the Hegotá mempool forever when a non-frame tx fails to apply.
