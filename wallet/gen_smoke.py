@@ -119,7 +119,13 @@ def spend_entry(
          "authorizer": f"0x{authorizer:040x}",
          "authorizer_private_key": authorizer_private_key,
          "beta": hex32(beta),
-         "proof": proof}
+         "proof": proof,
+         # The openings of both inputs, dummy included. If another deposit
+         # changes the tree first, the same spend, with the same nullifiers,
+         # must be proved again against a newer root, and nothing else keeps
+         # these secrets.
+         "inputs": [{"spend_key": hex32(i["sk"]), "rho": hex32(i["rho"]),
+                     "value": str(i["value"]), "leaf": i["idx"]} for i in inputs]}
     e.update(extra)
     return e
 

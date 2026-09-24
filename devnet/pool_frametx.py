@@ -386,10 +386,11 @@ def recent_root_tuple(url, cfg, e):
     if bytes.fromhex(stored.removeprefix("0x").rjust(64, "0")) != entry:
         raise SystemExit(
             f"  recent-root ref self-check failed at consensus slot {slot}. The "
-            f"fixture root differs from the root committed at that slot (a fixture generated "
-            f"against an empty tree cannot spend into a pool that already has leaves; regenerate "
-            f"against a fresh deployment), or the wrong epoch/slot was supplied. Either would be "
-            f"rejected as FrameTxRecentRootNotCommitted.")
+            f"fixture root differs from the root committed at that slot, or the wrong epoch/slot "
+            f"was supplied. Either would be rejected as FrameTxRecentRootNotCommitted. If another "
+            f"deposit changed the tree, the notes are safe but this proof is not: prove the spend "
+            f"again against a published root from the openings in its fixture entry's `inputs`, "
+            f"and keep this fixture, because regenerating it replaces those secrets.")
     return source_id + slot.to_bytes(8, "big") + root
 
 

@@ -71,6 +71,22 @@ class WalletOccurrenceTest(unittest.TestCase):
         self.assertNotEqual(w.nullifier(w.domain_scalar(31337, self.POOL, 0), 123, cm, 0),
                             w.nullifier(w.domain_scalar(31337, self.POOL, 1), 123, cm, 0))
 
+    def test_fixture_inputs_prove_the_same_spend_again(self):
+        # After another deposit changes the tree, only these openings let the
+        # owner prove the same spend, with the same nullifiers, on a newer root.
+        import json
+        from pathlib import Path
+        fixture = json.loads((Path(__file__).parent / "smoke_fixture.json").read_text())
+        for name in ("transfer", "withdraw_seed", "withdraw"):
+            entry = fixture[name]
+            inputs = [{"sk": int(i["spend_key"], 16), "rho": int(i["rho"], 16),
+                       "value": int(i["value"]), "idx": i["leaf"]} for i in entry["inputs"]]
+            nullifiers = w.input_nullifiers(int(entry["domain"], 16), inputs)
+            self.assertEqual(nullifiers, [int(entry["nf1"], 16), int(entry["nf2"], 16)], name)
+        opened = fixture["transfer"]["inputs"][0]
+        self.assertEqual(w.commitment(int(opened["spend_key"], 16), int(opened["rho"], 16),
+                                      int(opened["value"])), int(fixture["cm_a"], 16))
+
 
 if __name__ == "__main__":
     unittest.main()
