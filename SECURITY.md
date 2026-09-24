@@ -144,8 +144,8 @@ account shared by several users must not attribute a claimed balance change to
 one withdrawal. The wallet refuses the pool itself and known protocol addresses
 that would strand the credit: the EIP-8141 entry point and expiry verifier, the
 EIP-8250 nonce manager, the EIP-8272 recent root contract, and the EIP-4788,
-EIP-2935, EIP-7002 and EIP-7251 system contracts. Any other contract that
-rejects a plain ETH transfer strands a credit the same way.
+EIP-2935, EIP-7002 and EIP-7251 system contracts, and precompiles. Any other
+contract that rejects a plain ETH transfer strands a credit the same way.
 
 The account sees EIP-8141's shared entry point (`0xaa`) as its caller, not
 the pool or the account owner. Trusting that caller alone would let any frame

@@ -17,6 +17,7 @@ from pool_frametx import (
     SPEND_TUPLE,
     VERIFY_FRAME_GAS,
     VERIFY_FRAME_STATE_GAS,
+    PRECOMPILES,
     UNCLAIMABLE_RECIPIENTS,
     _keccak,
     action_options,
@@ -194,7 +195,7 @@ def main():
     checked += rejects(
         lambda: spend_tail_frame(POOL, settlement(public_amount=0, recipient=ACCOUNT)), "both be zero")
     checked += rejects(lambda: spend_tail_frame(POOL, settlement()[:-1], action), "canonical")
-    for stranded in (POOL, *UNCLAIMABLE_RECIPIENTS):
+    for stranded in (POOL, *UNCLAIMABLE_RECIPIENTS, *PRECOMPILES):
         stuck = settlement(public_amount=1, recipient=stranded)
         checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s), "would strand the credit")
         checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s, omit=True), "would strand the credit")

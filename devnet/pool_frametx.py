@@ -432,6 +432,9 @@ UNCLAIMABLE_RECIPIENTS = {
     0x00000961EF480EB55E80D19AD83579A64C007002: "the EIP-7002 withdrawal request contract",
     0x0000BBDDC7CE488642FB579F8B00F3A590007251: "the EIP-7251 consolidation request contract",
 }
+# No one controls a precompile. A claim to one either keeps the ETH there for
+# good or reverts and strands the credit: 0x01 to 0x11, and P256VERIFY at 0x100.
+PRECOMPILES = set(range(0x01, 0x12)) | {0x100}
 
 
 def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
@@ -454,8 +457,9 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
         raise ValueError("invalid pool, recipient, or public amount")
     if (amount == 0) != (recipient == 0):
         raise ValueError("public amount and recipient must both be zero or both nonzero")
-    if amount and (recipient == pool or recipient in UNCLAIMABLE_RECIPIENTS):
-        what = UNCLAIMABLE_RECIPIENTS.get(recipient, "the pool itself")
+    if amount and (recipient == pool or recipient in UNCLAIMABLE_RECIPIENTS or recipient in PRECOMPILES):
+        what = ("a precompile, which no one controls" if recipient in PRECOMPILES
+                else UNCLAIMABLE_RECIPIENTS.get(recipient, "the pool itself"))
         raise ValueError(f"withdrawal recipient would strand the credit: {what}")
     if omit:
         if action is not None:
