@@ -81,7 +81,14 @@ does not roll or insert.
 
 Root publication is not part of settlement. `publishEpochRoot(epoch)` accepts
 no caller-supplied root, reads the active or finalized authenticated root, and
-may safely be retried. A publication failure cannot consume note keys.
+may safely be retried. A publication failure cannot consume note keys. A
+transfer may publish from its tail, after settlement. It must name the epoch
+its outputs landed in: after a rollover, publishing the old epoch succeeds but
+leaves the new notes unpublished. If the tail's publication fails or names the
+wrong epoch, retry only the publication, because settlement has already
+consumed the input notes. Under EIP-8272, a later publication for the same
+epoch in the same slot replaces the stored root. The replacement still
+contains the notes, but proofs must use the root stored last.
 Withdrawals use checks-effects-interactions; a failed claim reverts and restores
 the credit.
 
@@ -104,9 +111,13 @@ alone. Wallets default the tail to the old `claimWithdrawal` budgets (100,000
 execution / 183,600 state) and only raise gas for a custom target or
 calldata. Settlement remains the
 only `SENDER` frame. The fourth frame is optional on every spend, including
-withdrawals: omitting it leaves `withdrawalCredit`. A zero-withdrawal tail
-cannot target the pool. A withdrawal tail may target the pool so
-`DEFAULT(pool, claimWithdrawal(recipient))` remains valid.
+withdrawals: omitting it leaves `withdrawalCredit`. Any tail may call the
+pool, but it can only do what any caller can: publish a root with
+`publishEpochRoot`, pay out a credit with `claimWithdrawal`, or read state.
+`settle` accepts only the pool itself as caller, `shield` needs ETH, and the
+pool's `VERIFY` entry works only in frame 1. A tail that tries to repeat
+settlement or verification therefore reverts on its own, and the settlement
+stands.
 
 `recipient` is the payout key, not the frame target. `claimWithdrawal(who)`
 always pays `who`. Anyone can still call `claimWithdrawal` later. The authorizer
@@ -195,11 +206,12 @@ zero authorizers, and recipient mismatches. The envelope vector mutates 48
 signed transfer components, 56 signed withdrawal components, 57 signed
 gas-only tails, and 57 signed custom withdrawal tails.
 
-The position-bound note suite passes 37 native scenarios using 23 real Groth16
+The position-bound note suite passes 42 native scenarios using 24 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, the fourth-frame rules,
-including rejection of a `SENDER` tail that repeats settlement, the
+including a transfer that publishes its own root and rejection of a `SENDER`
+tail that repeats settlement, the
 unpinned validation limits, and the fee check that covers them. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
 additional margin, not a formal proof of a universal bound. These runs use

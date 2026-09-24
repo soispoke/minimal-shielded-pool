@@ -217,17 +217,17 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(shr(224, frameDataLoad(2, 0)), 0x921fcac7)) { fail(errShape()) }
 
                 // Frame 3: generic DEFAULT. Present whenever frames == 4.
-                // Zero value and flags. Never SENDER. Nonzero target.
-                // Pool target is allowed only when publicAmount != 0 so the
-                // simple claimWithdrawal path remains valid. No pool-specific
-                // gas or calldata ceiling: remaining EIP-7825 execution and
-                // the chain's transaction size limits are the wallet's job.
-                // The outer signature authorizes this target and calldata, not
-                // spending from the target account.
+                // Zero value and flags. Never SENDER. The target must be nonzero
+                // and may be the pool on any spend. A DEFAULT call can only do
+                // what any caller can: settle requires the pool as sender, shield
+                // requires value, and this VERIFY entry requires frame 1. No
+                // pool-specific gas or calldata ceiling: remaining EIP-7825
+                // execution and the chain's transaction size limits are the
+                // wallet's job. The outer signature authorizes this target and
+                // calldata, not spending from the target account.
                 if eq(frames, 4) {
                     let target := frameParam(3, 0x00)
                     if iszero(target) { fail(errShape()) }
-                    if and(iszero(frameDataLoad(2, 260)), eq(target, address())) { fail(errShape()) }
                     if frameParam(3, 0x02) { fail(errShape()) }
                     if frameParam(3, 0x03) { fail(errShape()) }
                     if frameParam(3, 0x08) { fail(errShape()) }

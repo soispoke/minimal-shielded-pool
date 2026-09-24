@@ -152,6 +152,12 @@ def main():
     asserted = spend_tail_frame(POOL, withdrawal, pool_claim_action)
     assert asserted.target == POOL and asserted.data == claim.data
     checked += 1
+    publish_action = dict(action, target=POOL,
+                          data=_keccak(b"publishEpochRoot(uint64)")[:4] + bytes(32),
+                          gas_limit=100_000, state_limit=97_920)
+    published = spend_tail_frame(POOL, settlement(), publish_action)
+    assert published.target == POOL and published.data == publish_action["data"]
+    checked += 1
 
     flags = ["--action-target", "--action-call", "--action-gas", "--action-state-gas"]
     pairs = dict(zip(flags, [hex(ACCOUNT), "0x00", "1", "0"]))
@@ -174,7 +180,6 @@ def main():
 
     invalid_actions = [
         (dict(action, target=0), "nonzero"),
-        (dict(action, target=POOL), "nonzero non-pool"),
         (dict(action, target=1 << 160), "nonzero"),
         (dict(action, data="0x00"), "calldata must be bytes"),
         (dict(action, gas_limit=0), "execution gas"),
