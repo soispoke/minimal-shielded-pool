@@ -135,7 +135,7 @@ def prove_publics_honest(inputs, outputs, tree, domain, public, recipient, autho
     alpha = w.compression_alpha(stmt)
     return [beta, w.fingerprint((alpha + beta) % w.P, stmt), alpha]
 
-def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2, nonce_seq=0):
+def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2, nonce_seq=0, nonce_keys=None):
     source = keccak(POOL.to_bytes(20, "big") + word(int(entry["epoch"])))
     recent = source + int(entry["root_slot"]).to_bytes(8, "big") + word(int(entry["root"], 16))
     settle = builder.cast_calldata(f"settle({builder.SPEND_TUPLE})", builder.spend_args(entry))
@@ -145,7 +145,9 @@ def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2, nonce_s
     if int(entry["public_amount"]):
         frames.append(Frame(0, 0, POOL, CLAIM_FRAME_GAS, 0, keccak(b"claimWithdrawal(address)")[:4] + word(int(entry["recipient"], 16)), CLAIM_FRAME_STATE_GAS))
     if mutate is not None: mutate(frames)
-    tx = FrameTx(CHAIN, sorted([int(entry["nf1"], 16), int(entry["nf2"], 16)]), nonce_seq, POOL, frames,
+    if nonce_keys is None:
+        nonce_keys = sorted([int(entry["nf1"], 16), int(entry["nf2"], 16)])
+    tx = FrameTx(CHAIN, nonce_keys, nonce_seq, POOL, frames,
         [FrameSig(1, int(entry["authorizer"], 16), b"", b"")], 1, max_fee)
     sig = keys.PrivateKey(bytes.fromhex(entry["authorizer_private_key"].removeprefix("0x"))).sign_msg_hash(tx.sig_hash())
     tx.signatures[0].signature = bytes([sig.v]) + word(sig.r) + word(sig.s)
@@ -532,8 +534,8 @@ for field, index in ALIASES.items():
     case(f"compression-{field}-aliased-by-p-rejected", spend(f"aliased-{field}", aliased,
          rejected=True, error=POOL_VERIFY, mutate=mutate))
 
-# Five dispatcher checks stop theft or a burn, yet with any one of them deleted
-# every case above still passed. Each case below breaks one of them in an
+# These dispatcher checks stop theft, a burn or a gas drain, yet with any one of
+# them deleted every case above still passed. Each case below breaks one of them in an
 # otherwise valid spend, and the pool must refuse it in its VERIFY frame, before
 # approval. A spent key set replayed at nonce_seq 1 would pay out again.
 seq_replay = spend("replay-spent-keys-at-seq-one", initial, 102, rejected=True, error=POOL_VERIFY,
@@ -570,6 +572,43 @@ UNDEPOSITED = note(19 * ETH // 10)
 forged = prove("forged-root", tree_of(NA, NB, UNDEPOSITED), UNDEPOSITED, 2)
 case("forged-root-through-identity-precompile-rejected",
     spend("forged-root-identity", forged, rejected=True, error=POOL_VERIFY, mutate=frame0_target))
+
+# The same forged root through a genuine recent-root frame. Anyone can publish a
+# root to EIP-8272 under their own source, so frame 0 must name the pool's
+# source for the epoch; and a genuine tuple for the pool's real root must match
+# the root the proof uses.
+def tuple_field(offset, value):
+    def change(frames):
+        data = bytearray(frames[0].data)
+        data[offset:offset + len(value)] = value
+        frames[0].data = bytes(data)
+    return change
+own_source = keccak(DEPLOYER.to_bytes(20, "big") + word(0))
+forged_at_101 = dict(forged, root_slot="101")
+case("forged-root-published-under-another-source-rejected",
+    save("publish-forged-root", ordinary(NEXT, 0x8272, word(0) + word(int(forged["root"], 16))), slot_number=101),
+    spend("forged-root-other-source", forged_at_101, 102, rejected=True, error=POOL_VERIFY,
+          mutate=tuple_field(0, own_source)))
+case("forged-root-beside-genuine-tuple-rejected",
+    spend("forged-root-genuine-tuple", forged, rejected=True, error=POOL_VERIFY,
+          mutate=tuple_field(40, word(BASE.root()))))
+# The consumed keys must be the proof's nullifiers. Fresh keys would let a spent
+# note settle again.
+fresh_keys = sorted([int(initial["nf1"], 16) ^ 1, int(initial["nf2"], 16) ^ 1])
+rekeyed = spend("respend-with-fresh-keys", initial, 102, rejected=True, error=POOL_VERIFY,
+                raw=frame_tx(initial, nonce_keys=fresh_keys).raw())
+rekeyed["storage"][addr(0x8250)] = key_slots(initial, 1)
+case("spent-note-with-fresh-keys-rejected", spend("spend-before-fresh-keys", initial, paid=ETH-FEE), rekeyed)
+# A valid proof over another epoch's domain would pass the proof check and then
+# revert in settlement, with the pool paying the gas.
+foreign_domain = dict(epoch1, epoch="0", root_slot=str(SLOT))
+case("proof-over-another-epochs-domain-rejected",
+    spend("foreign-domain", foreign_domain, rejected=True, error=POOL_VERIFY))
+# Settlement's limits are pinned: less gas could run out after approval.
+for label, change in [("execution", settle_field("gas_limit", SETTLE_FRAME_GAS - 1)),
+                      ("state", settle_field("state_limit", SETTLE_FRAME_STATE_GAS - 1))]:
+    case(f"settlement-{label}-limit-below-profile-rejected",
+         spend(f"settle-{label}-below-profile", initial, rejected=True, error=POOL_VERIFY, mutate=change))
 
 (OUT / "rejector-runtime.hex").write_text("0x60006000fd\n")
 (OUT / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")

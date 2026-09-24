@@ -285,7 +285,7 @@ envelope vector checks that changing any of 49 transfer components, 57
 withdrawal components, 58 gas-only tail components or 58 custom withdrawal tail
 components, including `beta`, changes the signed hash.
 
-The position-bound note suite passes 67 native scenarios using 32 real Groth16
+The position-bound note suite passes 73 native scenarios using 32 real Groth16
 proofs, plus two client-policy tests, against the current dispatcher. It covers
 duplicate deposits and outputs, replay, epoch binding, database rollback and
 proof rebuilding, settlement gas boundaries, the fourth-frame rules,
@@ -294,7 +294,7 @@ tail that repeats settlement, the
 unpinned validation limits, the fee check that covers them, and hybrid
 compression, including fresh proofs over a statement value plus the field
 modulus that only the dispatcher's range checks refuse, and malformed envelopes
-that only the dispatcher's key, signature, settlement-mode and recent-root
+that only the dispatcher's key, signature, settlement, recent-root and domain
 checks refuse. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
 additional margin, not a formal proof of a universal bound. These runs use

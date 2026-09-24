@@ -17,7 +17,7 @@ vectors. Cached proofs are keyed by their witness, proving key and circuit
 WASM. No setup ceremony runs here. The repository's proving key is test-only.
 Generated vectors and proof files are ignored by Git; the reports are kept.
 
-The recorded run passes 67 native scenarios and two client-policy tests, using
+The recorded run passes 73 native scenarios and two client-policy tests, using
 32 real Groth16 proofs. The highest measured settlement execution cost is
 1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
 state test uses 489,600 state gas, below the 550,000 cap. The reports contain
@@ -70,15 +70,19 @@ dispatcher and the verifier. Seven more prove an honest withdrawal against
 and only the dispatcher's range checks can refuse it. Deleting those checks
 makes exactly these seven fail.
 
-Six scenarios cover dispatcher checks that stop theft or a burn and that no
-other scenario reaches. A spent key set replayed at `nonce_seq` 1 would pay out
-again. The victim's signature, re-sent as an explicit message in a transaction
-with another fourth frame, is valid under EIP-8141, and so is the attacker's
-own signature over the victim's proof. A `DEFAULT` settlement frame
-would revert after approval and leave the inputs spent. A recent-root frame sent
-to the identity precompile echoes any tuple, including the root of an
-attacker's own tree holding a note nobody deposited. The pool refuses each in
-its `VERIFY` frame, and deleting any one of the five checks makes exactly its
+Twelve scenarios cover dispatcher checks that no other scenario reaches, each
+breaking one check in an otherwise valid spend. A spent key set replayed at
+`nonce_seq` 1, or a spent note settled again under fresh nonce keys, would pay
+out twice. The victim's signature re-sent as an explicit message, or the
+attacker's own signature over the victim's proof, would let anyone choose the
+fourth frame. A `DEFAULT` settlement frame, or settlement limits below the
+profile's, could fail after approval and leave the inputs spent. A root the
+attacker published under their own source, a genuine tuple for the pool's real
+root beside a proof over another, or the identity precompile in place of the
+recent-root frame would let a note nobody deposited withdraw other users'
+funds. A valid proof over another epoch's domain would pass the proof check and
+revert in settlement at the pool's expense. The pool refuses each in its
+`VERIFY` frame, and deleting any one of these checks makes exactly its
 scenarios fail.
 
 The reorg scenario checkpoints the EVM database, executes and spends on one
