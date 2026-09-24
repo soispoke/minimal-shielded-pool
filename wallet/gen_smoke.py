@@ -177,6 +177,11 @@ def main():
         if recipient == RECIPIENT:
             raise SystemExit("pass --recipient for another chain or pool; the default "
                              f"{RECIPIENT} is a test placeholder")
+    # A random fixture holds the only openings of its notes, which may still be
+    # unspent, so never overwrite one.
+    if "--random" in sys.argv and output_path.exists():
+        raise SystemExit(f"{output_path} exists and may hold the only secrets of unspent notes; "
+                         "move it or pass another --output")
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # notes: Alice's deposit, Bob's payment target, Alice's change target

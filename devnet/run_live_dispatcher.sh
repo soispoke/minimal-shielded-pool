@@ -18,6 +18,11 @@ python3 ../tooling/check_activation.py "$MANIFEST" --allow-testbed
 BN=../contracts
 PRICE=(--gas-price 3000000000 --priority-gas-price 1000000000)
 SMOKE_OUTPUT=${SMOKE_OUTPUT:-../wallet/artifacts/smoke_fixture.live.json}
+# An earlier run's fixture holds the only secrets of the notes it left behind.
+[[ ! -e $SMOKE_OUTPUT ]] || {
+  echo "$SMOKE_OUTPUT exists and may hold the only secrets of unspent notes; move it or set SMOKE_OUTPUT" >&2
+  exit 1
+}
 deployed() { grep -oE 'Deployed to: 0x[0-9a-fA-F]{40}' | awk '{print $3}'; }
 addr_of() { python3 -c 'import json,sys; print(json.load(sys.stdin)["contractAddress"])'; }
 # Cast annotates large ints as "550000000000000000 [5.5e17]". int() needs the first token.
