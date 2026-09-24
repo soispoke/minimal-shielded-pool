@@ -84,8 +84,9 @@ recent-root frame would let a note nobody deposited withdraw other users'
 funds. A valid proof over another epoch's domain would pass the proof check and
 revert in settlement at the pool's expense. The pool refuses each in its
 `VERIFY` frame, and deleting any one of these checks makes exactly its
-scenarios fail. Deleting the settlement execution pin also stops the old-limit
-regression, which patches that literal, from building.
+scenarios fail. Deleting the settlement execution pin stops the fixture
+generator itself, because the old-limit regression patches that literal, so no
+scenario runs.
 
 Two more scenarios cover checks that back each other up, so each survives
 deleting one of them and fails only when both go. A recent-root frame in
@@ -109,6 +110,13 @@ transactions. Two additional tests inject conservative storage-bound states
 have been reached by deposits.
 
 The settlement profile allows 2,000,000 execution gas and 550,000 state gas.
+`run.py` checks the ethrex source against the pinned `247e2dd2` hashes. To
+run the same fixtures on another revision, such as the live client
+`bdfc5d8f`, generate them with `run.py`, then run `cargo test` with a
+`Cargo.toml` made from `Cargo.toml.in` whose `@ETHREX@` names that source and
+with `ETHREX_SOURCE` set to it. The report names the revision it ran on, with
+`-dirty` if that source has local changes.
+
 The old-limit regression deploys a separate dispatcher with only the pinned
 settlement limit changed back to 1.4 million. It requires settlement to fail
 after the nonce keys are consumed. The same long carry must settle successfully
@@ -118,7 +126,10 @@ frame's declared limits.
 `policy/` runs the real validation observer, Profile 2 checks and direct client
 mempool insertion with two independently signed, disjoint spends. It requires
 zero sender-storage reads and both transactions to remain pending, and includes
-storage-read and overlapping-key negative controls. This is not a test of full
+storage-read and overlapping-key negative controls. It inserts with MATCHA's
+charge disabled, so it tests keyed concurrency and the Profile 2 checks, not
+the width budget, which on a default node refuses the second spend until the
+pool has earned width. This is not a test of full
 blockchain admission, inclusion-list omission processing, block import or
 networking. The 235,800 declared validation budget still exceeds the standard
 100,000 public-mempool default and requires the existing testnet profile.

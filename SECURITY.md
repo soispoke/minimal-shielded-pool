@@ -146,8 +146,9 @@ accumulate, and anyone can push the whole balance to it at any time, so an
 account shared by several users must not attribute a claimed balance change to
 one withdrawal. The wallet refuses the pool itself and known protocol addresses
 that would strand the credit: the EIP-8141 entry point and expiry verifier, the
-EIP-8250 nonce manager, the EIP-8272 recent root contract, and the EIP-4788,
-EIP-2935, EIP-7002 and EIP-7251 system contracts, and precompiles. Any other
+EIP-8250 nonce manager, the EIP-8272 recent root contract, the EIP-4788,
+EIP-2935, EIP-7002 and EIP-7251 system contracts, the beacon deposit contract,
+the EIP-8282 builder deposit and exit contracts, and precompiles. Any other
 contract that rejects a plain ETH transfer strands a credit the same way.
 
 The account sees EIP-8141's shared entry point (`0xaa`) as its caller, not
@@ -251,10 +252,10 @@ other spends:
   changes the key set and the mempool refuses it while the first spend is
   pending.
 - Client capacity for pending spends. Both ethrex revisions revalidate every
-  pending spend, Groth16 pairing included, on each forkchoiceUpdated, at about
-  a millisecond each. On the live client, which has no width budget, roughly
-  7,000 pending spends would exceed the Engine API's 8-second limit. These
-  limit liveness, not safety.
+  pending spend, Groth16 pairing included, on each forkchoiceUpdated, at 1.1 to
+  1.3 ms each on fast hardware. On the live client, which has no width budget,
+  about 6,000 to 7,000 pending spends, fewer on slower nodes, would exceed the
+  Engine API's 8-second limit. These limit liveness, not safety.
 - Independent circuit, Solidity, Yul, wallet, and deployment review.
 
 EIP-8369 is a Draft Informational EIP. Its current `2^20` per-IL
@@ -275,8 +276,8 @@ landing first leaves them unusable. Each spend entry therefore keeps its
 inputs' openings, and the nonce-race transfers their outputs', from which the
 notes can be proved again at the leaves they occupy. The generators write
 secrets readable by their owner only, put live fixtures under the ignored
-wallet/artifacts/, and never write over a fixture for a chain other than the
-local test chain, which must be kept as long as its notes are unspent.
+wallet/artifacts/, and never write over a fixture for another chain. Keep a
+fixture as long as its notes are unspent.
 
 ## Evidence
 
@@ -294,7 +295,8 @@ sink-valued positive outputs, zero authorizers, and recipient mismatches. The
 circuit test checks `beta` against an independent Poseidon(10) and rejects a
 forged witness whose `beta` or `gamma` does not follow from the statement, and
 witnesses that each break only one constraint: value conservation, the 128-bit
-ranges, path-bit booleanity at several depths, and the sink rules. The
+ranges of the fee and of each output, path-bit booleanity at several depths,
+and the sink rules. The
 envelope vector checks that changing any of 49 transfer components, 57
 withdrawal components, 58 gas-only tail components or 58 custom withdrawal tail
 components, including `beta`, changes the signed hash.

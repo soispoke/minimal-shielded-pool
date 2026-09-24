@@ -402,8 +402,8 @@ def recent_root_tuple(url, cfg, e):
             f"was supplied. Either would be rejected as FrameTxRecentRootNotCommitted. If another "
             f"deposit changed the tree, the notes are safe but this proof is not: prove again "
             f"against a published root, at the leaves the notes occupy, from the openings in the "
-            f"fixture entries' `inputs`, and keep this fixture, because regenerating it replaces "
-            f"those secrets.")
+            f"fixture entries' `inputs`, and keep this fixture: it holds the only copy of those "
+            f"secrets.")
     return source_id + slot.to_bytes(8, "big") + root
 
 

@@ -7,13 +7,20 @@ mod tests {
     /// The revision of the ethrex source this runner was built against, so a report
     /// names the client that produced it.
     fn ethrex_revision() -> String {
-        std::process::Command::new("git")
-            .args(["-C", env!("ETHREX_SOURCE"), "rev-parse", "HEAD"])
-            .output()
-            .ok()
-            .filter(|output| output.status.success())
-            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
-            .unwrap_or_else(|| "unknown".into())
+        let git = |args: &[&str]| {
+            std::process::Command::new("git")
+                .args(["-C", env!("ETHREX_SOURCE")])
+                .args(args)
+                .output()
+                .ok()
+                .filter(|output| output.status.success())
+                .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        };
+        let revision = git(&["rev-parse", "HEAD"]).unwrap_or_else(|| "unknown".into());
+        match git(&["status", "--porcelain", "--untracked-files=no"]) {
+            Some(changes) if changes.is_empty() => revision,
+            _ => format!("{revision}-dirty"),
+        }
     }
 
     use bytes::Bytes;
