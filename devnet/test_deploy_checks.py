@@ -7,6 +7,7 @@ so a check whose failure is overwritten by a later line is caught here.
 """
 import json
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -51,6 +52,54 @@ def accepts(call, env):
     return result.stdout == "ACCEPT\n"
 
 
+CHECKS = ("verify_library_runtime", "verify_logic_runtime", "verify_created_runtime")
+
+
+def call_sites():
+    """Each check is defined once, and every call refuses the deployment when it
+    fails; no inline comparison of two command substitutions remains."""
+    source = SCRIPT.read_text()
+    lines = source.splitlines()
+    calls = 0
+    for name in CHECKS:
+        assert source.count(f"{name}() {{") == 1, f"{name} must be defined exactly once"
+        for i, line in enumerate(lines):
+            if line.startswith(f"{name} "):
+                block = "\n".join(lines[i:i + 4])
+                assert "|| {" in line and "exit 1" in block[:block.index("}") + 1], line
+                calls += 1
+    assert calls == 4, calls
+    assert not re.search(r"\[\[ *\$\(.*\) *== *\$\(", source), "inline comparison of two reads"
+    return calls
+
+
+def early_guards():
+    """The script stops before calling cast or forge when a FOUNDRY_* variable
+    would change what forge builds, or when its fixture path already exists."""
+    checked = 0
+    with tempfile.TemporaryDirectory() as tmp:
+        bin_dir = Path(tmp, "bin")
+        bin_dir.mkdir()
+        for tool in ("cast", "forge"):
+            fake = bin_dir / tool
+            fake.write_text("#!/bin/sh\necho REACHED >&2\nexit 99\n")
+            fake.chmod(0o755)
+        base = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "RPC_URL": "offline",
+                "DEPLOYER_PK": "0x01", "ALLOW_TESTBED_SETUP": "1", "SMOKE_OUTPUT": str(Path(tmp, "new.json"))}
+        existing = Path(tmp, "existing.json")
+        existing.write_text("{}")
+        for extra, expected in (({"SMOKE_OUTPUT": str(existing)}, "may hold the only secrets"),
+                                ({"FOUNDRY_VIA_IR": "false"}, "unset FOUNDRY_VIA_IR"),
+                                ({"DAPP_SRC": "src"}, "unset DAPP_SRC")):
+            env = {k: v for k, v in base.items() if not k.startswith(("FOUNDRY_", "DAPP_"))}
+            result = subprocess.run(["bash", str(SCRIPT)], env={**env, **extra},
+                                    capture_output=True, text=True)
+            assert result.returncode == 1 and expected in result.stderr, (extra, result.stderr[-400:])
+            assert "REACHED" not in result.stderr, extra
+            checked += 1
+    return checked
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         artifact = Path(tmp, "out/ShieldedPoolLogic.sol/ShieldedPoolLogic.json")
@@ -87,8 +136,11 @@ def main():
                  "pool": "verify_created_runtime 0x02 0xinit"}
         for kind, env, expected in cases:
             assert accepts(calls[kind], env) == expected, (kind, env)
+    calls = call_sites()
+    guards = early_guards()
     print(f"PASS: {len(cases)} deployment-check cases; mismatched code, wrong Poseidon addresses "
-          "and failed reads are rejected even when an earlier line fails and a later one passes")
+          "and failed reads are rejected even when an earlier line fails and a later one passes; "
+          f"{calls} call sites refuse on failure; {guards} early guards stop before cast or forge")
 
 
 if __name__ == "__main__":

@@ -23,6 +23,14 @@ SMOKE_OUTPUT=${SMOKE_OUTPUT:-../wallet/artifacts/smoke_fixture.live.json}
   echo "$SMOKE_OUTPUT exists and may hold the only secrets of unspent notes; move it or set SMOKE_OUTPUT" >&2
   exit 1
 }
+# forge reads FOUNDRY_* and DAPP_* variables over foundry.toml, which the manifest
+# pins, and every check below compares the chain with that same local build.
+for name in $(compgen -e); do
+  [[ $name != FOUNDRY_* && $name != DAPP_* ]] || {
+    echo "unset $name: FOUNDRY_* and DAPP_* variables override the pinned foundry.toml" >&2
+    exit 1
+  }
+done
 deployed() { grep -oE 'Deployed to: 0x[0-9a-fA-F]{40}' | awk '{print $3}'; }
 addr_of() { python3 -c 'import json,sys; print(json.load(sys.stdin)["contractAddress"])'; }
 # Cast annotates large ints as "550000000000000000 [5.5e17]". int() needs the first token.
@@ -111,7 +119,9 @@ verify_logic_runtime "$LOGIC" "$EXPECTED_LOGIC" || {
 echo "    logic=$LOGIC"
 
 echo "==> immutable dispatcher/pool"
-DISP_INIT=$(python3 dispatcher.py --initcode "$LOGIC" "$VERIFIER")
+# The pinned initcode, not a fresh compile, linked to the verified logic and verifier.
+DISP_ARGS=$(cast abi-encode 'f(address,address)' "$LOGIC" "$VERIFIER")
+DISP_INIT="$(cat build/shielded_pool_dispatcher_init.hex)${DISP_ARGS#0x}"
 POOL=$(cast send --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "${PRICE[@]}" --gas-limit 4000000 \
   --create "$DISP_INIT" --json | addr_of)
 verify_created_runtime "$POOL" "$DISP_INIT" || {
