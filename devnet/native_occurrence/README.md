@@ -120,8 +120,11 @@ with `ETHREX_SOURCE` set to it. The report names the revision it ran on, with
 The old-limit regression deploys a separate dispatcher with only the pinned
 settlement limit changed back to 1.4 million. It requires settlement to fail
 after the nonce keys are consumed. The same long carry must settle successfully
-under the new profile. Both execution and state gas are checked against each
-frame's declared limits.
+under the new profile. Every accepted transaction's frame statuses are
+asserted, so a frame that runs out of gas fails its case. The per-frame
+comparison with declared limits is only a consistency check: a frame that runs
+out still reports usage within its limit, so margin is tracked by the measured
+maxima above, not by an assertion.
 
 `policy/` runs the real validation observer, Profile 2 checks and direct client
 mempool insertion with two independently signed, disjoint spends. It requires
