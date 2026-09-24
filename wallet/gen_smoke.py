@@ -29,6 +29,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import wallet as w
@@ -48,11 +49,42 @@ TEST_POOL = "0xf62849f9a0b5bf2913b396098f7c7019b51a820a"
 
 def write_private(path, text):
     """Witnesses and fixtures hold note secrets and authorizer keys, so only the
-    owner may read them."""
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    os.fchmod(fd, 0o600)
-    with os.fdopen(fd, "w") as f:
-        f.write(text)
+    owner may read them. The text goes to a new owner-only file that then
+    replaces the old one, so a reader holding an earlier, world-readable copy
+    open never sees it."""
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
+def refuse_overwrite(path):
+    """A fixture for any chain but the local test chain may hold the only
+    openings of unspent notes, whatever mode the new run uses."""
+    if not path.exists():
+        return
+    try:
+        chain = int(json.loads(path.read_text()).get("chain_id", -1))
+    except (OSError, ValueError, AttributeError):
+        chain = -1
+    if chain != TEST_CHAIN_ID:
+        raise SystemExit(f"{path} holds a fixture for chain {chain} and may hold the only secrets "
+                         "of unspent notes; move it or pass another --output")
+
+
+def refuse_recipient(recipient, pool_address):
+    """A credit to the pool, a precompile or a system contract can never be
+    claimed; refuse it before proving rather than at withdrawal."""
+    sys.path.insert(0, str(HERE.parent / "devnet"))
+    from pool_frametx import PRECOMPILES, UNCLAIMABLE_RECIPIENTS
+    value = w.address_scalar(recipient)
+    if value == w.address_scalar(pool_address) or value in PRECOMPILES or value in UNCLAIMABLE_RECIPIENTS:
+        raise SystemExit(f"--recipient {recipient} would strand the withdrawal credit")
 
 
 def run(cmd, cwd=TOOLING):
@@ -121,9 +153,9 @@ def spend_entry(
          "beta": hex32(beta),
          "proof": proof,
          # The openings of both inputs, dummy included. If another deposit
-         # changes the tree first, the same spend, with the same nullifiers,
-         # must be proved again against a newer root, and nothing else keeps
-         # these secrets.
+         # changes the tree first, the notes must be proved again against a
+         # newer root, at the leaves they occupy, and nothing else keeps these
+         # secrets.
          "inputs": [{"spend_key": hex32(i["sk"]), "rho": hex32(i["rho"]),
                      "value": str(i["value"]), "leaf": i["idx"]} for i in inputs]}
     e.update(extra)
@@ -177,11 +209,8 @@ def main():
         if recipient == RECIPIENT:
             raise SystemExit("pass --recipient for another chain or pool; the default "
                              f"{RECIPIENT} is a test placeholder")
-    # A random fixture holds the only openings of its notes, which may still be
-    # unspent, so never overwrite one.
-    if "--random" in sys.argv and output_path.exists():
-        raise SystemExit(f"{output_path} exists and may hold the only secrets of unspent notes; "
-                         "move it or pass another --output")
+    refuse_recipient(recipient, pool_address)
+    refuse_overwrite(output_path)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # notes: Alice's deposit, Bob's payment target, Alice's change target

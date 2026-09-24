@@ -262,10 +262,14 @@ artifact set, ceremony, activation manifest, and circuit review.
 The wallet is a fixture generator, not a production keystore. Random note
 secrets and one-time authorizer keys are not durably backed up. The fixture
 generators' fixed seed is public, so they refuse it outside the local test
-chain. A fixture's proofs assume the tree its generator built, so another
-deposit landing first leaves them unusable. Each spend entry therefore keeps
-its inputs' openings, from which the same spend can be proved again against a
-newer root, and the fixture must be kept as long as its notes are unspent.
+chain or a live tree, and refuse recipients that would strand a credit. A
+fixture's proofs assume the tree its generator built, so another deposit
+landing first leaves them unusable. Each spend entry therefore keeps its
+inputs' openings, and the nonce-race transfers their outputs', from which the
+notes can be proved again at the leaves they occupy. The generators write
+secrets readable by their owner only and never over a fixture for a chain
+other than the local test chain, which must be kept as long as its notes are
+unspent.
 
 ## Evidence
 

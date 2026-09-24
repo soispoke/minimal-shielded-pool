@@ -190,6 +190,7 @@ python3 devnet/test_occurrence_profile.py
 python3 devnet/test_deploy_checks.py
 python3 wallet/test_occurrence.py
 python3 wallet/test_wallet_occurrence.py
+python3 wallet/test_generators.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
 python3 tooling/test_check_activation.py
