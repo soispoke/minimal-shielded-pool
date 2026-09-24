@@ -206,7 +206,8 @@ other spends:
   verification. The activation gate counts only phase-2 contributions, so
   phase-1 provenance must be checked separately.
 - Correct ethrex v23 implementations of EIP-8141, EIP-8250, EIP-8272 and
-  EIP-7843 at the pins the activation manifest records.
+  EIP-7843. The activation manifest records the EIP-8250 and EIP-8272
+  revisions, and the native suite pins ethrex `247e2dd2`.
 - An explicitly supported verification budget covering what wallets declare:
   235,800 gas by default, the recent-root frame's 8,000, the proof frame's
   225,000 and 2,800 for the signature. The dispatcher does not pin these two
@@ -298,7 +299,7 @@ checks refuse. The highest measured settlement execution cost is 1,423,709;
 the old 1.4M limit fails after consuming input keys. The new 2M limit includes
 additional margin, not a formal proof of a universal bound. These runs use
 ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where
-settlement gas has not been re-measured. See
+the same scenarios give identical results, gas included. See
 [`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
 
 The earlier profile's gas derivation is recorded in
