@@ -532,7 +532,7 @@ for field, index in ALIASES.items():
     case(f"compression-{field}-aliased-by-p-rejected", spend(f"aliased-{field}", aliased,
          rejected=True, error=POOL_VERIFY, mutate=mutate))
 
-# Four dispatcher checks stop theft or a burn, yet with any one of them deleted
+# Five dispatcher checks stop theft or a burn, yet with any one of them deleted
 # every case above still passed. Each case below breaks one of them in an
 # otherwise valid spend, and the pool must refuse it in its VERIFY frame, before
 # approval. A spent key set replayed at nonce_seq 1 would pay out again.
@@ -547,6 +547,14 @@ rewrap = frame_tx(initial, mutate=set_tail)
 rewrap.signatures[0] = FrameSig(1, int(initial["authorizer"], 16), victim.sig_hash(), victim.signatures[0].signature)
 case("signature-rewrapped-as-explicit-message-rejected",
     spend("signature-explicit-message", initial, rejected=True, error=POOL_VERIFY, raw=rewrap.raw()))
+# A signature by another key, here the attacker's own over another fourth
+# frame, would let anyone who sees a pending spend choose its tail and fees.
+other = frame_tx(initial, mutate=set_tail)
+other.signatures[0] = FrameSig(1, int.from_bytes(ATTACKER.public_key.to_canonical_address(), "big"), b"", b"")
+other_sig = ATTACKER.sign_msg_hash(other.sig_hash())
+other.signatures[0].signature = bytes([other_sig.v]) + word(other_sig.r) + word(other_sig.s)
+case("signature-by-another-key-rejected",
+    spend("signature-other-key", initial, rejected=True, error=POOL_VERIFY, raw=other.raw()))
 # A DEFAULT settlement frame would run after approval, revert on its sender
 # check and leave the input keys consumed.
 case("settlement-default-mode-rejected",
