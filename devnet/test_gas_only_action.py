@@ -195,7 +195,17 @@ def main():
     checked += rejects(
         lambda: spend_tail_frame(POOL, settlement(public_amount=0, recipient=ACCOUNT)), "both be zero")
     checked += rejects(lambda: spend_tail_frame(POOL, settlement()[:-1], action), "canonical")
-    for stranded in (POOL, *UNCLAIMABLE_RECIPIENTS, *PRECOMPILES):
+    # Written out here, not read from the code under test, so dropping an
+    # address from the refusal sets fails this test.
+    stranding = {
+        0xAA, 0x8141, 0x8250, 0x8272, *range(0x01, 0x12), 0x100,
+        0x000F3DF6D732807EF1319FB7B8BB8522D0BEAC02, 0x0000F90827F1C53A10CB7A02335B175320002935,
+        0x00000961EF480EB55E80D19AD83579A64C007002, 0x0000BBDDC7CE488642FB579F8B00F3A590007251,
+        0x00000000219AB540356CBB839CBE05303D7705FA, 0x0000BFF46984E3725691FA540A8C7589300D8282,
+        0x000064D678505AD48F8CCB093BC65613800E8282,
+    }
+    assert stranding <= set(UNCLAIMABLE_RECIPIENTS) | PRECOMPILES
+    for stranded in (POOL, *sorted(stranding)):
         stuck = settlement(public_amount=1, recipient=stranded)
         checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s), "would strand the credit")
         checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s, omit=True), "would strand the credit")

@@ -193,23 +193,25 @@ def check_cli_runs_deployed_gate():
 
 
 def check_shield_binds_fixture():
-    """shield refuses, before sending, a fixture made for another chain, pool, epoch
-    or leaf, and reports a note that landed somewhere its proofs cannot spend."""
+    """shield refuses, before sending, a fixture made for another chain, pool, epoch,
+    leaf or tree, and reports a note that landed somewhere its proofs cannot spend."""
     fixture = json.loads((ROOT / "wallet/smoke_fixture.json").read_text())
     chain_id, pool = fixture["chain_id"], int(fixture["pool_address"], 16)
     cfg = {"rpc": "http://node", "pool": fixture["pool_address"], "chainId": chain_id,
            "logic": "0x01", "verifier": "0x02", "profile": POOL_PROFILE}
-    epoch_call = "0x" + builder._keccak(b"currentEpoch()")[:4].hex()
+    selector = {builder._keccak(name.encode())[:4].hex(): i
+                for i, name in enumerate(("currentEpoch()", "nextIndex()", "currentRoot()"))}
+    empty = builder.EMPTY_ROOT
 
     def receipt(epoch, index):
         topics = [builder.LEAF_APPENDED_TOPIC, "0x" + "11" * 32, word(epoch)]
         return {"logs": [{"address": fixture["pool_address"], "topics": topics,
                           "data": word(index) + "22" * 32}]}
 
-    def run(fix, state=(0, 0), landed=(0, 0), config=cfg, extra=()):
+    def run(fix, state=(0, 0, empty), landed=(0, 0), config=cfg, extra=()):
         def rpc(url, method, params):
             assert method == "eth_call" and int(params[0]["to"], 16) == pool, (method, params)
-            return word(state[0] if params[0]["data"] == epoch_call else state[1])
+            return word(state[selector[params[0]["data"][2:10]]])
         sent = []
         with tempfile.TemporaryDirectory() as tmp:
             cfg_path, fix_path = Path(tmp, "config.json"), Path(tmp, "fixture.json")
@@ -232,28 +234,35 @@ def check_shield_binds_fixture():
     assert error is None and len(sent) == 1, error
     other_pool = f"0x{pool ^ 1:040x}"
     refused = {
-        "another chain": (fixture, (0, 0), dict(cfg, chainId=chain_id + 1), "not 0x"),
-        "another pool": (fixture, (0, 0), dict(cfg, pool=other_pool), "not 0x"),
-        "a domain for another epoch": (dict(fixture, epoch=1), (1, 0), cfg, "fixture domain"),
+        "another chain": (fixture, (0, 0, empty), dict(cfg, chainId=chain_id + 1), "not 0x"),
+        "another pool": (fixture, (0, 0, empty), dict(cfg, pool=other_pool), "not 0x"),
+        "a domain for another epoch": (dict(fixture, epoch=1), (1, 0, empty), cfg, "fixture domain"),
         "no recorded pool": ({k: v for k, v in fixture.items() if k != "pool_address"},
-                             (0, 0), cfg, "record pool_address"),
-        "a pool that already holds a leaf": (fixture, (0, 1), cfg, "next leaf is epoch 0 leaf 1"),
-        "a pool in a later epoch": (fixture, (1, 0), cfg, "next leaf is epoch 1 leaf 0"),
+                             (0, 0, empty), cfg, "record pool_address"),
+        "a pool that already holds a leaf": (fixture, (0, 1, 5), cfg, "next leaf is epoch 0 leaf 1"),
+        "a pool in a later epoch": (fixture, (1, 0, empty), cfg, "next leaf is epoch 1 leaf 0"),
     }
     for label, (fix, state, config, expected) in refused.items():
         error, sent = run(fix, state, config=config)
         assert error and expected in error and not sent, (label, error)
     # A deposit that lands first moves the note, after the check passed.
     error, sent = run(fixture, landed=(0, 1))
-    assert error and "landed at (epoch, leaf) (0, 1)" in error and len(sent) == 1, error
-    # The nonce-race fixture names each note's leaf.
-    race = dict(fixture, shields=[{"inner": fixture["inner_a"], "value": "1", "leaf": 3}])
-    error, sent = run(race, (0, 3), (0, 3), extra=("--note", "0"))
+    assert error and "landed at (epoch, leaf) (0, 1)" in error and "Keep this fixture" in error, error
+    assert len(sent) == 1
+    # A full tree rolls over first, so an epoch-1 fixture's note lands at leaf 0.
+    epoch1 = dict(fixture, epoch=1, domain="0x" + builder.expected_domain(chain_id, pool, 1).to_bytes(32, "big").hex())
+    error, sent = run(epoch1, (0, builder.TREE_CAPACITY, 7), landed=(1, 0))
     assert error is None and len(sent) == 1, error
-    error, sent = run(race, (0, 2), (0, 2), extra=("--note", "0"))
-    assert error and "leaf 3" in error and not sent, error
-    return len(refused) + 1
-
+    # The nonce-race fixture names each note's leaf and the root before it, so a
+    # foreign deposit at an earlier leaf is refused although the next leaf matches.
+    prior = "0x" + (1234).to_bytes(32, "big").hex()
+    race = dict(fixture, shields=[{"inner": fixture["inner_a"], "value": "1", "leaf": 3, "prior_root": prior}])
+    error, sent = run(race, (0, 3, 1234), (0, 3), extra=("--note", "0"))
+    assert error is None and len(sent) == 1, error
+    for state, expected in (((0, 2, 1234), "leaf 3"), ((0, 3, 999), "another deposit took an earlier leaf")):
+        error, sent = run(race, state, extra=("--note", "0"))
+        assert error and expected in error and not sent, error
+    return len(refused) + 2
 
 def main():
     assert POOL_PROFILE == "position-notes-v2"

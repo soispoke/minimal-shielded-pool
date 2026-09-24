@@ -246,13 +246,18 @@ def pool_uint(url, pool, signature):
     return int(rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"]), 16)
 
 
-def check_shield_fixture(url, pool, chain_id, fix, leaf):
+TREE_CAPACITY = 1 << 20
+EMPTY_ROOT = 0x2134E76AC5D21AAB186C2BE1DD8F84EE880A1E46EAF712F9D371B6DF22191F3E
+
+
+def check_shield_fixture(url, pool, chain_id, fix, leaf, prior_root):
     """Refuse to fund a note that this fixture's proofs cannot spend.
 
     The proofs name a chain, pool and epoch through their domain, and their
-    Merkle paths assume the note lands at `leaf`. A note shielded anywhere else
-    still holds the ETH, but spending it needs a new proof from the note's
-    secrets, which the fixture does not keep. Another deposit can still take
+    Merkle paths assume the note lands at `leaf` of the tree whose root is
+    `prior_root` before it. A note shielded into any other tree still holds the
+    ETH, but spending it needs a new proof at the leaf it occupies, from the
+    opening the fixture's spend entries keep. Another deposit can still take
     the leaf before this one lands, so main() also checks where it landed."""
     missing = [k for k in ("chain_id", "pool_address", "epoch", "domain") if k not in fix]
     if missing:
@@ -264,12 +269,19 @@ def check_shield_fixture(url, pool, chain_id, fix, leaf):
     if int(fix["domain"], 16) != expected_domain(chain_id, pool, epoch):
         raise SystemExit("fixture domain does not match its chain, pool and epoch")
     try:
-        state = (pool_uint(url, pool, "currentEpoch()"), pool_uint(url, pool, "nextIndex()"))
+        now_epoch, now_index, now_root = (pool_uint(url, pool, name) for name in
+                                          ("currentEpoch()", "nextIndex()", "currentRoot()"))
     except RuntimeError as error:
         raise SystemExit(f"could not read the pool's next leaf: {error}") from None
-    if state != (epoch, leaf):
+    # A full tree rolls to a new, empty epoch before this deposit.
+    if now_index == TREE_CAPACITY:
+        now_epoch, now_index, now_root = now_epoch + 1, 0, EMPTY_ROOT
+    if (now_epoch, now_index) != (epoch, leaf):
         raise SystemExit(f"fixture expects the note at epoch {epoch} leaf {leaf}, but the pool's "
-                         f"next leaf is epoch {state[0]} leaf {state[1]}")
+                         f"next leaf is epoch {now_epoch} leaf {now_index}")
+    if now_root != prior_root:
+        raise SystemExit("the pool's tree is not the one this fixture's proofs assume: another "
+                         "deposit took an earlier leaf")
 
 
 def shield_leaf(rcpt, pool):
@@ -431,6 +443,9 @@ UNCLAIMABLE_RECIPIENTS = {
     0x0000F90827F1C53A10CB7A02335B175320002935: "the EIP-2935 history contract",
     0x00000961EF480EB55E80D19AD83579A64C007002: "the EIP-7002 withdrawal request contract",
     0x0000BBDDC7CE488642FB579F8B00F3A590007251: "the EIP-7251 consolidation request contract",
+    0x00000000219AB540356CBB839CBE05303D7705FA: "the beacon deposit contract",
+    0x0000BFF46984E3725691FA540A8C7589300D8282: "the EIP-8282 builder deposit contract",
+    0x000064D678505AD48F8CCB093BC65613800E8282: "the EIP-8282 builder exit contract",
 }
 # No one controls a precompile. A claim to one either keeps the ETH there for
 # good or reverts and strands the credit: 0x01 to 0x11, and P256VERIFY at 0x100.
@@ -912,11 +927,14 @@ def main():
             if note_index is None:
                 raise SystemExit("this fixture has a 'shields' array; pass --note N (0-based)")
             s = fix["shields"][note_index]
+            if "prior_root" not in s:
+                raise SystemExit("this fixture's shields do not record prior_root; regenerate it")
             value, inner, leaf = int(s["value"]), s["inner"], int(s["leaf"])
+            prior_root = int(s["prior_root"], 16)
         else:
             # gen_smoke.py proves note A as the first leaf of an empty tree.
-            value, inner, leaf = int(fix["shield_value"]), fix["inner_a"], 0
-        check_shield_fixture(url, pool, cfg["chainId"], fix, leaf)
+            value, inner, leaf, prior_root = int(fix["shield_value"]), fix["inner_a"], 0, EMPTY_ROOT
+        check_shield_fixture(url, pool, cfg["chainId"], fix, leaf, prior_root)
         calldata = cast_calldata("shield(bytes32)", inner)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
         rcpt = build_and_send(url, pk, pool, value, calldata, dry_run=dry)
@@ -925,8 +943,9 @@ def main():
             print(f"SHIELD_LEAF {landed}", flush=True)
             if landed != (int(fix["epoch"]), leaf):
                 raise SystemExit(f"  the note landed at (epoch, leaf) {landed}, not ({fix['epoch']}, {leaf}), "
-                                 "so the fixture's proofs cannot spend it. Keep the note's secrets "
-                                 "(the witness files in wallet/artifacts) to prove it again.")
+                                 "so the fixture's proofs cannot spend it. Keep this fixture: its spend "
+                                 "entries' inputs hold the note's opening, from which it can be proved "
+                                 "again at the leaf it occupies.")
     elif op == "publish":
         # Same SelfVerify+SENDER shape as shield. A legacy cast send can sit in
         # the Hegotá mempool forever when a non-frame tx fails to apply.
