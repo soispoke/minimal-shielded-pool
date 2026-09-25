@@ -330,15 +330,21 @@ the same scenarios give identical results, gas included. See
 The earlier profile's gas derivation is recorded in
 [`devnet/vectors/2026-08-14-tight-gas-profile.md`](devnet/vectors/2026-08-14-tight-gas-profile.md).
 
-On 2026-09-22 the deployment recorded in `devnet/deploy_config.json`
+On 2026-09-25 the `position-notes-v2` pool recorded in
+`devnet/deploy_config.json` (commit `08bb034`, block 143402) completed a
+shield, two root publications, a transfer, a withdrawal whose fourth-frame
+claim failed and left its credit, and a withdrawal whose fourth-frame claim
+paid the recipient both credits, on the chain 8141 testnet.
+
+On 2026-09-22 the previous profile, `position-notes-v1` at `c26b8e4`,
 completed shield, transfer, root refresh, withdrawal, claim, a fourth-frame
 claim and call, an intentional tail revert with later credit recovery, and
-replay rejection on the chain 8141 testnet. It proves compatibility with that
-one testnet configuration, not production readiness or cross-client
-interoperability. That deployment is the previous profile, `position-notes-v1`
-at `c26b8e4`: it predates hybrid compression, the unpinned validation limits
-and pool-calling tails, and the current CLI refuses it. No `position-notes-v2`
-pool has been deployed yet.
+replay rejection on the same testnet. It predates hybrid compression, the
+unpinned validation limits and pool-calling tails, and the current CLI refuses
+it.
+
+These runs prove compatibility with that one testnet configuration, not
+production readiness or cross-client interoperability.
 
 ## Reporting
 
