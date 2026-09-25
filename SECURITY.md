@@ -304,7 +304,8 @@ ranges of the fee and of each output, including an output of exactly 2^128,
 path-bit booleanity at several depths, and the sink rules. Each rejection is checked against the committed R1CS, not
 only the witness generator, using a complete witness from a circuit without
 that constraint, so a constraint that became a runtime-only check would fail
-the test. The
+the test. The circuit test also fails if the circuit gains an unconstrained
+assignment (`<--` or `-->`), which it currently has none of. The
 envelope vector checks that changing any of 49 transfer components, 57
 withdrawal components, 58 gas-only tail components or 58 custom withdrawal tail
 components, including `beta`, changes the signed hash.

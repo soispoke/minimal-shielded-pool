@@ -223,8 +223,20 @@ def constraints_bind_compression(name, statement):
     print("PASS r1cs rejects a forged beta and a forged gamma", flush=True)
 
 
+def no_unconstrained_assignments():
+    """`<--` and `-->` assign a signal without constraining it, the classic way a
+    circuit ends up accepting forged values. The circuit uses neither, so a new
+    one fails here until it gets its own constraint and review."""
+    lines = [number for number, line in enumerate(
+        (ROOT / "circuits/spend.circom").read_text().splitlines(), 1)
+        if "<--" in line.split("//")[0] or "-->" in line.split("//")[0]]
+    assert not lines, f"circuits/spend.circom assigns without a constraint at lines {lines}"
+    print("PASS circuit has no unconstrained assignment", flush=True)
+
+
 def main():
     WORK.mkdir(exist_ok=True)
+    no_unconstrained_assignments()
     w.set_seed(20260921)
     pool = "0x" + "12" * 20
     domain0 = w.domain_scalar(31337, pool, 0)
