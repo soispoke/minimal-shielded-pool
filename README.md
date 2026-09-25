@@ -154,10 +154,11 @@ under `devnet/vectors/2026-09-01-hegota-final-profile/`.
 
 Each profile needs its own deployment, because a deployed pool cannot be
 upgraded and a `position-notes-v1` pool rejects this profile's validation
-limits. No `position-notes-v2` pool has been deployed yet. `devnet/deploy_config.json` still records the
-`position-notes-v1` deployment on chain 8141 (pool `0xac01…b100`, commit
-`c26b8e4`), which completed shield, transfer, withdrawal and fourth-frame calls
-on September 22, 2026. The CLI refuses to shield into or spend from that pool.
+limits. `devnet/deploy_config.json` records this profile's testnet deployment
+on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`), which completed shield,
+transfer, withdrawal and claim calls on September 25, 2026. The earlier
+`position-notes-v1` pool (`0xac01…b100`, commit `c26b8e4`) stays on chain, and
+the CLI refuses to shield into or spend from it.
 
 Before shielding or spending, the CLI requires the config to name this profile
 and checks the pool itself: the RPC must be on the configured chain, the pool's
