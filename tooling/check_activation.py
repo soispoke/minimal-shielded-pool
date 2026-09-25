@@ -96,12 +96,15 @@ PROFILES["position-notes-v2"] = {
 
 
 # Every active artifact must be pinned. A manifest that omits one would
-# otherwise pass without its hash being checked.
+# otherwise pass without its hash being checked. foundry.toml is pinned here;
+# check_forge_config.py compares the settings forge actually resolves, which
+# environment variables, .env files and the global config can also change.
 REQUIRED_ARTIFACTS = (
     "build/spend.r1cs",
     "build/spend_final.zkey",
     "build/spend_js/spend.wasm",
     "circuits/spend.circom",
+    "contracts/foundry.toml",
     "contracts/src/Groth16Verifier.sol",
     "contracts/src/PoseidonT3.sol",
     "contracts/src/PoseidonT4.sol",
@@ -180,7 +183,7 @@ def main():
         raise SystemExit("transaction exceeds the configured Hegota Profile 2 budget")
     if profile["wire_profile"] == "position-notes-v2":
         # The pre-PR 12279 figure charged keyed-nonce creation as execution gas and no
-        # longer applies. The largest later measurement, from an earlier dispatcher,
+        # longer applies. The measurement on this dispatcher, native ethrex 247e2dd2,
         # must fit the default.
         if "post_pr_12279_max_observed_verify_execution_gas" not in profile:
             raise SystemExit("missing PR 12279 VERIFY execution measurement status")

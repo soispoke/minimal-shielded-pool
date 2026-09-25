@@ -17,14 +17,21 @@ owner_pk = Poseidon3(1, spend_key, 0)
 cm       = Poseidon3(2, Poseidon2(owner_pk, rho), value)
 ```
 
-A spend proves a join-split with two inputs and two outputs. Its ten public
-signals are `[nf1, nf2, outCm1, outCm2, root, domain, publicAmount, fee,
-recipient, authorizer]`. The circuit checks that every positive input is in the
-tree, that value is conserved over 128-bit amounts, and that at least one input
-carries value. It also requires distinct nullifiers and outputs, a nonzero
-authorizer address, and a recipient exactly when `publicAmount` is positive. A
-zero-value output must use a fixed "sink" commitment for its position, which
-the pool never inserts.
+A spend proves a join-split with two inputs and two outputs. Its statement is
+ten values: `[nf1, nf2, outCm1, outCm2, root, domain, publicAmount, fee,
+recipient, authorizer]`. To save verification gas, the proof exposes three
+public signals instead, using the hybrid compression of
+[eprint 2025/1500](https://eprint.iacr.org/2025/1500): the pool computes
+`alpha = keccak256(statement) mod p`, the circuit computes
+`beta = Poseidon(statement)`, and both evaluate `gamma`, the statement as a
+polynomial at `alpha + beta`. The ten values stay public in the settlement
+data. The pool recomputes `alpha` and `gamma` from them and range-checks each
+value itself, since the verifier no longer sees them. The circuit checks that
+every positive input is in the tree, that value is conserved over 128-bit
+amounts, and that at least one input carries value. It also requires distinct
+nullifiers and outputs, a nonzero authorizer address, and a recipient exactly
+when `publicAmount` is positive. A zero-value output must use a fixed "sink"
+commitment for its position, which the pool never inserts.
 
 Every deposit is a separate note, identified by its tree epoch and leaf index.
 The nullifier binds that position, so two deposits of the same commitment are
@@ -60,8 +67,9 @@ second spend of either note. A spend has three frames and an optional fourth:
 4. Optional `DEFAULT` call: any nonzero target, including the pool, and any
    calldata, with zero value and flags. A withdrawal usually calls
    `claimWithdrawal(recipient)`. A transfer can call `publishEpochRoot` so the
-   notes it creates can be spent from the next slot. It must name the epoch
-   its outputs land in, which is a new epoch if settlement starts a new tree.
+   notes it creates can be spent from the next slot, though a spend against
+   that root is then easy to link to the transfer. It must name the epoch its
+   outputs land in, which is a new epoch if settlement starts a new tree.
 
 The dispatcher pins the data length of the first three frames and the
 settlement frame's gas limits. The validation frames' gas limits are wallet
@@ -77,22 +85,24 @@ stands out.
 | Frame | Execution gas | State gas | Data |
 |---|---:|---:|---:|
 | Recent root | 8,000 default (uses 5,579) | 0 pinned | 72 bytes |
-| Proof | 270,000 default (uses about 255,000) | 195,840 default | 256 bytes |
+| Proof | 225,000 default (uses about 210,000) | 195,840 default | 288 bytes |
 | Settlement | 2,000,000 pinned | 550,000 pinned | 388 bytes |
 
-The proof frame needs a limit of about 262,000, although it uses about
-255,000, because each nested call keeps back 1/64 of its gas (EIP-150). Below
+The proof frame's data is the 256-byte proof followed by `beta`. It needs a
+limit of about 216,000, although it uses about 210,000, because each nested
+call keeps back 1/64 of its gas (EIP-150). Below
 that, the verifier runs out of gas and the pool reports an invalid proof. The
 proof frame's state gas pays for creating the two nullifier keys.
 
-The proof names a fresh secp256k1 authorizer, and its signature covers the
+The proof names a secp256k1 authorizer, which the wallet makes fresh for each
+spend. Its signature covers the
 whole transaction, including the proof, the recent-root tuple and the fourth
 frame. The proof's `fee` must cover the transaction's maximum cost; any unused
 part stays in the pool.
 
 The wallet chooses the fourth frame's limits. Intrinsic gas plus every frame's
 execution limit, or the calldata floor when larger, must fit EIP-7825's `2^24`
-cap, of which the pool's own frames use 2.28M by default; state gas is
+cap, of which the pool's own frames use 2.23M by default; state gas is
 budgeted separately. The encoded transaction must also fit ethrex's 128 KiB
 mempool limit.
 
@@ -148,11 +158,22 @@ and checks the pool itself: the RPC must be on the configured chain, the pool's
 code must be exactly what this profile's dispatcher deploys when linked to the
 logic and verifier the config records, and its `domain(uint64)` must match the
 profile's formula. The code check matters because both profiles share the
-domain formula.
+domain formula. The linked verifier must also accept a reference proof and
+reject it with `gamma` changed. These checks catch a stale or mislabeled config,
+not a malicious deployer: they trust the config's logic and verifier, which the
+deployment script verified, and cannot see what a pool's constructor wrote to
+storage. Before depositing into a pool someone else deployed, check its
+deployment transactions.
+
+A shield also refuses a fixture made for another chain, pool or epoch, or one
+whose note would not land at the leaf and on the tree its proofs expect.
+Before sending, and with `--dry-run`, the CLI gives the RPC the fully signed
+transaction for simulation, and the RPC could broadcast it. Use an RPC you
+trust.
 
 The public mempool counts the two validation frames' declared limits plus
-2,800 gas for the signature: 280,800 by default, while a spend uses about
-263,000. That is well above EIP-8141's published default of 100,000. The chain
+2,800 gas for the signature: 235,800 by default, while a spend uses about
+218,500. That is well above EIP-8141's published default of 100,000. The chain
 8141 testnet admits it; other networks need a policy that does.
 [EIP-8369](https://eips.ethereum.org/EIPS/eip-8369) has not settled a
 per-transaction budget.
@@ -168,10 +189,13 @@ python3 devnet/test_pool_envelope_binding.py
 python3 devnet/test_gas_only_action.py
 python3 devnet/test_recent_root_window.py
 python3 devnet/test_occurrence_profile.py
+python3 devnet/test_deploy_checks.py
 python3 wallet/test_occurrence.py
 python3 wallet/test_wallet_occurrence.py
+python3 wallet/test_generators.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
+python3 tooling/check_forge_config.py activation_manifest.testbed.json contracts
 python3 tooling/test_check_activation.py
 python3 wallet/wallet.py
 python3 reference/poseidon_bn254.py
@@ -200,7 +224,8 @@ other clients or FOCIL.
   and Poseidon contracts.
 - Rerun the signature, capacity, reorg, gas and cross-client tests on the
   activation fork. Recheck the settlement gas limits under every supported gas
-  schedule, and deactivate the profile before an unsupported repricing fork.
+  schedule. The pool cannot be changed, so holders must exit before an
+  unsupported repricing fork.
 - Obtain an independent contract and circuit audit.
 
 See [SECURITY.md](SECURITY.md) for trust and failure boundaries.

@@ -120,6 +120,11 @@ object "ShieldedPoolDispatcher" {
                 if iszero(lt(pub, maxValue())) { fail(errValue()) }
                 if iszero(lt(fee, maxValue())) { fail(errValue()) }
 
+                // Hybrid compression's beta follows the 256-byte proof and must
+                // be a field element; the verifier also checks it.
+                let beta := calldataload(256)
+                if iszero(lt(beta, p)) { fail(errProof()) }
+
                 // Reject non-canonical field aliases and points at infinity
                 // before invoking the generated Groth16 verifier.
                 let q := baseField()
@@ -132,21 +137,38 @@ object "ShieldedPoolDispatcher" {
                 }
                 if iszero(or(calldataload(192), calldataload(224))) { fail(errProof()) }
 
-                let m := 0x80
-                mstore(m, shl(224, 0xf3bb70f6))
-                calldatacopy(add(m, 4), 0, 256)
-                mstore(add(m, 0x104), nf1)
-                mstore(add(m, 0x124), nf2)
-                mstore(add(m, 0x144), out1)
-                mstore(add(m, 0x164), out2)
-                mstore(add(m, 0x184), root)
-                mstore(add(m, 0x1a4), dom)
-                mstore(add(m, 0x1c4), pub)
-                mstore(add(m, 0x1e4), fee)
-                mstore(add(m, 0x204), recipient)
-                mstore(add(m, 0x224), authorizer)
+                // Hybrid compression (eprint 2025/1500): the proof exposes only
+                // (beta, gamma, alpha). Every statement value was range-checked
+                // above, so these words are the circuit's field elements.
+                // alpha = keccak256(statement) mod p, and gamma is the statement
+                // evaluated as a polynomial at alpha + beta, highest term first.
+                let st := 0x200
+                mstore(st, nf1)
+                mstore(add(st, 0x20), nf2)
+                mstore(add(st, 0x40), out1)
+                mstore(add(st, 0x60), out2)
+                mstore(add(st, 0x80), root)
+                mstore(add(st, 0xa0), dom)
+                mstore(add(st, 0xc0), pub)
+                mstore(add(st, 0xe0), fee)
+                mstore(add(st, 0x100), recipient)
+                mstore(add(st, 0x120), authorizer)
+                let alpha := mod(keccak256(st, 0x140), p)
+                let sigma := addmod(alpha, beta, p)
+                let gamma := 0
+                for { let o := 0x140 } o { o := sub(o, 0x20) } {
+                    gamma := addmod(mulmod(gamma, sigma, p), mload(add(st, sub(o, 0x20))), p)
+                }
 
-                let ok := staticcall(500000, verifierAddr(), m, 0x244, 0, 32)
+                // verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[3])
+                let m := 0x80
+                mstore(m, shl(224, 0x11479fea))
+                calldatacopy(add(m, 4), 0, 256)
+                mstore(add(m, 0x104), beta)
+                mstore(add(m, 0x124), gamma)
+                mstore(add(m, 0x144), alpha)
+
+                let ok := staticcall(500000, verifierAddr(), m, 0x164, 0, 32)
                 if iszero(ok) { fail(errProof()) }
                 if iszero(eq(returndatasize(), 32)) { fail(errProof()) }
                 if iszero(eq(mload(0), 1)) { fail(errProof()) }
@@ -198,7 +220,7 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(frameParam(1, 0x00), address())) { fail(errShape()) }
                 if iszero(eq(frameParam(1, 0x02), 1)) { fail(errShape()) }
                 if iszero(eq(frameParam(1, 0x03), 3)) { fail(errShape()) }
-                if iszero(eq(frameParam(1, 0x04), 256)) { fail(errShape()) }
+                if iszero(eq(frameParam(1, 0x04), 288)) { fail(errShape()) }
                 if frameParam(1, 0x08) { fail(errShape()) }
 
                 // Frame 2: the single settlement call, with fork-profile gas.
@@ -259,7 +281,7 @@ object "ShieldedPoolDispatcher" {
                 approveExecutionAndPayment()
             }
 
-            if eq(calldatasize(), 256) {
+            if eq(calldatasize(), 288) {
                 verifyFrameApprove()
                 stop()
             }

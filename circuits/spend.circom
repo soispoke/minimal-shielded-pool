@@ -11,7 +11,7 @@ pragma circom 2.0.8;
 //   - EIP-8250 MULTI-KEY nonces: the two nullifiers are consumed as ONE
 //     keyed-nonce set (shared nonce_seq = 0, atomic, per-sender domain), the
 //     `nonce_keys` list shape bounded by MAX_NONCE_KEYS = 16;
-//   - native-ETH fee binding: `fee` is a public signal and the pool self-pays;
+//   - native-ETH fee binding: `fee` is in the statement and the pool self-pays;
 //   - complete intent authorization: the proof chooses a fresh one-time
 //     secp256k1 signer. EIP-8141 verifies that signer over the complete frame
 //     transaction after the proof has been generated.
@@ -21,8 +21,9 @@ pragma circom 2.0.8;
 //     I own the input notes committed in the pool's tree at the anchored
 //     root (or they are zero-value dummies), their value equals the output
 //     notes' value plus the public amount plus the fee, every value is a
-//     128-bit integer, and I expose exactly the two nullifiers, two output
-//     commitments, public amount, fee, recipient, and one-time authorizer as
+//     128-bit integer, and my statement is exactly the two nullifiers, two
+//     output commitments, root, domain, public amount, fee, recipient, and
+//     one-time authorizer, which the pool checks through three compressed
 //     public signals. The root source, slot, epoch, frame grammar, gas, and
 //     fee fields are bound by that author's canonical EIP-8141 signature.
 //
@@ -41,13 +42,20 @@ pragma circom 2.0.8;
 // settlement contract recognises those commitments and does not insert them.
 // This gives every note a capacity-free exit without a second circuit.
 //
-// The ten public signals, in the verifier's order (circom puts outputs
-// first in declaration order, then public inputs in declaration order):
+// The statement is ten values, in this order:
 //     [nf1, nf2, out_cm1, out_cm2, root, domain, public_amount, fee,
 //      recipient, authorizer]
-// The verifier binds each directly (one scalar mul per signal, ~6k gas),
-// which is cheaper and leaner than the earlier design's Poseidon-compressed
-// claim recomputed onchain (4 hash3, ~230k gas).
+// They are private here but public in the settlement calldata. Hybrid
+// compression (eprint 2025/1500, as in ark-hybrid-compression) exposes three
+// public signals instead of ten, saving seven scalar multiplications:
+//     alpha = keccak256(the ten values as 32-byte words) mod p, computed
+//             by the pool and passed in as a public input;
+//     beta  = Poseidon(the ten values), computed here;
+//     gamma = x[0] + x[1]*s + ... + x[9]*s^9 at s = alpha + beta, computed
+//             here and recomputed by the pool from its own copy of the values.
+// circom puts outputs first, so the verifier's order is [beta, gamma, alpha].
+// The pool range-checks every value itself, since the verifier no longer
+// sees them.
 //
 // Soundness, beyond the fixed-denomination edition's five properties:
 //   6. Value conservation: v_in1 + v_in2 === v_out1 + v_out2 + public_amount
@@ -245,4 +253,71 @@ template Spend(DEPTH) {
     sameOutput.out === 0;
 }
 
-component main {public [root, domain, public_amount, fee, recipient, authorizer]} = Spend(20);
+// The spend with its ten-value statement compressed to (beta, gamma, alpha).
+template CompressedSpend(DEPTH) {
+    signal input alpha;
+    signal input root;
+    signal input domain;
+    signal input in_spend_key[2];
+    signal input in_rho[2];
+    signal input in_value[2];
+    signal input in_siblings[2][DEPTH];
+    signal input in_bits[2][DEPTH];
+    signal input out_inner[2];
+    signal input out_value[2];
+    signal input public_amount;
+    signal input fee;
+    signal input recipient;
+    signal input authorizer;
+    signal output beta;
+    signal output gamma;
+
+    component spend = Spend(DEPTH);
+    spend.root <== root;
+    spend.domain <== domain;
+    for (var k = 0; k < 2; k++) {
+        spend.in_spend_key[k] <== in_spend_key[k];
+        spend.in_rho[k] <== in_rho[k];
+        spend.in_value[k] <== in_value[k];
+        for (var i = 0; i < DEPTH; i++) {
+            spend.in_siblings[k][i] <== in_siblings[k][i];
+            spend.in_bits[k][i] <== in_bits[k][i];
+        }
+        spend.out_inner[k] <== out_inner[k];
+        spend.out_value[k] <== out_value[k];
+    }
+    spend.public_amount <== public_amount;
+    spend.fee <== fee;
+    spend.recipient <== recipient;
+    spend.authorizer <== authorizer;
+
+    signal stmt[10];
+    stmt[0] <== spend.nf1;
+    stmt[1] <== spend.nf2;
+    stmt[2] <== spend.out_cm1;
+    stmt[3] <== spend.out_cm2;
+    stmt[4] <== root;
+    stmt[5] <== domain;
+    stmt[6] <== public_amount;
+    stmt[7] <== fee;
+    stmt[8] <== recipient;
+    stmt[9] <== authorizer;
+
+    component digest = Poseidon(10);
+    for (var i = 0; i < 10; i++) {
+        digest.inputs[i] <== stmt[i];
+    }
+    beta <== digest.out;
+
+    // Horner's rule, highest coefficient first.
+    signal sigma;
+    sigma <== alpha + beta;
+    signal acc[10];
+    acc[9] <== stmt[9];
+    for (var i = 9; i > 0; i--) {
+        acc[i - 1] <== acc[i] * sigma + stmt[i - 1];
+    }
+    gamma <== acc[0];
+}
+
+component main {public [alpha]} = CompressedSpend(20);

@@ -18,22 +18,34 @@ python3 ../tooling/check_activation.py "$MANIFEST" --allow-testbed
 BN=../contracts
 PRICE=(--gas-price 3000000000 --priority-gas-price 1000000000)
 SMOKE_OUTPUT=${SMOKE_OUTPUT:-../wallet/artifacts/smoke_fixture.live.json}
+# An earlier run's fixture holds the only secrets of the notes it left behind.
+[[ ! -e $SMOKE_OUTPUT ]] || {
+  echo "$SMOKE_OUTPUT exists and may hold the only secrets of unspent notes; move it or set SMOKE_OUTPUT" >&2
+  exit 1
+}
+# forge resolves its settings from foundry.toml, FOUNDRY_* variables in any case,
+# .env files and the global config, and every check below compares the chain with
+# that same local build. Compare what forge would use with the manifest's pins.
+python3 ../tooling/check_forge_config.py "$MANIFEST" "$BN"
 deployed() { grep -oE 'Deployed to: 0x[0-9a-fA-F]{40}' | awk '{print $3}'; }
 addr_of() { python3 -c 'import json,sys; print(json.load(sys.stdin)["contractAddress"])'; }
 # Cast annotates large ints as "550000000000000000 [5.5e17]". int() needs the first token.
 cast_uint() { python3 -c 'import sys; print(int(sys.argv[1].strip().split()[0], 0))' "$1"; }
+# These checks run on the left of `||`, where Bash ignores `set -e`, so every
+# read and comparison returns its own failure. Otherwise only the last line
+# would decide the result.
 verify_library_runtime() {
   local addr=$1 expected=$2 actual prefix actual_lower prefix_lower
-  actual=$(cast code "$addr" --rpc-url "$RPC")
+  actual=$(cast code "$addr" --rpc-url "$RPC") || return 1
   prefix="0x73${addr#0x}"
   actual_lower=$(printf '%s' "$actual" | tr '[:upper:]' '[:lower:]')
   prefix_lower=$(printf '%s' "$prefix" | tr '[:upper:]' '[:lower:]')
-  [[ $actual_lower == "$prefix_lower"* && ${actual:44} == ${expected:44} ]]
+  [[ $actual_lower == "$prefix_lower"* && ${actual:44} == "${expected:44}" ]]
 }
 verify_logic_runtime() {
-  local addr=$1 expected=$2 actual
-  actual=$(cast code "$addr" --rpc-url "$RPC")
-  python3 - "$actual" "$expected" "$BN/out/ShieldedPoolLogic.sol/ShieldedPoolLogic.json" <<'PY'
+  local addr=$1 expected=$2 actual t3 t4
+  actual=$(cast code "$addr" --rpc-url "$RPC") || return 1
+  python3 - "$actual" "$expected" "$BN/out/ShieldedPoolLogic.sol/ShieldedPoolLogic.json" <<'PY' || return 1
 import json, sys
 actual = bytearray.fromhex(sys.argv[1][2:])
 expected = bytearray.fromhex(sys.argv[2][2:])
@@ -47,8 +59,15 @@ for locations in refs.values():
         expected[start:start + length] = b"\0" * length
 raise SystemExit(0 if actual == expected else 1)
 PY
-  [[ $(cast call "$addr" 'POSEIDON_T3()(address)' --rpc-url "$RPC") == "$T3" ]]
-  [[ $(cast call "$addr" 'POSEIDON_T4()(address)' --rpc-url "$RPC") == "$T4" ]]
+  t3=$(cast call "$addr" 'POSEIDON_T3()(address)' --rpc-url "$RPC") || return 1
+  t4=$(cast call "$addr" 'POSEIDON_T4()(address)' --rpc-url "$RPC") || return 1
+  [[ $t3 == "$T3" && $t4 == "$T4" ]]
+}
+verify_created_runtime() {
+  local addr=$1 initcode=$2 actual expected
+  actual=$(cast code "$addr" --rpc-url "$RPC") || return 1
+  expected=$(cast call --rpc-url "$RPC" --create "$initcode") || return 1
+  [[ ${#expected} -gt 2 && $actual == "$expected" ]]
 }
 
 CHAIN_ID=$(cast chain-id --rpc-url "$RPC")
@@ -96,10 +115,12 @@ verify_logic_runtime "$LOGIC" "$EXPECTED_LOGIC" || {
 echo "    logic=$LOGIC"
 
 echo "==> immutable dispatcher/pool"
-DISP_INIT=$(python3 dispatcher.py --initcode "$LOGIC" "$VERIFIER")
+# The pinned initcode, not a fresh compile, linked to the verified logic and verifier.
+DISP_ARGS=$(cast abi-encode 'f(address,address)' "$LOGIC" "$VERIFIER")
+DISP_INIT="$(cat build/shielded_pool_dispatcher_init.hex)${DISP_ARGS#0x}"
 POOL=$(cast send --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "${PRICE[@]}" --gas-limit 4000000 \
   --create "$DISP_INIT" --json | addr_of)
-[[ $(cast code "$POOL" --rpc-url "$RPC") == $(cast call --rpc-url "$RPC" --create "$DISP_INIT") ]] || {
+verify_created_runtime "$POOL" "$DISP_INIT" || {
   echo "dispatcher runtime mismatch" >&2; exit 1;
 }
 

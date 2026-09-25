@@ -17,6 +17,7 @@ from pool_frametx import (
     SPEND_TUPLE,
     VERIFY_FRAME_GAS,
     VERIFY_FRAME_STATE_GAS,
+    PRECOMPILES,
     UNCLAIMABLE_RECIPIENTS,
     _keccak,
     action_options,
@@ -42,7 +43,7 @@ def _spend_tx(tail):
         chain_id=1, nonce_keys=[3, 4], nonce_seq=0, sender=POOL,
         frames=[
             Frame(1, 0, int(RECENT_ROOT_ADDRESS, 16), RECENT_ROOT_FRAME_GAS, 0, b"\x00" * 72),
-            Frame(1, 3, POOL, VERIFY_FRAME_GAS, 0, b"\x00" * 256,
+            Frame(1, 3, POOL, VERIFY_FRAME_GAS, 0, b"\x00" * 288,
                   state_limit=VERIFY_FRAME_STATE_GAS),
             Frame(2, 0, POOL, SETTLE_FRAME_GAS, 0, settlement(),
                   state_limit=SETTLE_FRAME_STATE_GAS),
@@ -101,7 +102,7 @@ def run_broadcast_case(simulation, receipt, action, rpc_calls, allow_failed_clai
                 protocol_nonces=[3, 4], proof_verify=True,
                 recent_root=b"\x00" * 72, sender_override=POOL,
                 max_fee_override=10, max_priority_override=1,
-                frame0_data=b"\x00" * 256, allow_failed_claim=allow_failed_claim,
+                frame0_data=b"\x00" * 288, allow_failed_claim=allow_failed_claim,
                 action=action,
             )
     finally:
@@ -184,6 +185,7 @@ def main():
         (dict(action, data="0x00"), "calldata must be bytes"),
         (dict(action, gas_limit=0), "execution gas"),
         (dict(action, state_limit=-1), "state gas"),
+        *((dict(action, target=t), "precompile") for t in (0x01, 0x02, 0x04, 0x11, 0x100)),
     ]
     for candidate, message in invalid_actions:
         checked += rejects(lambda a=candidate: spend_tail_frame(POOL, settlement(), a), message)
@@ -194,7 +196,17 @@ def main():
     checked += rejects(
         lambda: spend_tail_frame(POOL, settlement(public_amount=0, recipient=ACCOUNT)), "both be zero")
     checked += rejects(lambda: spend_tail_frame(POOL, settlement()[:-1], action), "canonical")
-    for stranded in (POOL, *UNCLAIMABLE_RECIPIENTS):
+    # Written out here, not read from the code under test, so dropping an
+    # address from the refusal sets fails this test.
+    stranding = {
+        0xAA, 0x8141, 0x8250, 0x8272, *range(0x01, 0x12), 0x100,
+        0x000F3DF6D732807EF1319FB7B8BB8522D0BEAC02, 0x0000F90827F1C53A10CB7A02335B175320002935,
+        0x00000961EF480EB55E80D19AD83579A64C007002, 0x0000BBDDC7CE488642FB579F8B00F3A590007251,
+        0x00000000219AB540356CBB839CBE05303D7705FA, 0x0000BFF46984E3725691FA540A8C7589300D8282,
+        0x000064D678505AD48F8CCB093BC65613800E8282,
+    }
+    assert stranding <= set(UNCLAIMABLE_RECIPIENTS) | PRECOMPILES
+    for stranded in (POOL, *sorted(stranding)):
         stuck = settlement(public_amount=1, recipient=stranded)
         checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s), "would strand the credit")
         checked += rejects(lambda s=stuck: spend_tail_frame(POOL, s, omit=True), "would strand the credit")
@@ -267,6 +279,28 @@ def main():
     checked += exits(missing_outcome, "gas-only action outcome is unknown")
     assert missing_calls.count("eth_sendRawTransaction") == 1
     checked += 1
+
+    # The send gates: a spend whose simulation does not show settlement
+    # succeeding is never broadcast, since mining it would consume the keys
+    # without creating the outputs.
+    withdrawal = settlement(public_amount=5, recipient=ACCOUNT)
+    ok, bad = {"succeeded": True}, {"succeeded": False}
+    for label, simulation, action_used, calldata, text in [
+            ("no simulation", None, action, None, "without a pre-send simulation"),
+            ("settlement failed", {"valid": True, "frames": [ok, ok, bad, ok]}, action, None,
+             "settlement frame 2 did not explicitly succeed"),
+            ("outcomes missing", {"valid": True, "frames": [ok, ok]}, action, None,
+             "settlement frame 2 did not explicitly succeed"),
+            ("another frame failed", {"valid": True, "frames": [ok, bad, ok, ok]}, action, None,
+             "another frame failed"),
+            ("invalid prefix", {"valid": False, "violation": "prefix", "frames": []}, action, None,
+             "INVALID"),
+            ("claim failed", {"valid": True, "frames": [ok, ok, ok, bad]}, None, withdrawal,
+             "claim frame failed; not sending")]:
+        calls = []
+        checked += exits(lambda: run_broadcast_case(simulation, None, action_used, calls, calldata=calldata), text)
+        assert "eth_sendRawTransaction" not in calls, label
+        checked += 1
 
     print(json.dumps({
         "checked_cases": checked,

@@ -10,16 +10,17 @@ verify budget.
 # that is too low only makes the transaction invalid, and the proof fee covers whatever is
 # declared, so wallets can raise them after a repricing without a new pool. The recent-root
 # frame (cold access to the predeploy, two keccaks, one cold SLOAD over one 72-byte tuple)
-# used 5,579. The proof frame used at most 255,011 but needs a limit of 261,521, because
-# each nested call keeps back 1/64 of its gas. The defaults leave about 2,400 and 8,500
-# gas of headroom, so the declared validation budget is 280,800 instead of 352,800.
+# used 5,579. With hybrid public-input compression the proof frame uses 210,049, plus 90
+# with a fourth frame and 27 when nf1 > nf2, and the heaviest spend needs a limit of
+# 216,141 because each nested call keeps back 1/64 of its gas. The defaults leave about
+# 2,400 and 8,850 gas of headroom, so the declared validation budget is 235,800.
 RECENT_ROOT_FRAME_GAS = 8_000
 RECENT_ROOT_TUPLE_BYTES = 72
 POOL_PROFILE = "position-notes-v2"
 # The last deployed profile. The deployment record keeps naming it until this profile is
 # deployed, and the CLI refuses to spend against it.
 PREVIOUS_POOL_PROFILE = "position-notes-v1"
-VERIFY_FRAME_GAS = 270_000
+VERIFY_FRAME_GAS = 225_000
 # Native ethrex 247e2dd2 spends at 262,143 and 524,287 leaves verify and
 # approve, then settlement OOGs with no outputs at 1.4M. The signed SENDER
 # pin is 2M so EIP-150 forwarding still covers that long-carry. 2M is the

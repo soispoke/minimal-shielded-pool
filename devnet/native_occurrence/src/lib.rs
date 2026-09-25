@@ -4,6 +4,25 @@
 
 #[cfg(test)]
 mod tests {
+    /// The revision of the ethrex source this runner was built against, so a report
+    /// names the client that produced it.
+    fn ethrex_revision() -> String {
+        let git = |args: &[&str]| {
+            std::process::Command::new("git")
+                .args(["-C", env!("ETHREX_SOURCE")])
+                .args(args)
+                .output()
+                .ok()
+                .filter(|output| output.status.success())
+                .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        };
+        let revision = git(&["rev-parse", "HEAD"]).unwrap_or_else(|| "unknown".into());
+        match git(&["status", "--porcelain", "--untracked-files=no"]) {
+            Some(changes) if changes.is_empty() => revision,
+            _ => format!("{revision}-dirty"),
+        }
+    }
+
     use bytes::Bytes;
     use ethrex_common::{
         Address, H256, U256,
@@ -502,7 +521,7 @@ mod tests {
         fs::write(
             &output,
             serde_json::to_string_pretty(&json!({
-                "client": "ethrex Hegota source snapshot 247e2dd2c4d4c526dcc64ac1c025bd2319e7a10e",
+                "client": format!("ethrex Hegota source snapshot {}", ethrex_revision()),
                 "chain_id": manifest.chain_id,
                 "block_gas_limit": manifest.block_gas_limit,
                 "cases": cases,
