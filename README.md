@@ -153,18 +153,18 @@ the nullifier key `K = Poseidon2(D, spend_key)` instead of the spending key.
 Anyone can recompute the note's nullifier from `K` and its position and find
 the spend that consumed it, while `K` cannot spend anything. A receipt can
 follow notes from a public deposit through private transfers to a
-withdrawal, show what a payment was worth, and fully explain a spend when
-both of its inputs are disclosed.
+withdrawal, and fully explains a spend when both of its inputs are disclosed.
 
 ```sh
 python3 wallet/disclosure.py export --rpc URL --config devnet/deploy_config.json \
-  --notes FIXTURE --output receipt.json
-python3 wallet/disclosure.py verify --rpc URL --receipt receipt.json \
-  --config devnet/deploy_config.json
+  --fixture FIXTURE --output receipt.json
+python3 wallet/disclosure.py verify --rpc URL --config devnet/deploy_config.json \
+  --receipt receipt.json
 ```
 
-The verifier trusts only the chain. A receipt proves links and amounts, not
-who presents it or where the funds came from before the deposit. See
+The verifier checks the receipt against the chain and the pool's deployed
+code. A receipt proves links and amounts, not who presents it or where the
+funds came from before the deposit. See
 [SECURITY.md](SECURITY.md#privacy-limits) for what a receipt reveals.
 
 ## Deployment

@@ -206,7 +206,7 @@ other spends:
   holds it, and they can pass it on. Disclosing both inputs of a spend and one
   output also reveals the other output's value by conservation. A nullifier
   key exposes every note its spend key owns in that epoch, so the wallet
-  makes a fresh spend key for each note and the export warns about reuse.
+  makes a fresh spend key for each note.
   The receipt also reveals each note's `inner`, which links any other note
   paid to the same `inner`.
 
