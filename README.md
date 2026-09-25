@@ -141,7 +141,31 @@ devnet/dispatcher.py
 devnet/pool_frametx.py
 wallet/wallet.py
 wallet/gen_smoke.py
+wallet/disclosure.py
 ```
+
+## Disclosure receipts
+
+`wallet/disclosure.py` lets a user show, after the fact, where funds in the
+pool came from and where they went, like Tornado Cash's compliance tool but
+without handing over a note's secrets. For each spent note, a receipt gives
+the nullifier key `K = Poseidon2(D, spend_key)` instead of the spending key.
+Anyone can recompute the note's nullifier from `K` and its position and find
+the spend that consumed it, while `K` cannot spend anything. A receipt can
+follow notes from a public deposit through private transfers to a
+withdrawal, show what a payment was worth, and fully explain a spend when
+both of its inputs are disclosed.
+
+```sh
+python3 wallet/disclosure.py export --rpc URL --config devnet/deploy_config.json \
+  --notes FIXTURE --output receipt.json
+python3 wallet/disclosure.py verify --rpc URL --receipt receipt.json \
+  --config devnet/deploy_config.json
+```
+
+The verifier trusts only the chain. A receipt proves links and amounts, not
+who presents it or where the funds came from before the deposit. See
+[SECURITY.md](SECURITY.md#privacy-limits) for what a receipt reveals.
 
 ## Deployment
 
@@ -200,6 +224,7 @@ python3 devnet/test_deploy_checks.py
 python3 wallet/test_occurrence.py
 python3 wallet/test_wallet_occurrence.py
 python3 wallet/test_generators.py
+python3 wallet/test_disclosure.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
 python3 tooling/check_forge_config.py activation_manifest.testbed.json contracts
