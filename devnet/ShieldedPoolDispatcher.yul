@@ -120,6 +120,11 @@ object "ShieldedPoolDispatcher" {
                 if iszero(lt(pub, maxValue())) { fail(errValue()) }
                 if iszero(lt(fee, maxValue())) { fail(errValue()) }
 
+                // Hybrid compression's beta follows the 256-byte proof and must
+                // be a field element; the verifier also checks it.
+                let beta := calldataload(256)
+                if iszero(lt(beta, p)) { fail(errProof()) }
+
                 // Reject non-canonical field aliases and points at infinity
                 // before invoking the generated Groth16 verifier.
                 let q := baseField()
@@ -132,21 +137,38 @@ object "ShieldedPoolDispatcher" {
                 }
                 if iszero(or(calldataload(192), calldataload(224))) { fail(errProof()) }
 
-                let m := 0x80
-                mstore(m, shl(224, 0xf3bb70f6))
-                calldatacopy(add(m, 4), 0, 256)
-                mstore(add(m, 0x104), nf1)
-                mstore(add(m, 0x124), nf2)
-                mstore(add(m, 0x144), out1)
-                mstore(add(m, 0x164), out2)
-                mstore(add(m, 0x184), root)
-                mstore(add(m, 0x1a4), dom)
-                mstore(add(m, 0x1c4), pub)
-                mstore(add(m, 0x1e4), fee)
-                mstore(add(m, 0x204), recipient)
-                mstore(add(m, 0x224), authorizer)
+                // Hybrid compression (eprint 2025/1500): the proof exposes only
+                // (beta, gamma, alpha). Every statement value was range-checked
+                // above, so these words are the circuit's field elements.
+                // alpha = keccak256(statement) mod p, and gamma is the statement
+                // evaluated as a polynomial at alpha + beta, highest term first.
+                let st := 0x200
+                mstore(st, nf1)
+                mstore(add(st, 0x20), nf2)
+                mstore(add(st, 0x40), out1)
+                mstore(add(st, 0x60), out2)
+                mstore(add(st, 0x80), root)
+                mstore(add(st, 0xa0), dom)
+                mstore(add(st, 0xc0), pub)
+                mstore(add(st, 0xe0), fee)
+                mstore(add(st, 0x100), recipient)
+                mstore(add(st, 0x120), authorizer)
+                let alpha := mod(keccak256(st, 0x140), p)
+                let sigma := addmod(alpha, beta, p)
+                let gamma := 0
+                for { let o := 0x140 } o { o := sub(o, 0x20) } {
+                    gamma := addmod(mulmod(gamma, sigma, p), mload(add(st, sub(o, 0x20))), p)
+                }
 
-                let ok := staticcall(500000, verifierAddr(), m, 0x244, 0, 32)
+                // verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[3])
+                let m := 0x80
+                mstore(m, shl(224, 0x11479fea))
+                calldatacopy(add(m, 4), 0, 256)
+                mstore(add(m, 0x104), beta)
+                mstore(add(m, 0x124), gamma)
+                mstore(add(m, 0x144), alpha)
+
+                let ok := staticcall(500000, verifierAddr(), m, 0x164, 0, 32)
                 if iszero(ok) { fail(errProof()) }
                 if iszero(eq(returndatasize(), 32)) { fail(errProof()) }
                 if iszero(eq(mload(0), 1)) { fail(errProof()) }
@@ -165,12 +187,18 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(txParam(0x0E), 2)) { fail(errKeys()) }
                 if txParam(0x01) { fail(errKeys()) }
 
+                // The validation frames' gas limits are not pinned, except frame 0's
+                // zero state limit, which identifies it below. A limit that is too
+                // low only makes the transaction invalid, before any nonce key is
+                // consumed, and the fee check below covers whatever is declared.
+                // Wallets choose the limits and can raise them after a repricing,
+                // within the verifier call's fixed 500000 gas.
+
                 // Frame 0: EIP-8272's canonical recent-root verifier, exactly as the
                 // spec identifies a completed one: resolved target, mode, flags,
                 // state budget, one tuple's worth of data, and status success. The
                 // protocol ran RECENT_ROOT_CODE over the tuple before this frame.
                 if iszero(eq(frameParam(0, 0x00), recentRootAddress())) { fail(errRoot()) }
-                if iszero(eq(frameParam(0, 0x01), 30000)) { fail(errShape()) }
                 if iszero(eq(frameParam(0, 0x02), 1)) { fail(errRoot()) }
                 if frameParam(0, 0x03) { fail(errRoot()) }
                 if iszero(eq(frameParam(0, 0x04), 72)) { fail(errRoot()) }
@@ -190,14 +218,9 @@ object "ShieldedPoolDispatcher" {
 
                 // Frame 1: proof-carrying VERIFY by the pool.
                 if iszero(eq(frameParam(1, 0x00), address())) { fail(errShape()) }
-                if iszero(eq(frameParam(1, 0x01), 320000)) { fail(errShape()) }
-                // This profile pins EIP-8037 CPSB to 1530. EIP-8250 charges
-                // 64 * CPSB when payment approval creates a keyed nonce slot.
-                // Every spend creates two slots, so the total is 195840.
-                if iszero(eq(frameParam(1, 0x09), 195840)) { fail(errShape()) }
                 if iszero(eq(frameParam(1, 0x02), 1)) { fail(errShape()) }
                 if iszero(eq(frameParam(1, 0x03), 3)) { fail(errShape()) }
-                if iszero(eq(frameParam(1, 0x04), 256)) { fail(errShape()) }
+                if iszero(eq(frameParam(1, 0x04), 288)) { fail(errShape()) }
                 if frameParam(1, 0x08) { fail(errShape()) }
 
                 // Frame 2: the single settlement call, with fork-profile gas.
@@ -205,9 +228,9 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(frameParam(2, 0x01), 2000000)) { fail(errShape()) }
                 // Settlement's state growth is bounded at five new slots
                 // (finalized/current root, epoch counter, two subtrees, withdrawal
-                // credit); 550000 covers 5 * 64 * 1530 with margin. Pinned for the
-                // same reason as the execution budget: unpinned, it is the pool's
-                // money.
+                // credit); 550000 covers 5 * 64 * 1530 with margin. Pinned like the
+                // execution budget, because running out of gas after approval would
+                // burn the notes.
                 if iszero(eq(frameParam(2, 0x09), 550000)) { fail(errShape()) }
                 if iszero(eq(frameParam(2, 0x02), 2)) { fail(errShape()) }
                 if frameParam(2, 0x03) { fail(errShape()) }
@@ -216,17 +239,17 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(shr(224, frameDataLoad(2, 0)), 0x921fcac7)) { fail(errShape()) }
 
                 // Frame 3: generic DEFAULT. Present whenever frames == 4.
-                // Zero value and flags. Never SENDER. Nonzero target.
-                // Pool target is allowed only when publicAmount != 0 so the
-                // simple claimWithdrawal path remains valid. No pool-specific
-                // gas or calldata ceiling: remaining EIP-7825 execution and
-                // the chain's transaction size limits are the wallet's job.
-                // The outer signature authorizes this target and calldata, not
-                // spending from the target account.
+                // Zero value and flags. Never SENDER. The target must be nonzero
+                // and may be the pool on any spend. A DEFAULT call can only do
+                // what any caller can: settle requires the pool as sender, shield
+                // requires value, and this VERIFY entry requires frame 1. No
+                // pool-specific gas or calldata ceiling: remaining EIP-7825
+                // execution and the chain's transaction size limits are the
+                // wallet's job. The outer signature authorizes this target and
+                // calldata, not spending from the target account.
                 if eq(frames, 4) {
                     let target := frameParam(3, 0x00)
                     if iszero(target) { fail(errShape()) }
-                    if and(iszero(frameDataLoad(2, 260)), eq(target, address())) { fail(errShape()) }
                     if frameParam(3, 0x02) { fail(errShape()) }
                     if frameParam(3, 0x03) { fail(errShape()) }
                     if frameParam(3, 0x08) { fail(errShape()) }
@@ -258,7 +281,7 @@ object "ShieldedPoolDispatcher" {
                 approveExecutionAndPayment()
             }
 
-            if eq(calldatasize(), 256) {
+            if eq(calldatasize(), 288) {
                 verifyFrameApprove()
                 stop()
             }

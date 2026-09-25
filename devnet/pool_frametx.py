@@ -124,12 +124,13 @@ def spend_args(entry):
 
 
 def proof_bytes(entry):
-    """The raw 256-byte proof (pA || pB || pC in snarkjs calldata word order):
-    frame 0's calldata. The frame-0 verifier reads these eight words directly;
-    settlement never carries them."""
+    """The proof frame's 288 bytes: the Groth16 proof (pA || pB || pC in
+    snarkjs calldata word order) followed by hybrid compression's beta. The
+    pool recomputes alpha and gamma from the settlement calldata; settlement
+    never carries the proof."""
     p = entry["proof"]
     words = [p["pA"][0], p["pA"][1], p["pB"][0][0], p["pB"][0][1],
-             p["pB"][1][0], p["pB"][1][1], p["pC"][0], p["pC"][1]]
+             p["pB"][1][0], p["pB"][1][1], p["pC"][0], p["pC"][1], entry["beta"]]
     return b"".join(int(w, 16).to_bytes(32, "big") for w in words)
 
 
@@ -154,17 +155,74 @@ def expected_domain(chain_id, pool, epoch=0):
     return int.from_bytes(_keccak(preimage), "big") % SCALAR_FIELD
 
 
-def check_deployed_profile(url, pool, configured_chain=None):
-    """Refuse a pool whose deployed logic does not use this profile's domain.
+DISPATCHER_INITCODE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "build", "shielded_pool_dispatcher_init.hex")
+# A proof from the committed proving key, used to check the verifier a pool is
+# linked to. verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[3]).
+REFERENCE_FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 "..", "wallet", "smoke_fixture.json")
+VERIFY_PROOF_SELECTOR = bytes.fromhex("11479fea")
 
-    A config's profile label is not evidence of the deployed code. A pool from
-    before position-bound notes exposes `domain()` and reverts on
-    `domain(uint64)`; shielding into it would create notes this tooling cannot
-    spend, and spends against it fail in VERIFY. A configured chain must also
-    match the RPC, so a deposit cannot land in a same-address pool elsewhere."""
+
+def reference_verifier_calls():
+    """Calldata for the reference transfer proof with its compressed signals
+    (beta, gamma, alpha), and the same call with gamma changed."""
+    with open(REFERENCE_FIXTURE) as f:
+        e = json.load(f)["transfer"]
+    stmt = [int(e[k], 16) for k in ("nf1", "nf2", "out_cm1", "out_cm2", "root", "domain")]
+    stmt += [int(e["public_amount"]), int(e["fee"]), int(e["recipient"], 16), int(e["authorizer"], 16)]
+    alpha = int.from_bytes(_keccak(b"".join(x.to_bytes(32, "big") for x in stmt)), "big") % SCALAR_FIELD
+    beta = int(e["beta"], 16)
+    sigma = (alpha + beta) % SCALAR_FIELD
+    gamma = 0
+    for x in reversed(stmt):
+        gamma = (gamma * sigma + x) % SCALAR_FIELD
+
+    def call(g):
+        signals = b"".join(v.to_bytes(32, "big") for v in (beta, g, alpha))
+        return "0x" + (VERIFY_PROOF_SELECTOR + proof_bytes(e)[:256] + signals).hex()
+    return call(gamma), call((gamma + 1) % SCALAR_FIELD)
+
+
+def check_deployed_profile(url, pool, configured_chain, logic, verifier):
+    """Refuse a pool that is not this profile's dispatcher on the configured chain.
+
+    A config's profile label is not evidence of the deployed code, and the
+    previous profile shares this one's domain formula, so `domain(uint64)`
+    cannot tell them apart. The pool's code must be exactly what the committed
+    dispatcher initcode deploys when linked to the logic and verifier the config
+    records, which run_live_dispatcher.sh verifies at deployment. Otherwise a
+    deposit could land in a pool whose VERIFY rejects every spend this tooling
+    builds. The dispatcher's code does not cover the verifier it calls, so the
+    linked verifier must accept this repository's reference proof and reject it
+    with gamma changed; a verifier for another circuit or interface, such as
+    the previous ten-input one, fails that. A configured chain must also match
+    the RPC, so a deposit cannot land in a same-address pool elsewhere.
+
+    This catches a stale or mislabeled config, not a malicious deployer. It
+    trusts the config's logic and verifier, does not authenticate their code
+    or the Poseidon libraries, and cannot see what the pool's constructor
+    wrote to storage."""
     chain_id = int(rpc(url, "eth_chainId", []), 16)
-    if configured_chain is not None and chain_id != configured_chain:
+    if chain_id != configured_chain:
         raise SystemExit(f"RPC is on chain {chain_id}, but the config names chain {configured_chain}")
+    with open(DISPATCHER_INITCODE) as f:
+        initcode = f.read().strip() + f"{logic:064x}{verifier:064x}"
+    try:
+        expected = rpc(url, "eth_call", [{"data": initcode}, "latest"])
+    except RuntimeError as error:
+        raise SystemExit(f"could not simulate the {POOL_PROFILE} dispatcher deployment: {error}") from None
+    code = rpc(url, "eth_getCode", [f"0x{pool:040x}", "latest"])
+    if len(expected) <= 2 or code.lower() != expected.lower():
+        raise SystemExit(f"pool 0x{pool:040x} is not the {POOL_PROFILE} dispatcher linked to "
+                         f"the configured logic 0x{logic:040x} and verifier 0x{verifier:040x}")
+    for data, verdict in zip(reference_verifier_calls(), (1, 0)):
+        try:
+            result = rpc(url, "eth_call", [{"to": f"0x{verifier:040x}", "data": data}, "latest"])
+        except RuntimeError:
+            result = None
+        if not isinstance(result, str) or len(result) != 66 or int(result, 16) != verdict:
+            raise SystemExit(f"verifier 0x{verifier:040x} does not verify {POOL_PROFILE} proofs")
     data = "0x" + (_keccak(b"domain(uint64)")[:4] + bytes(32)).hex()
     try:
         result = rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"])
@@ -177,6 +235,66 @@ def check_deployed_profile(url, pool, configured_chain=None):
         raise SystemExit(f"pool 0x{pool:040x} domain(0) does not match {POOL_PROFILE} "
                          f"on chain {chain_id}")
 
+
+
+# LeafAppended(bytes32 indexed cm, uint64 indexed epoch, uint32 index, bytes32 newRoot)
+LEAF_APPENDED_TOPIC = "0x1c9386c619e61f45f16a19541b370266f8eb6fd22d241ff010e03cc31ea82368"
+
+
+def pool_uint(url, pool, signature):
+    data = "0x" + _keccak(signature.encode())[:4].hex()
+    return int(rpc(url, "eth_call", [{"to": f"0x{pool:040x}", "data": data}, "latest"]), 16)
+
+
+TREE_CAPACITY = 1 << 20
+EMPTY_ROOT = 0x2134E76AC5D21AAB186C2BE1DD8F84EE880A1E46EAF712F9D371B6DF22191F3E
+
+
+def check_shield_fixture(url, pool, chain_id, fix, leaf, prior_root):
+    """Refuse to fund a note that this fixture's proofs cannot spend.
+
+    The proofs name a chain, pool and epoch through their domain, and their
+    Merkle paths assume the note lands at `leaf` of the tree whose root is
+    `prior_root` before it. A note shielded into any other tree still holds the
+    ETH, but spending it needs a new proof at the leaf it occupies, from the
+    opening the fixture's spend entries keep. Another deposit can still take
+    the leaf before this one lands, so main() also checks where it landed."""
+    missing = [k for k in ("chain_id", "pool_address", "epoch", "domain") if k not in fix]
+    if missing:
+        raise SystemExit(f"shield requires the fixture to record {', '.join(missing)}")
+    epoch = int(fix["epoch"])
+    if int(fix["chain_id"]) != chain_id or int(fix["pool_address"], 16) != pool:
+        raise SystemExit(f"fixture was made for pool {fix['pool_address']} on chain "
+                         f"{fix['chain_id']}, not 0x{pool:040x} on chain {chain_id}")
+    if int(fix["domain"], 16) != expected_domain(chain_id, pool, epoch):
+        raise SystemExit("fixture domain does not match its chain, pool and epoch")
+    try:
+        now_epoch, now_index, now_root = (pool_uint(url, pool, name) for name in
+                                          ("currentEpoch()", "nextIndex()", "currentRoot()"))
+    except RuntimeError as error:
+        raise SystemExit(f"could not read the pool's next leaf: {error}") from None
+    # A full tree rolls to a new, empty epoch before this deposit.
+    if now_index == TREE_CAPACITY:
+        now_epoch, now_index, now_root = now_epoch + 1, 0, EMPTY_ROOT
+    if (now_epoch, now_index) != (epoch, leaf):
+        raise SystemExit(f"fixture expects the note at epoch {epoch} leaf {leaf}, but the pool's "
+                         f"next leaf is epoch {now_epoch} leaf {now_index}")
+    if now_root != prior_root:
+        raise SystemExit("the pool's tree is not the one this fixture's proofs assume: another "
+                         "deposit took an earlier leaf")
+
+
+def shield_leaf(rcpt, pool):
+    """(epoch, index) from the pool's LeafAppended log in a shield receipt."""
+    logs = list(rcpt.get("logs") or [])
+    for frame in rcpt.get("frameReceipts") or []:
+        logs += frame.get("logs") or []
+    for log in logs:
+        topics = log.get("topics") or []
+        if (int(log.get("address", "0x0"), 16) == pool and len(topics) == 3
+                and topics[0].lower() == LEAF_APPENDED_TOPIC):
+            return int(topics[2], 16), int(log["data"][2:66], 16)
+    return None
 
 ACTION_OPTION_FLAGS = {
     "--action-target": "target",
@@ -280,10 +398,12 @@ def recent_root_tuple(url, cfg, e):
     if bytes.fromhex(stored.removeprefix("0x").rjust(64, "0")) != entry:
         raise SystemExit(
             f"  recent-root ref self-check failed at consensus slot {slot}. The "
-            f"fixture root differs from the root committed at that slot (a fixture generated "
-            f"against an empty tree cannot spend into a pool that already has leaves; regenerate "
-            f"against a fresh deployment), or the wrong epoch/slot was supplied. Either would be "
-            f"rejected as FrameTxRecentRootNotCommitted.")
+            f"fixture root differs from the root committed at that slot, or the wrong epoch/slot "
+            f"was supplied. Either would be rejected as FrameTxRecentRootNotCommitted. If another "
+            f"deposit changed the tree, the notes are safe but this proof is not: prove again "
+            f"against a published root, at the leaves the notes occupy, from the openings in the "
+            f"fixture entries' `inputs`, and keep this fixture: it holds the only copy of those "
+            f"secrets.")
     return source_id + slot.to_bytes(8, "big") + root
 
 
@@ -324,7 +444,13 @@ UNCLAIMABLE_RECIPIENTS = {
     0x0000F90827F1C53A10CB7A02335B175320002935: "the EIP-2935 history contract",
     0x00000961EF480EB55E80D19AD83579A64C007002: "the EIP-7002 withdrawal request contract",
     0x0000BBDDC7CE488642FB579F8B00F3A590007251: "the EIP-7251 consolidation request contract",
+    0x00000000219AB540356CBB839CBE05303D7705FA: "the beacon deposit contract",
+    0x0000BFF46984E3725691FA540A8C7589300D8282: "the EIP-8282 builder deposit contract",
+    0x000064D678505AD48F8CCB093BC65613800E8282: "the EIP-8282 builder exit contract",
 }
+# No one controls a precompile. A claim to one either keeps the ETH there for
+# good or reverts and strands the credit: 0x01 to 0x11, and P256VERIFY at 0x100.
+PRECOMPILES = set(range(0x01, 0x12)) | {0x100}
 
 
 def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
@@ -335,8 +461,8 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     skips that default and leaves withdrawalCredit. Any spend may instead
     append one explicitly authorized DEFAULT call. Resource limits are
     checked on the assembled transaction so they include the proof,
-    signatures, other frames and encoding overhead. A zero-public-amount
-    tail cannot target the pool.
+    signatures, other frames and encoding overhead. Any spend's tail may
+    target the pool, for example to publish the root its outputs create.
     """
     selector = _keccak(f"settle({SPEND_TUPLE})".encode())[:4]
     if len(settle_calldata) != 4 + 12 * 32 or settle_calldata[:4] != selector:
@@ -347,8 +473,9 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
         raise ValueError("invalid pool, recipient, or public amount")
     if (amount == 0) != (recipient == 0):
         raise ValueError("public amount and recipient must both be zero or both nonzero")
-    if amount and (recipient == pool or recipient in UNCLAIMABLE_RECIPIENTS):
-        what = UNCLAIMABLE_RECIPIENTS.get(recipient, "the pool itself")
+    if amount and (recipient == pool or recipient in UNCLAIMABLE_RECIPIENTS or recipient in PRECOMPILES):
+        what = ("a precompile, which no one controls" if recipient in PRECOMPILES
+                else UNCLAIMABLE_RECIPIENTS.get(recipient, "the pool itself"))
         raise ValueError(f"withdrawal recipient would strand the credit: {what}")
     if omit:
         if action is not None:
@@ -370,8 +497,10 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     state = action["state_limit"]
     if not isinstance(target, int) or not 0 < target < 1 << 160:
         raise ValueError("action target must be a nonzero address")
-    if amount == 0 and target == pool:
-        raise ValueError("action target must be a nonzero non-pool address")
+    # Both pinned ethrex revisions panic executing a top-level frame to a
+    # precompile after an earlier frame emitted logs, as settlement does.
+    if target in PRECOMPILES:
+        raise ValueError("action target must not be a precompile")
     if not isinstance(data, bytes):
         raise ValueError("action calldata must be bytes")
     if not isinstance(execution, int) or execution <= 0:
@@ -535,17 +664,17 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         if settled and tail_kind == "action":
             raise SystemExit(
                 "  simulate: settlement would succeed but the gas-only action frame would fail; "
-                "not sending. Fix the account calldata or limits and rebuild from the unspent notes.")
+                "not sending. Fix the account calldata or limits and rebuild. The RPC has seen this "
+                "signed spend, so check that its nonce keys are unused before sending another.")
         if settled and tail_kind == "claim" and allow_failed_claim:
             print(f"  simulate: valid={sim.get('valid')} violation={sim.get('violation')}; "
                   "settlement succeeded and failed claim is allowed")
         else:
             msg = f"  simulate: INVALID ({sim.get('violation')}); not sending"
             if protocol_nonces and "Nonce mismatch" in str(sim.get("violation", "")):
-                msg += ("\n  a nullifier keyed nonce was already consumed. If this spend comes from a"
-                        "\n  second deterministic fixture against an already-used deployment, the fixed"
-                        "\n  seed reuses the dummy note and its nullifier collides; regenerate with"
-                        "\n  gen_smoke.py --random or deploy a fresh pool.")
+                msg += ("\n  a nullifier key is already consumed: this spend, or another spend of the"
+                        "\n  same note or dummy, may already have settled. Check the notes before"
+                        "\n  building another spend.")
             raise SystemExit(msg)
 
     # Require frame 2 itself to succeed. A failed DEFAULT tail does not undo
@@ -559,7 +688,8 @@ def build_and_send(url, pk, pool, value, calldata, protocol_nonces=None, proof_v
         if tail_failed and tail_kind == "action":
             raise SystemExit(
                 "  simulate: settlement succeeded but the gas-only action frame failed; not sending. "
-                "Fix the account calldata or limits and rebuild from the unspent notes.")
+                "Fix the account calldata or limits and rebuild. The RPC has seen this signed spend, "
+                "so check that its nonce keys are unused before sending another.")
         if tail_failed and tail_kind == "claim" and not allow_failed_claim:
             raise SystemExit("  simulate: settlement succeeded but the claim frame failed; "
                              "not sending. The credit would remain and can be claimed later.")
@@ -658,9 +788,17 @@ def main():
     cfg = json.loads(open(cfg_path).read())
     fix = json.loads(open(fix_path).read())
     pool = int(cfg["pool"], 16)
-    if op in ("transfer", "withdraw"):
+    # A config for another profile describes a pool this tooling cannot spend from,
+    # so neither shield into it nor spend against it. The label is only a first
+    # check before any RPC; check_deployed_profile compares the deployed code.
+    if op in ("shield", "transfer", "withdraw"):
         if cfg.get("profile") != POOL_PROFILE:
-            raise SystemExit(f"spends require profile={POOL_PROFILE}; use a fresh deployment of this profile")
+            raise SystemExit(f"{op} requires profile={POOL_PROFILE}; this config names "
+                             f"{cfg.get('profile')!r}. Use a fresh deployment of this profile")
+        missing = [field for field in ("chainId", "logic", "verifier") if field not in cfg]
+        if missing:
+            raise SystemExit(f"{op} requires the config to record {', '.join(missing)}")
+    if op in ("transfer", "withdraw"):
         if cfg.get("claimGas") != CLAIM_FRAME_GAS or cfg.get("claimStateGas") != CLAIM_FRAME_STATE_GAS:
             raise SystemExit(f"spends require claimGas/claimStateGas matching {POOL_PROFILE}")
     omit_tail = "--no-tail" in sys.argv
@@ -757,7 +895,7 @@ def main():
     if allow_failed_claim and omit_tail:
         raise SystemExit("--allow-failed-claim cannot be combined with --no-tail")
     if op in ("shield", "transfer", "withdraw"):
-        check_deployed_profile(url, pool, cfg.get("chainId"))
+        check_deployed_profile(url, pool, cfg["chainId"], int(cfg["logic"], 16), int(cfg["verifier"], 16))
 
     def spend_setup(op_name):
         """Protocol nonces, validation data, and recent-root tuple for a
@@ -793,12 +931,25 @@ def main():
             if note_index is None:
                 raise SystemExit("this fixture has a 'shields' array; pass --note N (0-based)")
             s = fix["shields"][note_index]
-            value, inner = int(s["value"]), s["inner"]
+            if "prior_root" not in s:
+                raise SystemExit("this fixture's shields do not record prior_root; regenerate it")
+            value, inner, leaf = int(s["value"]), s["inner"], int(s["leaf"])
+            prior_root = int(s["prior_root"], 16)
         else:
-            value, inner = int(fix["shield_value"]), fix["inner_a"]
+            # gen_smoke.py proves note A as the first leaf of an empty tree.
+            value, inner, leaf, prior_root = int(fix["shield_value"]), fix["inner_a"], 0, EMPTY_ROOT
+        check_shield_fixture(url, pool, cfg["chainId"], fix, leaf, prior_root)
         calldata = cast_calldata("shield(bytes32)", inner)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
-        build_and_send(url, pk, pool, value, calldata, dry_run=dry)
+        rcpt = build_and_send(url, pk, pool, value, calldata, dry_run=dry)
+        if not dry and rcpt:
+            landed = shield_leaf(rcpt, pool)
+            print(f"SHIELD_LEAF {landed}", flush=True)
+            if landed != (int(fix["epoch"]), leaf):
+                raise SystemExit(f"  the note landed at (epoch, leaf) {landed}, not ({fix['epoch']}, {leaf}), "
+                                 "so the fixture's proofs cannot spend it. Keep this fixture: its spend "
+                                 "entries' inputs hold the note's opening, from which it can be proved "
+                                 "again at the leaf it occupies.")
     elif op == "publish":
         # Same SelfVerify+SENDER shape as shield. A legacy cast send can sit in
         # the Hegotá mempool forever when a non-frame tx fails to apply.

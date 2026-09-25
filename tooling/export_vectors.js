@@ -10,7 +10,8 @@
 // a constants mismatch inside circomlibjs itself would fail here, not later.
 //
 // Vector set: zero, unit, counter, and LCG-seeded
-// states for Poseidon(2) and Poseidon(3), plus the pool chain from seed 2026
+// states for Poseidon(2), Poseidon(3) and Poseidon(10) (hybrid compression's
+// beta), plus the pool chain from seed 2026
 // (owner_pk, cm, the domain-separated nf, out_cm) and the depth-20
 // incremental-tree fixtures.
 
@@ -64,11 +65,11 @@ async function main() {
   }
   const vec2 = cases(2).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
   const vec3 = cases(3).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
+  // Poseidon(10): hybrid compression's beta over the ten-value statement.
+  const vec10 = cases(10).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
 
   // ---- the pool's tagged chain (mirrors circuits/spend.circom), seed 2026 ----
-  // note chain: the value-carrying note and the join-split outputs; the
-  // publics themselves are bound directly as Groth16 public signals, so no
-  // hash beyond the note chain exists to fix a vector for
+  // note chain: the value-carrying note and the join-split outputs
   const lcg = new Lcg(2026);
   const [spend_key, rho, out_inner1, out_inner2] =
     Array.from({ length: 4 }, () => lcg.nextFe(p));
@@ -111,6 +112,7 @@ async function main() {
   const vectors = {
     poseidon2: vec2,
     poseidon3: vec3,
+    poseidon10: vec10,
     pool_chain: Object.fromEntries(Object.entries({
       spend_key, rho, value, out_inner1, out_inner2, out_value1, out_value2,
       domain, index, owner_pk, inner, cm, nf, nf2, out_cm1, out_cm2,
@@ -139,9 +141,10 @@ async function main() {
     prime: p.toString(),
     t3: { rounds_f: 8, rounds_p: 57, C: constants.C[1].map(toDec), M: constants.M[1].map((r) => r.map(toDec)) },
     t4: { rounds_f: 8, rounds_p: 56, C: constants.C[2].map(toDec), M: constants.M[2].map((r) => r.map(toDec)) },
+    t11: { rounds_f: 8, rounds_p: 66, C: constants.C[9].map(toDec), M: constants.M[9].map((r) => r.map(toDec)) },
   }, null, 1));
 
-  console.log(`wrote ${vpath} (${vec2.length}+${vec3.length} vectors + pool chain + tree)`);
+  console.log(`wrote ${vpath} (${vec2.length}+${vec3.length}+${vec10.length} vectors + pool chain + tree)`);
   console.log(`wrote ${cpath}`);
 }
 

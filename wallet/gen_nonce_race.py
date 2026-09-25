@@ -17,8 +17,13 @@ two transfers under the keys `transfer` (A) and a second entry the harness
 reads directly. Both carry the same recent-root reference (R at R's slot).
 
 Run from wallet/: python3 gen_nonce_race.py --chain-id=N --pool-address=0x...
-                   --root-slot=N [--epoch=N]
+                   --root-slot=N [--epoch=N] [--random]
                    [--output=PATH]
+
+The fixed seed is public, so it is refused outside the local test chain and
+whenever --rpc reads a live tree: pass --random there. The fixture holds the
+only openings of its notes, inputs and outputs alike, so it is written under
+the ignored wallet/artifacts/ and never over a fixture for another chain.
 """
 import json
 import sys
@@ -27,7 +32,9 @@ from pathlib import Path
 
 import wallet as w
 from poseidon_bn254 import hex32
-from gen_smoke import prove, spend_entry, ETH, WORK
+from gen_smoke import prove, refuse_overwrite, spend_entry, write_private, ETH, WORK
+
+DEFAULT_OUTPUT = WORK / "nonce_race_fixture.json"
 
 HERE = Path(__file__).parent
 
@@ -85,7 +92,7 @@ def main():
     note_wei = ETH
     rpc_url = None
     pool = None
-    output_path = HERE / "nonce_race_fixture.json"
+    output_path = DEFAULT_OUTPUT
     for arg in sys.argv[1:]:
         if arg.startswith("--chain-id="):
             chain_id = int(arg.split("=", 1)[1], 0)
@@ -107,8 +114,16 @@ def main():
         raise SystemExit("--pool-address=0x... and --root-slot=N are required")
     if (rpc_url is None) != (pool is None):
         raise SystemExit("--rpc= and --pool= must be given together (seed the live tree)")
+    if "--random" not in sys.argv:
+        # Anyone could rebuild notes made from the public seed and spend them.
+        if chain_id != 31337 or rpc_url is not None:
+            raise SystemExit("the fixed seed is public, so anyone could spend these notes; "
+                             "pass --random for another chain or a live tree")
+        w.set_seed(20260712)
+    previous = refuse_overwrite(output_path)
+    if rpc_url is not None and int(_rpc(rpc_url, "eth_chainId", []), 16) != chain_id:
+        raise SystemExit("--chain-id does not match the chain --rpc reads")
     WORK.mkdir(exist_ok=True)
-    w.set_seed(20260712)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # Two deposits, into one tree. Root R is fixed after both inserts. Against a
@@ -123,7 +138,10 @@ def main():
     cm_c = w.commitment(sk_c, rho_c, v)
 
     tree = seeded_tree(rpc_url, pool, epoch) if rpc_url else w.Tree()
+    # The root before each note lands, which shield checks against the pool.
+    prior_a = tree.root()
     idx_a = tree.append(cm_a)
+    prior_c = tree.root()
     idx_c = tree.append(cm_c)
     root_R = tree.root()
 
@@ -154,13 +172,19 @@ def main():
     )
     pub_c, proof_c = prove(wc, "race_c")
 
+    # No later spend here records the outputs, so their openings go with the
+    # transfer that creates them.
+    def openings(*notes):
+        return [{"spend_key": hex32(sk), "rho": hex32(rho), "value": str(v)} for sk, rho, v in notes]
     ea = spend_entry(
         tree, domain, ins_a, outs_a, epoch, 0, v_fee, 0,
         auth_a, auth_a_key, pub_a, proof_a,
+        output_openings=openings((sk_bob, rho_bob, v_bob), (sk_achg, rho_achg, v_change)),
     )
     ec = spend_entry(
         tree, domain, ins_c, outs_c, epoch, 0, v_fee, 0,
         auth_c, auth_c_key, pub_c, proof_c,
+        output_openings=openings((sk_dave, rho_dave, v_bob), (sk_cchg, rho_cchg, v_change)),
     )
 
     nfa = {ea["nf1"], ea["nf2"]}
@@ -176,15 +200,17 @@ def main():
         "domain": hex32(domain),
         "root": hex32(root_R),
         "shields": [
-            {"inner": hex32(inner_a), "cm": hex32(cm_a), "value": str(v), "leaf": idx_a},
-            {"inner": hex32(inner_c), "cm": hex32(cm_c), "value": str(v), "leaf": idx_c},
+            {"inner": hex32(inner_a), "cm": hex32(cm_a), "value": str(v), "leaf": idx_a,
+             "prior_root": hex32(prior_a)},
+            {"inner": hex32(inner_c), "cm": hex32(cm_c), "value": str(v), "leaf": idx_c,
+             "prior_root": hex32(prior_c)},
         ],
         # pool_frametx.py reads spend entries under an op key; both are transfers
         "transfer": ea,
         "transfer_c": ec,
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(fixture, indent=1))
+    write_private(output_path, json.dumps(fixture, indent=1), previous)
     print("two independent transfers proven against one root, disjoint nullifiers")
     print(f"  root R      {hex32(root_R)[:18]}...")
     print(f"  transfer A  nf {ea['nf1'][:14]}.. {ea['nf2'][:14]}..")

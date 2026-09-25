@@ -26,8 +26,11 @@ for disposable devnet deployments and envelope boundary tests; defaults remain
 1.0 ETH shielded, 0.6 ETH paid privately, and a 0.05 ETH fee.
 """
 import json
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import wallet as w
@@ -45,6 +48,81 @@ TEST_CHAIN_ID = 31337
 TEST_POOL = "0xf62849f9a0b5bf2913b396098f7c7019b51a820a"
 
 
+ANY = object()
+
+
+def file_identity(path):
+    """Which file sits at path, or None if nothing does."""
+    try:
+        st = os.stat(path)
+    except FileNotFoundError:
+        return None
+    return st.st_ino, st.st_mtime_ns, st.st_size
+
+
+def write_private(path, text, previous=ANY):
+    """Witnesses and fixtures hold note secrets and authorizer keys, so only the
+    owner may read them. The text goes to a new owner-only file that then
+    replaces the old one, so a reader holding an earlier, world-readable copy
+    open never sees it. previous is what refuse_overwrite saw: None means the
+    file must still be absent, otherwise it must still be that same file, so a
+    concurrent run cannot write over a fixture another run just created."""
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        if previous is None:
+            try:
+                os.link(tmp, path)
+            except FileExistsError:
+                raise SystemExit(f"{path} appeared while generating; move it and run again") from None
+            os.unlink(tmp)
+        else:
+            if previous is not ANY and file_identity(path) != previous:
+                raise SystemExit(f"{path} changed while generating; move it and run again")
+            os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def refuse_overwrite(path):
+    """A fixture for any chain but the local test chain may hold the only
+    openings of unspent notes, whatever mode the new run uses. Returns the
+    identity of what is there, for write_private to check again."""
+    previous = file_identity(path)
+    if previous is None:
+        return None
+    try:
+        chain = int(json.loads(path.read_text()).get("chain_id", -1))
+    except (OSError, ValueError, AttributeError):
+        chain = -1
+    if chain != TEST_CHAIN_ID:
+        raise SystemExit(f"{path} holds a fixture for chain {chain} and may hold the only secrets "
+                         "of unspent notes; move it or pass another --output")
+    return previous
+
+
+def default_output(chain_id, pool_address):
+    """The committed fixture for the test chain and pool; anything else goes
+    under the ignored wallet/artifacts/, never into a tracked file."""
+    if (chain_id, int(pool_address, 16)) == (TEST_CHAIN_ID, int(TEST_POOL, 16)):
+        return HERE / "smoke_fixture.json"
+    return WORK / f"smoke_fixture.{chain_id}.json"
+
+
+def refuse_recipient(recipient, pool_address):
+    """A credit to the pool, a precompile or a system contract can never be
+    claimed; refuse it before proving rather than at withdrawal."""
+    sys.path.insert(0, str(HERE.parent / "devnet"))
+    from pool_frametx import PRECOMPILES, UNCLAIMABLE_RECIPIENTS
+    value = w.address_scalar(recipient)
+    if value == w.address_scalar(pool_address) or value in PRECOMPILES or value in UNCLAIMABLE_RECIPIENTS:
+        raise SystemExit(f"--recipient {recipient} would strand the withdrawal credit")
+
+
 def run(cmd, cwd=TOOLING):
     r = subprocess.run([str(c) for c in cmd], capture_output=True, text=True, cwd=cwd)
     if r.returncode != 0:
@@ -53,32 +131,45 @@ def run(cmd, cwd=TOOLING):
     return r
 
 
+def private_workdir(tag):
+    """A fresh owner-only directory per proof, so concurrent runs never read
+    each other's witness or proof, and the witness, which holds note secrets,
+    goes away afterwards; the fixture keeps the openings."""
+    return Path(tempfile.mkdtemp(dir=WORK, prefix=f"{tag}-"))
+
+
 def prove(witness, tag):
-    wpath = WORK / f"witness_{tag}.json"
-    proofpath = WORK / f"proof_{tag}.json"
-    pubpath = WORK / f"public_{tag}.json"
-    wpath.write_text(json.dumps(witness))
-    run(["npx", "snarkjs", "groth16", "fullprove", wpath,
-         BUILD / "spend_js" / "spend.wasm", BUILD / "spend_final.zkey",
-         proofpath, pubpath])
-    # the real proof check, against the committed verification key
-    run(["npx", "snarkjs", "groth16", "verify",
-         HERE.parent / "contracts" / "vectors" / "spend_vkey.json", pubpath, proofpath])
-    call = run(["npx", "snarkjs", "zkey", "export", "soliditycalldata", pubpath, proofpath])
-    pa, pb, pc, _pub = json.loads("[" + call.stdout.strip() + "]")
-    publics = [int(x) for x in json.loads(pubpath.read_text())]
-    return publics, {"pA": pa, "pB": pb, "pC": pc}
+    work = private_workdir(tag)
+    try:
+        wpath, proofpath, pubpath = work / "witness.json", work / "proof.json", work / "public.json"
+        write_private(wpath, json.dumps(witness))
+        run(["npx", "snarkjs", "groth16", "fullprove", wpath,
+             BUILD / "spend_js" / "spend.wasm", BUILD / "spend_final.zkey",
+             proofpath, pubpath])
+        # the real proof check, against the committed verification key
+        run(["npx", "snarkjs", "groth16", "verify",
+             HERE.parent / "contracts" / "vectors" / "spend_vkey.json", pubpath, proofpath])
+        call = run(["npx", "snarkjs", "zkey", "export", "soliditycalldata", pubpath, proofpath])
+        pa, pb, pc, _pub = json.loads("[" + call.stdout.strip() + "]")
+        publics = [int(x) for x in json.loads(pubpath.read_text())]
+        return publics, {"pA": pa, "pB": pb, "pC": pc}
+    finally:
+        shutil.rmtree(work)
 
 
 def assert_unprovable(witness, tag):
     """Assert witness generation rejects a circuit-level attack."""
-    wpath = WORK / f"review_{tag}.json"
-    out = WORK / f"review_{tag}.wtns"
-    wpath.write_text(json.dumps(witness))
-    result = subprocess.run(
-        ["npx", "snarkjs", "wtns", "calculate", BUILD / "spend_js" / "spend.wasm", wpath, out],
-        capture_output=True, text=True, cwd=TOOLING,
-    )
+    work = private_workdir(f"review-{tag}")
+    try:
+        wpath = work / "witness.json"
+        write_private(wpath, json.dumps(witness))
+        result = subprocess.run(
+            ["npx", "snarkjs", "wtns", "calculate", BUILD / "spend_js" / "spend.wasm", wpath,
+             work / "witness.wtns"],
+            capture_output=True, text=True, cwd=TOOLING,
+        )
+    finally:
+        shutil.rmtree(work)
     if result.returncode == 0:
         raise SystemExit(f"UNSOUND: circuit accepted {tag}")
 
@@ -90,12 +181,16 @@ def spend_entry(
     root = tree.root()
     nf1, nf2 = w.input_nullifiers(domain, inputs)
     out_cm1, out_cm2 = w.output_commitments(outputs)
-    # the crux: the proof's public signals are exactly the wallet's own
-    # publics, in the circuit's order (outputs first, then public inputs),
-    # which is also the order verifySpend passes them to the verifier
-    assert publics == [nf1, nf2, out_cm1, out_cm2, root, domain,
-                       public_amount, fee, recipient, authorizer], \
-        "proof public signals do not bind the wallet's publics"
+    # the crux: the proof's public signals (beta, gamma, alpha), in the
+    # circuit's order, compress exactly the wallet's own ten statement values,
+    # recomputed here as the pool recomputes them
+    stmt = w.statement(nf1, nf2, out_cm1, out_cm2, root, domain,
+                       public_amount, fee, recipient, authorizer)
+    beta, gamma, alpha = publics
+    assert alpha == w.compression_alpha(stmt), "proof alpha does not hash the wallet's statement"
+    assert beta == w.compression_beta(stmt), "proof beta is not Poseidon of the wallet's statement"
+    assert gamma == w.fingerprint((alpha + beta) % w.P, stmt), \
+        "proof gamma does not fingerprint the wallet's statement"
     e = {"root": hex32(root), "epoch": str(epoch),
          "domain": hex32(domain),
          "nf1": hex32(nf1), "nf2": hex32(nf2),
@@ -104,7 +199,14 @@ def spend_entry(
          "recipient": f"0x{recipient:040x}",
          "authorizer": f"0x{authorizer:040x}",
          "authorizer_private_key": authorizer_private_key,
-         "proof": proof}
+         "beta": hex32(beta),
+         "proof": proof,
+         # The openings of both inputs, dummy included. If another deposit
+         # changes the tree first, the notes must be proved again against a
+         # newer root, at the leaves they occupy, and nothing else keeps these
+         # secrets.
+         "inputs": [{"spend_key": hex32(i["sk"]), "rho": hex32(i["rho"]),
+                     "value": str(i["value"]), "leaf": i["idx"]} for i in inputs]}
     e.update(extra)
     return e
 
@@ -122,7 +224,7 @@ def main():
     shield_wei = ETH
     payment_wei = ETH * 60 // 100
     fee_wei = ETH * 5 // 100
-    output_path = HERE / "smoke_fixture.json"
+    output_path = None
     recipient = RECIPIENT
     for arg in sys.argv[1:]:
         if arg.startswith("--chain-id="):
@@ -146,6 +248,19 @@ def main():
             recipient = f"0x{w.address_scalar(recipient):040x}"
         elif arg.startswith("--output="):
             output_path = Path(arg.split("=", 1)[1]).expanduser().resolve()
+    # The fixed seed is public, so anyone could rebuild these notes and spend
+    # them. Keep it, and the placeholder recipient, for the committed fixture's
+    # test chain and pool.
+    if (chain_id, int(pool_address, 16)) != (TEST_CHAIN_ID, int(TEST_POOL, 16)):
+        if "--random" not in sys.argv:
+            raise SystemExit("the fixed seed is public, so anyone could spend these notes; "
+                             "pass --random for another chain or pool")
+        if recipient == RECIPIENT:
+            raise SystemExit("pass --recipient for another chain or pool; the default "
+                             f"{RECIPIENT} is a test placeholder")
+    refuse_recipient(recipient, pool_address)
+    output_path = output_path or default_output(chain_id, pool_address)
+    previous = refuse_overwrite(output_path)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
     # notes: Alice's deposit, Bob's payment target, Alice's change target
@@ -270,8 +385,8 @@ def main():
                                 auth_w, auth_w_key, pub_w, proof_w),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(fixture, indent=1))
-    print("real join-split proofs generated and verified off-chain; public signals bind the wallet publics")
+    write_private(output_path, json.dumps(fixture, indent=1), previous)
+    print("real join-split proofs generated and verified off-chain; compressed public signals bind the wallet statement")
     print(f"wrote {output_path}")
     print(f"  transfer  nf1 {fixture['transfer']['nf1'][:18]}... nf2 {fixture['transfer']['nf2'][:18]}... fee {v_fee}")
     print(f"  withdraw_seed publicAmount {v_seed_pub} fee {v_fee}")

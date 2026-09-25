@@ -1,7 +1,7 @@
 """Reference implementation of circomlib's Poseidon over BN254 in plain Python.
 
 This is the hash the BN254 spend circuit uses: Poseidon over the BN254 scalar
-field, x^5 S-box, 8 full rounds plus 57 (t=3) or 56 (t=4) partial rounds,
+field, x^5 S-box, 8 full rounds plus 57 (t=3), 56 (t=4) or 66 (t=11) partial rounds,
 state initialised as [0, in_0, ..., in_{n-1}], output state[0]. Constants and
 the mix convention (new_state[i] = sum_j M[i][j] * state[j]) are exactly
 circomlibjs's poseidon_reference.js; both live in
@@ -28,11 +28,11 @@ def _params(t):
         [int(x) for x in c["C"]], [[int(x) for x in row] for row in c["M"]]
 
 
-_PARAMS = {3: _params(3), 4: _params(4)}
+_PARAMS = {3: _params(3), 4: _params(4), 11: _params(11)}
 
 
 def poseidon(inputs):
-    """circomlib Poseidon: 2 or 3 field-element inputs, one output."""
+    """circomlib Poseidon: 2, 3 or 10 field-element inputs, one output."""
     t = len(inputs) + 1
     rf, rp, C, M = _PARAMS[t]
     state = [0] + [x % P for x in inputs]
@@ -74,6 +74,8 @@ def _check():
         assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), "poseidon2 mismatch"
     for v in vecs["poseidon3"]:
         assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), "poseidon3 mismatch"
+    for v in vecs["poseidon10"]:
+        assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), "poseidon10 mismatch"
 
     c = {k: int(v) for k, v in vecs["pool_chain"].items()}
     owner_pk = tagged(TAG_PK, c["spend_key"], 0)
@@ -99,7 +101,7 @@ def _check():
         zeros.append(p2(zeros[-1], zeros[-1]))
     assert zeros[-1] == int(t["root_empty"]), "empty root mismatch"
 
-    n = len(vecs["poseidon2"]) + len(vecs["poseidon3"])
+    n = len(vecs["poseidon2"]) + len(vecs["poseidon3"]) + len(vecs["poseidon10"])
     print(f"poseidon_bn254.py matches circomlibjs: {n} vectors + pool chain + empty root")
 
 

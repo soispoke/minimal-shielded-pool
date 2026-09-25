@@ -56,20 +56,20 @@ PROFILES = {
     # EIP-8272 at 824cbc0b0e: the recent root travels in a canonical verifier frame that
     # leads the transaction and counts toward the verify budget.
     "eip8272-canonical-frame": {
-        "recent_root_frame_gas": RECENT_ROOT_FRAME_GAS,
-        "verify_frame_gas": VERIFY_FRAME_GAS,
+        "recent_root_frame_gas": 30_000,
+        "verify_frame_gas": 320_000,
         "signature_gas": 2_800,
-        "verify_frame_state_gas": VERIFY_FRAME_STATE_GAS,
+        "verify_frame_state_gas": 195_840,
         "settle_frame_gas": 1_400_000,
         "settle_frame_state_gas": SETTLE_FRAME_STATE_GAS,
     },
     # Withdrawals add an exact DEFAULT claim frame. A 3-frame eip8272-canonical-frame
     # pool is not compatible with this wallet.
     "recipient-pull-v1": {
-        "recent_root_frame_gas": RECENT_ROOT_FRAME_GAS,
-        "verify_frame_gas": VERIFY_FRAME_GAS,
+        "recent_root_frame_gas": 30_000,
+        "verify_frame_gas": 320_000,
         "signature_gas": 2_800,
-        "verify_frame_state_gas": VERIFY_FRAME_STATE_GAS,
+        "verify_frame_state_gas": 195_840,
         "settle_frame_gas": 1_400_000,
         "settle_frame_state_gas": SETTLE_FRAME_STATE_GAS,
         "pool_profile": "recipient-pull-v1",
@@ -81,18 +81,30 @@ PROFILES = {
 # Same frame grammar plus an optional generic DEFAULT tail, new
 # circuit/nullifier identities and storage layout. Fresh deployment required.
 PROFILES["position-notes-v1"] = {
-    **PROFILES["recipient-pull-v1"], "pool_profile": POOL_PROFILE,
+    **PROFILES["recipient-pull-v1"], "pool_profile": "position-notes-v1",
     "settle_frame_gas": SETTLE_FRAME_GAS,
+}
+
+# The dispatcher stops pinning the validation frames' limits. These are the wallet
+# defaults the manifest records, sized from measurement with headroom.
+PROFILES["position-notes-v2"] = {
+    **PROFILES["position-notes-v1"], "pool_profile": POOL_PROFILE,
+    "recent_root_frame_gas": RECENT_ROOT_FRAME_GAS,
+    "verify_frame_gas": VERIFY_FRAME_GAS,
+    "verify_frame_state_gas": VERIFY_FRAME_STATE_GAS,
 }
 
 
 # Every active artifact must be pinned. A manifest that omits one would
-# otherwise pass without its hash being checked.
+# otherwise pass without its hash being checked. foundry.toml is pinned here;
+# check_forge_config.py compares the settings forge actually resolves, which
+# environment variables, .env files and the global config can also change.
 REQUIRED_ARTIFACTS = (
     "build/spend.r1cs",
     "build/spend_final.zkey",
     "build/spend_js/spend.wasm",
     "circuits/spend.circom",
+    "contracts/foundry.toml",
     "contracts/src/Groth16Verifier.sol",
     "contracts/src/PoseidonT3.sol",
     "contracts/src/PoseidonT4.sol",
@@ -169,7 +181,15 @@ def main():
         raise SystemExit("signature gas does not match the immutable dispatcher profile")
     if required > profile["hegota_profile_2_budget"]:
         raise SystemExit("transaction exceeds the configured Hegota Profile 2 budget")
-    if profile["wire_profile"] in (
+    if profile["wire_profile"] == "position-notes-v2":
+        # The pre-PR 12279 figure charged keyed-nonce creation as execution gas and no
+        # longer applies. The measurement on this dispatcher, native ethrex 247e2dd2,
+        # must fit the default.
+        if "post_pr_12279_max_observed_verify_execution_gas" not in profile:
+            raise SystemExit("missing PR 12279 VERIFY execution measurement status")
+        historical_verify_gas = profile["post_pr_12279_max_observed_verify_execution_gas"]
+        measured_verify_gas = historical_verify_gas
+    elif profile["wire_profile"] in (
             "eip8250-state-gas-pre-8272-frame", "eip8272-canonical-frame", "recipient-pull-v1",
             "position-notes-v1"):
         historical_verify_gas = profile["pre_pr_12279_max_observed_verify_execution_gas"]
