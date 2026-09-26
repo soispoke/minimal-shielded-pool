@@ -55,7 +55,7 @@ def W1 : Prop :=
 /-- Chain non-vacuity: some reachable state of an honest deployment shows a
 leaf and a payout, and the pool approves some valid transaction there. -/
 def W2 : Prop :=
-  ∃ d st tx, Honest d ∧ ReachableChain d st ∧ ValidTx st tx ∧ (1, 3) ∈ approvalsIn d st tx ∧
+  ∃ d st t, Honest d ∧ ReachableChain d st ∧ ValidTx st t ∧ (1, 3) ∈ approvalsIn d st t ∧
     st.leafLogs (addrOf d) 0 ≠ [] ∧ ∃ r, st.sentTo (addrOf d) r ≠ 0
 
 end

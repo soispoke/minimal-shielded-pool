@@ -18,9 +18,10 @@ open Classical
 
 /-- A deployment's fixed parameters, and P3's extractor. `verifies π pub` is the
 linked verifier's return value for proof words `π` and public signals `pub`
-(A6). `ext` maps a proof to an assignment. Every claim holds for every
-extractor, so no proof can choose a convenient one; an approved spend whose
-extraction fails is a bad event. -/
+(A6). `ext` stands for P3's extractor on one run: the table of its outputs for
+that run's proofs. Every claim holds for every extractor, so no proof can
+choose a convenient one; an approved spend whose extraction fails is a bad
+event. -/
 structure Pool where
   A : ℕ
   c : ℕ
@@ -267,10 +268,12 @@ def traceQueries (P : Pool) (evs : List Event) (s : PoolState) : List Query :=
     [Query.dom P.c P.A e, .keccak (addr20 P.A ++ u256 e)] ++
     (List.range ((s.leaves e).length + 1)).flatMap fun n => treeQueries DEPTH ((s.leaves e).take n)
 
-/-- A compression break (P4): an approved spend whose extracted assignment
-proves another statement. -/
+/-- A compression break (P4): an approved spend whose extraction succeeds with
+another statement. -/
 def CompressionBreak (P : Pool) (evs : List Event) : Prop :=
-  ∃ tx g, Event.spend tx g ∈ evs ∧ stmtOf (extOf P tx) ≠ (settleData tx).stmt
+  ∃ tx g, Event.spend tx g ∈ evs ∧
+    Satisfied (extOf P tx) ∧ publicOf (extOf P tx) = verifiedPublics tx ∧
+    stmtOf (extOf P tx) ≠ (settleData tx).stmt
 
 /-- An extraction failure (P3): an approved spend whose proof the extractor does
 not turn into a satisfying assignment with the verified public signals. -/
@@ -396,7 +399,7 @@ def mkSpend (P : Pool) (e : ℕ) (L : List F) (i : ℕ) (sk ρ v skd ρd f rcp a
                       ![1, 2], ![0, 0]⟩
   (⟨nf d sk (w.leaf 0) i, nf d skd (w.leaf 1) 0, SINK 0, SINK 1, TR L, d, v - f, f, rcp, auth⟩, w)
 
-/-- Spendability. Whoever holds an opening of an unspent occurrence can spend it
+/-- Spendability. Whoever holds an opening `(sk, ρ, v)` of an unspent occurrence can spend it
 against any root of its epoch that contains it, for every choice of dummy input,
 fee below the value, recipient and authorizer, as long as the dummy is fresh:
 the canonical spend is valid and its keys are nonzero and unconsumed. Quantifying over the dummy, rather than asking for
@@ -404,8 +407,7 @@ one, keeps a proof from choosing a dummy whose hashes collide. With C1c and C2c
 the spend is then approved. -/
 def Spendable (P : Pool) : Prop :=
   ∀ evs s, Run P evs s →
-    ∀ (o : Occ) (sk ρ : F), o.i < (s.leaves o.e).length → o ∉ s.spent →
-      let v : F := ((s.vals o.e).getD o.i 0 : F)
+    ∀ (o : Occ) (sk ρ v : F), o.i < (s.leaves o.e).length → o ∉ s.spent →
       (s.leaves o.e).getD o.i 0 = cm (inner sk ρ) v →
       ∀ n, o.i < n → n ≤ (s.leaves o.e).length →
       ∀ (skd ρd f rcp auth : F), f.val < v.val → 0 < rcp.val → rcp.val < 2 ^ 160 →

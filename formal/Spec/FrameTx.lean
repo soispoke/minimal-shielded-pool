@@ -9,7 +9,7 @@ namespace MSP
 inductive Mode | default | verify | sender
 deriving DecidableEq, Inhabited
 
-/-- D11. One frame, with its resolved target and, once it has run, its status. -/
+/-- D11. One frame, with its resolved target. -/
 structure Frame where
   target : ℕ
   mode : Mode
@@ -18,7 +18,6 @@ structure Frame where
   execLimit : ℕ
   stateLimit : ℕ
   data : List UInt8
-  status : Bool
 deriving Inhabited
 
 /-- D11. `msg` is empty (the signature signs the canonical hash) or a nonzero
@@ -113,7 +112,7 @@ def Acc (A c : ℕ) (verifies : List UInt8 → F × F × F → Prop) (current : 
     -- A1
     (tx.sender = A ∧ tx.signatures.length = 1 ∧ tx.blobHashes = [] ∧ current = 1 ∧
      f0.target = RECENT_ROOT ∧ f0.mode = .verify ∧ f0.flags = 0 ∧ f0.data.length = 72 ∧
-     f0.status = true ∧ f0.value = 0 ∧ f0.stateLimit = 0 ∧
+     f0.value = 0 ∧ f0.stateLimit = 0 ∧
      f1.target = A ∧ f1.mode = .verify ∧ f1.flags = 3 ∧ f1.data.length = 288 ∧ f1.value = 0 ∧
      f2.target = A ∧ f2.mode = .sender ∧ f2.flags = 0 ∧ f2.data.length = 388 ∧
      f2.data.take 4 = SETTLE_SELECTOR ∧ f2.value = 0 ∧

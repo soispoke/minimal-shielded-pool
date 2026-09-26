@@ -4,9 +4,9 @@ import Spec.Relation
 # C1 and C1c: the circuit
 
 Step 3 binds these declarations to the pinned `build/spend.r1cs`: a generated
-file lists its constraints over `F`, reads the named signals through
-`build/spend.sym`, and CI checks the generated file against the artifact's
-SHA-256 (`e2f6fc89bc0e4782…`).
+file lists its constraints over `F` and names signals through a symbol file
+that recompiling the pinned circuit produces; CI checks the constraints against
+the artifact's SHA-256 (`e2f6fc89bc0e4782…`).
 -/
 
 namespace MSP
