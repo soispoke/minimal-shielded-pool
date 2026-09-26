@@ -56,6 +56,7 @@ opaque NONCE_MANAGER : ℕ
 def poolOf (d : Deployment) (ext : List UInt8 → F × F × F → Assignment) : Pool :=
   ⟨addrOf d, chainOf d, verifierOf d, ext⟩
 
+/-- The chain state right after the deployment transaction; its `slot` is that block's slot. -/
 opaque chainInit : Deployment → ChainState
 /-- One step: a transaction, run with `SLOTNUM = slot`, or the next slot, which
 advances `slot` by one whether or not the slot has a block. -/
@@ -84,7 +85,8 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
 `shield`, `publishEpochRoot` or `claimWithdrawal` that returns successfully and
 whose effects persist, whether or not it changes state, decoded (a shield's
 `inner` is its calldata word and `v` its `CALLVALUE`); each spend, a
-transaction whose frame 1 the pool approved, with the gas the pool paid; each
+transaction whose frame 1 the pool approved, with the gas the pool paid, placed
+at its settlement, before the events of its later frames; each
 EIP-8272 write by another address; `receive` for ETH credited to the pool other
 than by a call to it or as a gas refund; and `tick` at a new slot. Any other
 successful call must leave what `Obs` reads unchanged. -/
@@ -154,8 +156,9 @@ of each gas dimension against the block's remaining gas, the chain ID,
 EIP-8250's nonce sequences, signature validation, and success of every frame
 before frame 1. -/
 opaque PreValid : ChainState → RawTx → Prop
-/-- Every `APPROVE` executed while `t` runs from `st` by code whose `ADDRESS` is
-the pool's, in any frame: its frame index and scope. -/
+/-- Every `APPROVE` that does not revert its frame, executed while `t` runs from
+`st` by code whose `ADDRESS` is the pool's, in any frame: its frame index and
+scope. -/
 opaque approvalsIn : Deployment → ChainState → RawTx → List (ℕ × ℕ)
 
 /-- C2. The pool's code approves only in frame 1 of its own transactions, with
@@ -190,12 +193,14 @@ def C8 : Prop :=
     (∀ a b, ∃ g, libHash2 d a b = some ((H2 a b).val, g) ∧ g ≤ 200000) ∧
     (∀ a b c, ∃ g, libHash3 d a b c = some ((H3 a b c).val, g) ∧ g ≤ 200000)
 
-/-- A call to the pool from `caller`, with value 0 and the calldata, as the only
-call of a non-frame transaction whose gas limit is 16,000,000. -/
+/-- The outcome of a call to the pool from `caller`, with value 0 and the
+calldata, run as the only call of a non-frame transaction whose gas limit is
+16,000,000. The transaction's validity checks on `caller` (code, nonce,
+balance, fee caps, block gas) count as passed: they do not involve the pool. -/
 opaque callPool : Deployment → ChainState → ℕ → List UInt8 → Outcome
 
-/-- The first `CALL`, `CALLCODE` or `STATICCALL` the pool's code makes during a
-`callPool`: whether it is a `CALL`, recipient, value, calldata, gas forwarded,
+/-- The first `CALL`, `CALLCODE` or `STATICCALL` made during a `callPool` by code
+whose `ADDRESS` is the pool's (a `DELEGATECALL` does not count): whether it is a `CALL`, recipient, value, calldata, gas forwarded,
 whether the value was transferred and execution at the recipient began (its
 code, its EIP-7702 delegate's code, or a precompile), whether it succeeded, and
 the size of its return data. -/
@@ -214,8 +219,8 @@ opaque firstPayout : Deployment → ChainState → ℕ → List UInt8 → Option
 def publishCalldata (e : ℕ) : List UInt8 := [0xd0, 0x38, 0x70, 0xb3] ++ u256 e
 def claimCalldata (r : ℕ) : List UInt8 := [0xa3, 0x06, 0x6a, 0xab] ++ u256 r
 
-/-- The pool's first message call is a plain payment of `v` to `r` with at least
-15,000,000 gas, and `r`'s own code rejected it or returned at least 64 KiB,
+/-- The pool's first `CALL`, `CALLCODE` or `STATICCALL` is a plain payment of `v`
+to `r` with at least 15,000,000 gas, and `r` rejected it or returned at least 64 KiB,
 which the pool copies and which can exhaust its gas. A reentrancy guard in the
 pool may make a recipient that calls back reject; that is allowed. -/
 def RecipientRejected (d : Deployment) (st : ChainState) (caller r v : ℕ) : Prop :=

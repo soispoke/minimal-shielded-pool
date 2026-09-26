@@ -90,8 +90,9 @@ committed dispatcher initcode's output linked to a logic contract `L` and a
 verifier `V`; `L` is `ShieldedPoolLogic` built with the pinned settings, linked
 to the committed Poseidon libraries; after construction the pool's storage is
 zero except slot 22, which holds `EMPTY_ROOT`. It is deployed once the pinned
-EIPs are active, and no code ran at `A` before its construction: `A` is the
-`CREATE` address of an externally owned account. Its
+EIPs are active, and `A` is created by a contract-creation transaction (empty
+`to`) sent by an externally owned account, so no code ran at `A` before and the
+committed initcode is the only code that runs in that transaction. Its
 balance at deployment may be nonzero, since anyone can fund the address in
 advance.
 
@@ -143,14 +144,14 @@ efficient party outputs.
 
 - **P1 Poseidon.** `H2`, `H3`, `H10` are the concrete functions of D2. Finding a Poseidon collision, or an input with output 0, among a run's queries is assumed infeasible.
 - **P2 Keccak.** The same for Keccak collisions and outputs below `2^64`, for distinct `(c, a, e)` with equal `D`, and for a run query other than `addr20(A) ‖ u256(e)` whose output is `K(addr20(A) ‖ u256(e))` for some `e < 2^64`, or an output `K(addr20(A) ‖ u256(e))` below `2^64`.
-- **P3 Groth16.** For the committed verification key and an honest setup, knowledge soundness in the algebraic group model under q-DLOG (Fuchsbauer, Kiltz and Loss 2018) or the generic group model: for every efficient algebraic machine that produces the run's transactions, honest provers included, an extractor that does not rewind, and reads the machine's representations of its group outputs, maps each accepted proof to a satisfying assignment with the verified public signals. Every claim holds for every extractor, and an approved spend whose extraction fails is a bad event. No claim assumes extraction for every accepted proof: a Groth16 verifier accepts some proof for every public input. Spend authority against mempool attackers, who see proofs before inclusion, needs Groth16's weak simulation extractability instead; that is a paper-level claim (§8). The current single-party setup does not meet P3.
+- **P3 Groth16.** For the committed verification key, from snarkjs's two-phase setup (`γ = [1]₂`, `δ` from phase 2) run honestly, knowledge soundness: for every efficient algebraic machine that produces the run's transactions, honest provers included, whose group inputs are the whole setup transcript (the phase-1 powers of tau and the phase-2 contributions), an extractor that does not rewind, and reads the machine's representations of its group outputs over that transcript, maps each accepted proof to a satisfying assignment with the verified public signals. Bowe, Gabizon and Miers (2017) argue this in the generic group model, and Kohlweiss, Maller, Siim and Volkhov (2021) prove that setup's ceremony secure; Fuchsbauer, Kiltz and Loss (2018) cover Groth's original reference string, not this one. Every claim holds for every extractor, and an approved spend whose extraction fails is a bad event. No claim assumes extraction for every accepted proof: a Groth16 verifier accepts some proof for every public input. Spend authority against mempool attackers, who see proofs before inclusion, needs Groth16's weak simulation extractability instead; that is a paper-level claim (§8). The current single-party setup does not meet P3.
 - **P3c Groth16 completeness.** For every satisfying assignment there are eight proof words below `q`, none encoding a point at infinity, that the linked verifier accepts for its public signals. Used only for liveness (§5).
 - **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. For every efficient machine producing the run, with P3's extractor, this has negligible probability. For these fixed, unkeyed functions that is an assumption about what the run outputs, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
 - **P5 EIP-8141.** A transaction is valid only if its `chain_id` is the chain's. Frames run in order. A VERIFY frame changes nothing but through `APPROVE`; if it fails, the transaction is invalid. `APPROVE` reverts the current frame unless `ADDRESS` is the frame's resolved target and the scope is among the frame's flags; `APPROVE` with payment reverts if the payer's balance is below `max_cost`. Approval flags are excluded from atomic batches. `APPROVE(3)` from frame 1 makes `A` sender and payer. A SENDER frame's caller is `sender`, a DEFAULT frame's the entry point. A failed non-VERIFY frame reverts its own effects, or its whole atomic batch's. `TXPARAM`, `FRAMEPARAM` and `SIGPARAM` return the EIP's table values, with EIP-8250's `TXPARAM(0x01) = nonce_seq`, `0x0E` = key count, `0x0F = K(u256(n) ‖ u256(k_1) ‖ … ‖ u256(k_n))`. Frame data read with `FRAMEDATALOAD` or, in the running frame, `CALLDATALOAD` is the frame's data. A `msg` is empty, signing the canonical hash, or a nonzero 32-byte digest, so `SIGPARAM(i, 0x02) = 0` exactly when signature `i` signs the canonical hash, which covers every field except the raw bytes of such signatures. The payer pays at most `max_cost`.
 - **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas.
 - **P7 EIP-8272.** A call from address `a` with data `salt ‖ root` during slot `S` stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, as A1 and A3 describe it, succeeds only if, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. Entries change otherwise only through a reorg; the model follows the canonical chain.
 - **P8 Gas schedule and fork.** A pinned gas schedule `G`, with EIP-8037 state gas, EIP-2929 access costs and EIP-150's 63/64 rule. The claims hold while the chain keeps `G` and the pinned EIP revisions; a fork that changes them ends them.
-- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, from an externally owned account, and the linked verifier's key is the committed zkey's. The deployment script and build tooling check this; no proof does.
+- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account, and the linked verifier's key is the committed zkey's. The deployment script and build tooling check this; no proof does.
 - **P10 EVM model.** The Lean EVM and Yul semantics, extended with EIP-8141 frames, EIP-8250 and EIP-8272, match the client, and every chain-level declaration in `Spec/Evm.lean` is defined from it.
 - **P11 Chain identity.** The chain ID never changes on a chain that carries the pool's state.
 - **P12 Signatures.** secp256k1 low-s ECDSA is existentially unforgeable, and the canonical signature hash is collision resistant. Used only to read C3's signature conclusion as "only the holder of `auth`'s key authorized this transaction".
@@ -168,13 +169,14 @@ nullifiers inside a proof.
 some satisfying assignment has statement `x`, inputs `w` and public signals
 `(H10(x), γ(x, α + H10(x)), α)`. *Ensures* every valid spend can be proven.
 
-**C2 Approval.** Whenever code running at `A` executes `APPROVE` during a valid
-transaction in a reachable state, it is frame 1 of a transaction whose sender
+**C2 Approval.** Whenever code running at `A` executes an `APPROVE` that does
+not revert its frame, during a valid transaction in a reachable state, it is
+frame 1 of a transaction whose sender
 is `A`, the scope is 3, and `Acc(A, c, tx)` holds. *Prevents* approving a wrong
 shape, keys, root, signer, statement, proof or fee, and paying for anyone
 else's transaction.
 
-**C2c Approval completeness.** The pool approves every transaction with
+**C2c Approval completeness.** In every reachable state, the pool approves every transaction with
 `Acc(A, c, tx)` that is valid up to frame 1 (EIP-8141's static rules and gas
 caps, the fee caps against the base fee, each gas dimension's reservation
 against the block's remaining gas, the chain ID, the nonce sequences,
@@ -228,11 +230,13 @@ yields `TR` of the inserted leaves.
 **C10 Publication and claims.** In every reachable state anyone can call
 `publishEpochRoot(e)` for every `e ≤ E` whose root is nonzero, and the call
 succeeds; and anyone can call `claimWithdrawal(r)` for every credit the balance
-covers, and the call succeeds unless the pool's first message call pays the
-credit plainly with at least 15,000,000 gas and the recipient (its code, its
+covers, and the call succeeds unless the first `CALL`, `CALLCODE` or
+`STATICCALL` made by code running at `A` (the dispatcher's `DELEGATECALL` into
+`L` does not count) is a plain `CALL` paying the credit to `r` with at least
+15,000,000 gas and the recipient (its code, its
 EIP-7702 delegate or a precompile) rejects it or returns at least 64 KiB. Each
 call is the only call of a non-frame transaction with a 16,000,000 gas limit,
-and carries no value. *Prevents* permanently locking notes or credits.
+taken as valid, and carries no value. *Prevents* permanently locking notes or credits.
 
 **Refinement.** Along every run of the chain from an honest deployment, for
 every extractor, the model events of the deployment and of the run's steps form
@@ -264,7 +268,8 @@ refinement). `Composes` states that the main theorem implies `ChainCorollary`:
 for every extractor, along every run of an honest deployment, the chain shows a
 model state in which the pool is solvent, no occurrence is consumed twice, and
 every root under one of its sources is a real root of its tree, or some prefix
-of the run has a bad event.
+of the run has a bad event (for a root, one that may use that source's Keccak
+input, as in C5e).
 
 Liveness composes from the same claims and is argued, not stated in Lean. The
 holder of an unspent note worth more than the spend's maximum cost builds the
@@ -273,7 +278,8 @@ and P3c give an accepted proof. C10 and refinement put a root containing the
 note on chain, and P6 makes its keys' sequences 0 unless an EIP-8250 slot
 collides with a consumed one. C5c gives `max_cost ≤ fee < v ≤ balance`, so C2c
 approves the spend; C4 and refinement settle it, and C10 pays the credit, which
-C5c covers, to any recipient that accepts a plain payment. This assumes the
+C5c covers, to any recipient that accepts a plain payment and returns less
+than 64 KiB. This assumes the
 publication and the spend are included, with the spend 1 to 8,191 slots after
 the root's slot. Against parties who see the spend before inclusion, it also
 rests on the premises §8 names.
@@ -355,13 +361,13 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 | D1 to D10 | definitions, `R` | `Basic`, `Hash`, `Relation` |
 | D11, D15 | `FrameTx`, `RawTx`, `Acc`, `SignsCanonicalHash` | `FrameTx`, `Evm` |
 | D12 | `Deployment`, `Honest`, `addrOf`, `chainOf`, `verifierOf` | `Evm` |
-| D13, D14 | `PoolState`, `Step`, `Run`, `Occ` | `System` |
+| D13, D14 | `PoolState`, `Event`, `Step`, `Run`, `Occ` | `System` |
 | P3, P4, P13, C4's checks | `Pool.ext`, `ExtractionFailure`, `CompressionBreak`, `Bounded`, `SettlePre` | `System` |
 | C1, C1c | `C1`, `C1c` | `Circuit` |
-| C2, C2c, C8, C10 | same names | `Evm` |
+| C2, C2c, C8, C10 | same names, `ValidTx`, `PreValid`, `approvalsIn`, `callPool`, `firstPayout`, `RecipientRejected` | `Evm` |
 | C3, C4, C5a to C5e, C5g, C5h, spendability | same names, `Spendable` | `System` |
 | C6 | `C6` | `Tree` |
-| Refinement, C5f, C7 | `Refines`, `Obs`, `eventsOf` | `Evm` |
+| Refinement, C5f, C7 | `Refines`, `Obs`, `eventsOf`, `passiveInflow`, `chainInit`, `initEvents`, `ChainRun`, `ReachableChain` | `Evm` |
 | Main theorem | `MainTheorem`, `ModelTheorem`, `ChainTheorem`, `ChainCorollary`, `Composes` | `Main` |
 | Non-vacuity | `W1`, `W2`, `IdealVerifier` | `Main`, `System` |
 
