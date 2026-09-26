@@ -301,7 +301,8 @@ def openingQueries (P : Pool) (e i : ℕ) (sk ρ v : F) : List Query :=
 abbrev stmtOfTx (tx : FrameTx) : Statement := (settleData tx).stmt
 
 /-- C3. An approved spend proves a valid spend of its own settlement statement,
-consumes exactly its two nullifiers, names a root the pool wrote, and is
+consumes exactly its two nullifiers, names the tree root of a prefix of its
+epoch's leaves, and is
 signed by `auth` over the canonical hash. -/
 def C3 (P : Pool) : Prop :=
   ∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' →
