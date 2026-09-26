@@ -217,7 +217,10 @@ committed artifacts come from circom2 0.2.8; 0.2.23 does not reproduce them
 byte for byte, so a compiler upgrade means a new reviewed artifact set. 
 `tooling/setup.sh` runs a new single-party test setup, not a ceremony. Run it
 only to replace the test setup on purpose, then rebuild the activation manifest
-and proof fixtures.
+and proof fixtures. The activation gate checks that the proving key's A and B
+terms come from the committed R1CS and that the verifier holds the key's
+verification key; the rest of the key needs the phase-1 file (`--ptau`, see
+[SECURITY.md](SECURITY.md)).
 
 The native tests in [`devnet/native_occurrence/`](devnet/native_occurrence/README.md)
 run real proofs through the pinned ethrex VM. They cover duplicate notes,
