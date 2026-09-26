@@ -49,7 +49,8 @@ opaque Honest : Deployment → Prop
 opaque addrOf : Deployment → ℕ
 opaque chainOf : Deployment → ℕ
 /-- The linked verifier returns 1 for these proof words and public signals when
-called with 500,000 gas, as the dispatcher calls it. -/
+its call frame starts with 500,000 gas (the dispatcher's gas operand; frame 1's
+limit may leave less, which C2c covers). -/
 opaque verifierOf : Deployment → List UInt8 → F × F × F → Prop
 /-- EIP-8250's `NONCE_MANAGER`, chosen by the fork configuration. -/
 opaque NONCE_MANAGER : ℕ
@@ -59,8 +60,11 @@ def poolOf (d : Deployment) (ext : List UInt8 → F × F × F → Assignment) : 
 
 /-- The chain state right after the deployment transaction; its `slot` is that block's slot. -/
 opaque chainInit : Deployment → ChainState
-/-- One step: a transaction, run with `SLOTNUM = slot`, or the next slot, which
-advances `slot` by one whether or not the slot has a block. -/
+/-- One step: any transaction valid in `st` in the current block, run with
+`SLOTNUM = slot`; or the next slot, which advances `slot` by one and is either
+empty or opens a block with any header the consensus rules allow (number,
+timestamp, fee recipient, prevrandao, base fee, gas limit), together with its
+system calls and withdrawals. -/
 opaque ChainStep : Deployment → ChainState → ChainState → Prop
 
 /-- The model state `s` is what the chain state shows, up to ghost fields. Every
@@ -200,11 +204,20 @@ def C8 : Prop :=
     (∀ a b, ∃ g, libHash2 d a b = some ((H2 a b).val, g) ∧ g ≤ 200000) ∧
     (∀ a b c, ∃ g, libHash3 d a b c = some ((H3 a b c).val, g) ∧ g ≤ 200000)
 
-/-- The outcome of a call to the pool from `caller`, with value 0 and the
-calldata, run as the only call of a non-frame transaction whose gas limit is
-16,000,000. The transaction's validity checks on `caller` (code, nonce,
-balance, fee caps, block gas) count as passed: they do not involve the pool. -/
-opaque callPool : Deployment → ChainState → ℕ → List UInt8 → Outcome
+opaque EnvImpl : NonemptyType.{0}
+/-- A block header and transaction fields: number, timestamp, fee recipient,
+prevrandao, base fee, gas limit and blob base fee, and the transaction's nonce,
+gas price and fee caps. -/
+def Env : Type := EnvImpl.type
+
+/-- A non-frame transaction from `caller` with one 36-byte call to the pool,
+value 0, a 16,000,000 gas limit and `env`'s fields is valid in `st`: in the
+current block with its header, or first in a next block whose header, `env`'s,
+the consensus rules allow. -/
+opaque EnvValid : ChainState → ℕ → Env → Prop
+
+/-- The outcome of that transaction's call to the pool with the calldata. -/
+opaque callPool : Deployment → ChainState → Env → ℕ → List UInt8 → Outcome
 
 /-- The first `CALL`, `CALLCODE` or `STATICCALL` made during a `callPool` by code
 whose `ADDRESS` is the pool's (a `DELEGATECALL` does not count): whether it is a
@@ -223,7 +236,7 @@ structure Payout where
   success : Bool
   returnSize : ℕ
 
-opaque firstPayout : Deployment → ChainState → ℕ → List UInt8 → Option Payout
+opaque firstPayout : Deployment → ChainState → Env → ℕ → List UInt8 → Option Payout
 
 def publishCalldata (e : ℕ) : List UInt8 := [0xd0, 0x38, 0x70, 0xb3] ++ u256 e
 def claimCalldata (r : ℕ) : List UInt8 := [0xa3, 0x06, 0x6a, 0xab] ++ u256 r
@@ -232,20 +245,23 @@ def claimCalldata (r : ℕ) : List UInt8 := [0xa3, 0x06, 0x6a, 0xab] ++ u256 r
 to `r` with at least 15,000,000 gas, and `r` rejected it or returned at least 64 KiB,
 which the pool copies and which can exhaust its gas. A reentrancy guard in the
 pool may make a recipient that calls back reject; that is allowed. -/
-def RecipientRejected (d : Deployment) (st : ChainState) (caller r v : ℕ) : Prop :=
-  ∃ po, firstPayout d st caller (claimCalldata r) = some po ∧ po.isCall = true ∧
+def RecipientRejected (d : Deployment) (st : ChainState) (env : Env) (caller r v : ℕ) : Prop :=
+  ∃ po, firstPayout d st env caller (claimCalldata r) = some po ∧ po.isCall = true ∧
     po.recipient = r ∧ po.value = v ∧ po.data = [] ∧ 15000000 ≤ po.gas ∧ po.entered = true ∧
     (po.success = false ∨ 2 ^ 16 ≤ po.returnSize)
 
-/-- C10. Anyone can publish an existing epoch's nonzero root, and anyone can pay
-out a covered credit, which fails only if the recipient rejects a plain payment
-or returns at least 64 KiB. -/
+/-- C10. Anyone other than the pool, in any valid transaction and block
+environment, can publish an existing epoch's nonzero root and pay out a covered
+credit, which fails only if the recipient rejects a plain payment or returns at
+least 64 KiB. -/
 def C10 : Prop :=
-  ∀ d st s caller, Honest d → ReachableChain d st → Obs d st s → caller ≠ addrOf d →
+  ∀ d st s caller env, Honest d → ReachableChain d st → Obs d st s → caller ≠ addrOf d →
+    EnvValid st caller env →
     (∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
-      callPool d st caller (publishCalldata e) = .ok) ∧
+      callPool d st env caller (publishCalldata e) = .ok) ∧
     (∀ r < 2 ^ 160, 0 < s.credit r → s.credit r ≤ s.balance →
-      callPool d st caller (claimCalldata r) = .ok ∨ RecipientRejected d st caller r (s.credit r))
+      callPool d st env caller (claimCalldata r) = .ok ∨
+      RecipientRejected d st env caller r (s.credit r))
 
 end
 

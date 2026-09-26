@@ -386,8 +386,9 @@ def C5h (P : Pool) : Prop :=
       (nf (D P.c P.A o.e) sk ((s.leaves o.e).getD o.i 0) o.i).val ∉ s.keys
 
 /-- C5i. A spend that consumes an occurrence as a nonzero-value input, under any
-opening of its leaf, extracts that opening's key and randomness. So taking a
-note needs its holder's key, which §8's premises keep secret. -/
+opening of its leaf, extracts that opening's key and randomness. With §8's
+premises, taking a note therefore needs its holder's key; C5i alone does not
+give that, since P3's extractor may read the key from an honest prover. -/
 def C5i (P : Pool) : Prop :=
   ∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' →
     ∀ (o : Occ) (sk ρ v : F) (k : Fin 2), o.i < (s.leaves o.e).length →
