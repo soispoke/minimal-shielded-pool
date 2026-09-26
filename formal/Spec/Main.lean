@@ -18,7 +18,7 @@ def ModelTheorem : Prop :=
 
 /-- The chain half: the deployed code behaves as the model, including fitting
 its gas, and lets anyone publish roots and pay out credits. -/
-def ChainTheorem : Prop := C2 ∧ C2c ∧ C6 ∧ C8 ∧ C10 ∧ Refines
+def ChainTheorem : Prop := C2 ∧ C2c ∧ C6 ∧ C8 ∧ C9 ∧ C10 ∧ Refines
 
 /-- §5. -/
 def MainTheorem : Prop := C1 ∧ C1c ∧ ModelTheorem ∧ ChainTheorem

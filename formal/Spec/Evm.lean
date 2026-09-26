@@ -183,6 +183,11 @@ def C2c : Prop :=
 inductive Outcome | ok | reverted | outOfGas
 deriving DecidableEq, Inhabited
 
+/-- C9. The linked verifier returns 1 exactly when Groth16's verification for the
+committed key accepts. -/
+def C9 : Prop :=
+  ∀ d, Honest d → ∀ π pub, π.length = 256 → (verifierOf d π pub ↔ Groth16Accepts π pub)
+
 /-- `hash2` and `hash3` of the linked libraries: the returned word and the gas used. -/
 opaque libHash2 : Deployment → F → F → Option (ℕ × ℕ)
 opaque libHash3 : Deployment → F → F → F → Option (ℕ × ℕ)

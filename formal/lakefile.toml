@@ -1,5 +1,5 @@
 name = "msp-formal"
-defaultTargets = ["Spec"]
+defaultTargets = ["Spec", "Sanity"]
 
 [[require]]
 name = "mathlib"
@@ -7,3 +7,7 @@ scope = "leanprover-community"
 
 [[lean_lib]]
 name = "Spec"
+
+[[lean_lib]]
+name = "Sanity"
+globs = ["Sanity.+"]
