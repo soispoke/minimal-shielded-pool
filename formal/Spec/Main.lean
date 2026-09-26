@@ -29,14 +29,14 @@ every root under one of its sources is a real root of its tree, or some prefix
 of the run has a bad event. -/
 def ChainCorollary : Prop :=
   ∀ d ext, Honest d → ∀ h, ChainRun d h →
-    (∃ pre e s, pre ++ [e] <+: eventsAlong d ext h ∧ Run (poolOf d ext) pre s ∧
+    (∃ pre e s, pre ++ [e] <+: modelEvents d h ∧ Run (poolOf d ext) pre s ∧
         BadEvent (poolOf d ext) (pre ++ [e]) s) ∨
-    ∃ s, Run (poolOf d ext) (eventsAlong d ext h) s ∧
-      (BadEvent (poolOf d ext) (eventsAlong d ext h) s ∨
+    ∃ s, Run (poolOf d ext) (modelEvents d h) s ∧
+      (BadEvent (poolOf d ext) (modelEvents d h) s ∨
         (Obs d (h.getLast?.getD default) s ∧ owed s ≤ s.balance ∧ s.spent.Nodup ∧
          ∀ r ∈ s.roots, ∀ e < 2 ^ 64, r.1 = sourceId (addrOf d) e →
-           BadEventWith (poolOf d ext) (eventsAlong d ext h) s [.keccak (addr20 (addrOf d) ++ u256 e)] ∨
-           ∃ n ≤ (s.leaves e).length, r.2.2 = TR ((s.leaves e).take n)))
+           BadEventWith (poolOf d ext) (modelEvents d h) s [.keccak (addr20 (addrOf d) ++ u256 e)] ∨
+           ∃ n ≤ (s.leaves e).length, r.2.2 = (TR ((s.leaves e).take n)).val))
 
 /-- The main theorem implies its chain-level meaning. -/
 def Composes : Prop := MainTheorem → ChainCorollary

@@ -53,8 +53,8 @@ structure PoolState where
   finalRoot : ℕ → F
   credit : ℕ →₀ ℕ
   balance : ℕ
-  /-- every EIP-8272 write `(source_id, slot, root)`, by the pool or anyone else -/
-  roots : List (ℕ × ℕ × F)
+  /-- every EIP-8272 write `(source_id, slot, root word)`, by the pool or anyone else -/
+  roots : List (ℕ × ℕ × ℕ)
   /-- EIP-8250 keys consumed for sender `A` -/
   keys : List ℕ
   /-- ghost: occurrences consumed as nonzero-value inputs -/
@@ -103,7 +103,7 @@ def newCount (sd : SettleData) : ℕ :=
 /-- Every revert condition of `settle`: its checks, the ABI decoder's range
 checks, and checked arithmetic on the epoch counter and the credit. -/
 def SettlePre (s : PoolState) (P : Pool) (sd : SettleData) : Prop :=
-  sd.rootSlot < 2 ^ 64 ∧ sd.epoch < 2 ^ 64 ∧ sd.rcp < 2 ^ 160 ∧ sd.auth < 2 ^ 160 ∧
+  sd.epoch < 2 ^ 64 ∧ sd.rcp < 2 ^ 160 ∧ sd.auth < 2 ^ 160 ∧
   sd.nf1 ≠ 0 ∧ sd.nf2 ≠ 0 ∧ sd.auth ≠ 0 ∧ sd.domain = (D P.c P.A sd.epoch).val ∧ sd.epoch ≤ s.E ∧
   sd.root < p ∧ sd.domain < p ∧ sd.nf1 < p ∧ sd.nf2 < p ∧ sd.o1 < p ∧ sd.o2 < p ∧
   sd.pub < 2 ^ 128 ∧ sd.fee < 2 ^ 128 ∧ (sd.pub = 0 ↔ sd.rcp = 0) ∧
@@ -112,7 +112,7 @@ def SettlePre (s : PoolState) (P : Pool) (sd : SettleData) : Prop :=
   (sd.pub ≠ 0 → s.credit sd.rcp + sd.pub < 2 ^ 256)
 
 /-- The latest EIP-8272 write for `(source, slot)`, which replaced any earlier one. -/
-def lastWrite (roots : List (ℕ × ℕ × F)) (src sl : ℕ) : Option F :=
+def lastWrite (roots : List (ℕ × ℕ × ℕ)) (src sl : ℕ) : Option ℕ :=
   ((roots.filter fun w => w.1 = src ∧ w.2.1 = sl).getLast?).map fun w => w.2.2
 
 /-- The non-sink outputs a settlement inserts, with their values from the witness. -/
@@ -124,18 +124,19 @@ def newLeaves (sd : SettleData) (w : Witness) : List (F × ℕ) :=
 def inputsOf (sd : SettleData) (w : Witness) : List Occ :=
   ((List.finRange 2).filter fun k => w.v k ≠ 0).map fun k => ⟨sd.epoch, w.idx k⟩
 
-/-- Successful calls and other chain actions that change the pool's state.
-A reverted call changes nothing and has no event. -/
+/-- Calls into the pool that return successfully and whose effects persist,
+whether or not they change state, and the other chain actions the pool observes.
+A reverted call has no event. -/
 inductive Event
   /-- `shield(inner)` with `msg.value = v` -/
   | shield (inner : F) (v : ℕ)
   /-- `publishEpochRoot(e)` -/
   | publish (e : ℕ)
-  /-- an EIP-8272 write by another address `a` with salt `salt` -/
-  | rootWrite (a salt : ℕ) (root : F)
+  /-- an EIP-8272 write by another address `a` with salt `salt` and root word `root` -/
+  | rootWrite (a salt root : ℕ)
   /-- `claimWithdrawal(r)`, paying `r` -/
   | claim (r : ℕ)
-  /-- ETH arriving while none of the pool's code runs -/
+  /-- ETH reaching the pool other than by a call to it, or held at deployment -/
   | receive (v : ℕ)
   /-- a frame transaction whose frame 1 the pool approved, and the gas the pool paid -/
   | spend (tx : FrameTx) (gasPaid : ℕ)
@@ -152,9 +153,9 @@ def Step (P : Pool) (s : PoolState) : Event → PoolState → Prop
   | .publish e, s' =>
       e < 2 ^ 64 ∧ e ≤ s.E ∧
       (let r := if e = s.E then TR (s.leaves s.E) else s.finalRoot e
-       r ≠ 0 ∧ s' = { s with roots := s.roots ++ [(sourceId P.A e, s.slot, r)] })
+       r ≠ 0 ∧ s' = { s with roots := s.roots ++ [(sourceId P.A e, s.slot, r.val)] })
   | .rootWrite a salt r, s' =>
-      addr20 a ≠ addr20 P.A ∧ s' = { s with roots := s.roots ++ [(K (addr20 a ++ u256 salt), s.slot, r)] }
+      addr20 a ≠ addr20 P.A ∧ r < 2 ^ 256 ∧ s' = { s with roots := s.roots ++ [(K (addr20 a ++ u256 salt), s.slot, r)] }
   | .claim r, s' =>
       0 < s.credit r ∧ s.credit r ≤ s.balance ∧
       s' = { s with balance := s.balance - s.credit r, credit := s.credit.erase r,
@@ -170,7 +171,7 @@ def Step (P : Pool) (s : PoolState) : Event → PoolState → Prop
       (∀ k ∈ tx.nonceKeys, k < 2 ^ 256) ∧ tx.nonceKeys.Pairwise (· < ·) ∧
       (∀ k ∈ tx.nonceKeys, k ∉ s.keys) ∧
       -- P7: frame 0 names the latest write for its source and slot, in the usable window
-      (lastWrite s.roots (sourceId P.A sd.epoch) sd.rootSlot = some (sd.root : F) ∧
+      (lastWrite s.roots (sourceId P.A sd.epoch) sd.rootSlot = some sd.root ∧
         sd.rootSlot < s.slot ∧ s.slot ≤ sd.rootSlot + 8191) ∧
       -- P5: the pool can pay the maximum cost and pays at most that
       tx.maxCost ≤ s.balance ∧ gas ≤ tx.maxCost ∧
@@ -259,7 +260,7 @@ EIP-8272 write. -/
 def traceQueries (P : Pool) (evs : List Event) (s : PoolState) : List Query :=
   [Query.h3 2 1 0, .h3 2 2 0] ++
   evs.flatMap (eventQueries P) ++
-  s.roots.flatMap (fun w => [Query.keccak (rrEntryMsg w.1 w.2.1 w.2.2.val),
+  s.roots.flatMap (fun w => [Query.keccak (rrEntryMsg w.1 w.2.1 w.2.2),
                              .keccak (rrKeyMsg w.1 (w.2.1 % 8192))]) ++
   (List.range s.E).map (fun e => Query.keccak (finalRootMsg e)) ++
   (List.range (s.E + 1)).flatMap fun e =>
@@ -360,7 +361,7 @@ def C5e (P : Pool) : Prop :=
   ∀ evs s, Run P evs s →
     ∀ r ∈ s.roots, ∀ e < 2 ^ 64, r.1 = sourceId P.A e →
       BadEventWith P evs s [.keccak (addr20 P.A ++ u256 e)] ∨
-      (e ≤ s.E ∧ ∃ n ≤ (s.leaves e).length, r.2.2 = TR ((s.leaves e).take n))
+      (e ≤ s.E ∧ ∃ n ≤ (s.leaves e).length, r.2.2 = (TR ((s.leaves e).take n)).val)
 
 /-- C5g. A consumed key that is some occurrence's nullifier, under any opening
 of its leaf, consumes that occurrence as an input of this spend. -/

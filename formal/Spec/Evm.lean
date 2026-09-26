@@ -28,7 +28,7 @@ structure ChainState where
   storage : ℕ → ℕ → ℕ
   /-- the `cm` of every persisting `LeafAppended` log each address emitted for each epoch, in order -/
   leafLogs : ℕ → ℕ → List F
-  /-- all ETH each address sent to each other address, other than gas payments -/
+  /-- all ETH each address sent to each other address in transfers that persist, other than gas payments and refunds -/
   sentTo : ℕ → ℕ → ℕ
   slot : ℕ
   rest : ChainRest
@@ -73,18 +73,18 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
   (∀ e ≤ s.E, ∀ sl r, lastWrite s.roots (sourceId A e) sl = some r →
     sl < s.slot → s.slot ≤ sl + 8191 →
     st.storage RECENT_ROOT (K (rrKeyMsg (sourceId A e) (sl % 8192))) =
-      K (rrEntryMsg (sourceId A e) sl r.val)) ∧
+      K (rrEntryMsg (sourceId A e) sl r)) ∧
   (∀ r, st.sentTo A r = s.paid r) ∧
   st.slot = s.slot
 
-/-- The model events of a chain step, in execution order, given P3's extractor:
-each call into the pool whose effects persist, decoded (a shield's `inner` is
-its calldata word and `v` its `CALLVALUE`; a spend is a transaction whose frame 1
-the pool approved, with the gas the pool paid); each EIP-8272 write by another
-address; `receive` for ETH credited to the pool other than by a call to it; and
-`tick` at a new slot. -/
-opaque eventsOf : Deployment → (List UInt8 → F × F × F → Assignment) →
-  ChainState → ChainState → List Event
+/-- The model events of a chain step, in execution order:
+each call into the pool that returns successfully and whose effects persist,
+whether or not it changes state, decoded (a shield's `inner` is its calldata
+word and `v` its `CALLVALUE`; a spend is a transaction whose frame 1 the pool
+approved, with the gas the pool paid); each EIP-8272 write by another address;
+`receive` for ETH credited to the pool other than by a call to it; and `tick` at
+a new slot. -/
+opaque eventsOf : Deployment → ChainState → ChainState → List Event
 
 /-- ETH credited to the pool in a step other than by a call to it or a gas refund:
 priority fees, `SELFDESTRUCT` beneficiaries, withdrawals. -/
@@ -97,10 +97,22 @@ inductive ChainRun (d : Deployment) : List ChainState → Prop
   | init : ChainRun d [chainInit d]
   | step {h st st'} : ChainRun d (h ++ [st]) → ChainStep d st st' → ChainRun d (h ++ [st, st'])
 
-def eventsAlong (d : Deployment) (ext : List UInt8 → F × F × F → Assignment) :
-    List ChainState → List Event
-  | st :: st' :: rest => eventsOf d ext st st' ++ eventsAlong d ext (st' :: rest)
+def eventsAlong (d : Deployment) : List ChainState → List Event
+  | st :: st' :: rest => eventsOf d st st' ++ eventsAlong d (st' :: rest)
   | _ => []
+
+/-- The chain's history before deployment as model events, in order: a `tick`
+per slot and each EIP-8272 write as `rootWrite`. -/
+opaque preEvents : Deployment → List Event
+
+/-- The model events that build the deployed state: the history before
+deployment, then the balance the pool holds at deployment. -/
+def initEvents (d : Deployment) : List Event :=
+  preEvents d ++ [.receive ((chainInit d).balance (addrOf d))]
+
+/-- The model events of a chain run from deployment. -/
+def modelEvents (d : Deployment) (h : List ChainState) : List Event :=
+  initEvents d ++ eventsAlong d h
 
 def ReachableChain (d : Deployment) (st : ChainState) : Prop := ∃ h, ChainRun d h ∧ h.getLast? = some st
 
@@ -111,18 +123,20 @@ run up to and including that event has a bad event. `receive` accounts for
 exactly the ETH that arrives other than by a call. -/
 def Refines : Prop :=
   ∀ d ext, Honest d → ∀ h, ChainRun d h →
-    ((∃ s, Run (poolOf d ext) (eventsAlong d ext h) s ∧
-        (BadEvent (poolOf d ext) (eventsAlong d ext h) s ∨ Obs d (h.getLast?.getD default) s)) ∨
-     ∃ pre e s, pre ++ [e] <+: eventsAlong d ext h ∧ Run (poolOf d ext) pre s ∧
+    ((∃ s, Run (poolOf d ext) (modelEvents d h) s ∧
+        (BadEvent (poolOf d ext) (modelEvents d h) s ∨ Obs d (h.getLast?.getD default) s)) ∨
+     ∃ pre e s, pre ++ [e] <+: modelEvents d h ∧ Run (poolOf d ext) pre s ∧
         BadEvent (poolOf d ext) (pre ++ [e]) s) ∧
     ∀ i st st', h[i]? = some st → h[i + 1]? = some st' →
-      receivedIn (eventsOf d ext st st') = passiveInflow d st st'
+      receivedIn (eventsOf d st st') = passiveInflow d st st'
 
 /-- P5 to P7: `tx` is valid in `st`. -/
 opaque ValidTx : ChainState → FrameTx → Prop
 /-- The validity conditions frame 1 and later frames do not decide: EIP-8141's
-static rules and gas caps, the chain ID, EIP-8250's nonce sequences, signature
-validation, and success of every frame before frame 1. -/
+static rules and gas caps, the fee caps against the base fee, the reservations
+of each gas dimension against the block's remaining gas, the chain ID,
+EIP-8250's nonce sequences, signature validation, and success of every frame
+before frame 1. -/
 opaque PreValid : ChainState → FrameTx → Prop
 /-- Every `APPROVE` executed while `tx` runs from `st` by code whose `ADDRESS` is
 the pool's, in any frame: its frame index and scope. -/
@@ -160,26 +174,37 @@ def C8 : Prop :=
     (∀ a b, ∃ g, libHash2 d a b = some ((H2 a b).val, g) ∧ g ≤ 200000) ∧
     (∀ a b c, ∃ g, libHash3 d a b c = some ((H3 a b c).val, g) ∧ g ≤ 200000)
 
-/-- Calling the pool from `caller` with value 0, the calldata, and EIP-7825's
-16,777,216 gas. -/
+/-- A top-level call to the pool from `caller`, with value 0, the calldata and
+16,000,000 gas. -/
 opaque callPool : Deployment → ChainState → ℕ → List UInt8 → Outcome
-/-- The first call carrying ETH that the pool's code makes during that call:
-recipient, value, gas forwarded, and whether it succeeded. -/
-opaque firstPayout : Deployment → ChainState → ℕ → List UInt8 → Option (ℕ × ℕ × ℕ × Bool)
+
+/-- A message call in `st` with origin, caller, recipient, value, calldata and
+gas: whether it succeeded, and the size of its return data. -/
+opaque callResult : ChainState → ℕ → ℕ → ℕ → ℕ → List UInt8 → ℕ → Bool × ℕ
+
+/-- `r` rejects a plain payment of `v` from the pool, or returns data, for some
+gas between 15,000,000 and 16,000,000, in `st` with `r`'s credit zeroed, as
+`claimWithdrawal` pays. Returned data is copied, which can exhaust the pool's
+gas. This depends on `r` and `st`, not on how the pool pays. -/
+def RejectsPayment (d : Deployment) (st : ChainState) (origin r v : ℕ) : Prop :=
+  let A := addrOf d
+  let st' : ChainState :=
+    { st with storage := Function.update st.storage A (Function.update (st.storage A) (K (creditMsg r)) 0) }
+  ∃ g, 15000000 ≤ g ∧ g ≤ 16000000 ∧
+    ((callResult st' origin A r v [] g).1 = false ∨ 0 < (callResult st' origin A r v [] g).2)
 
 def publishCalldata (e : ℕ) : List UInt8 := [0xd0, 0x38, 0x70, 0xb3] ++ u256 e
 def claimCalldata (r : ℕ) : List UInt8 := [0xa3, 0x06, 0x6a, 0xab] ++ u256 r
 
 /-- C10. Anyone can publish an existing epoch's nonzero root, and anyone can pay
-out a covered credit, which fails only if the recipient rejects the payment
-with ample gas. -/
+out a covered credit, which fails only if the recipient rejects a plain payment
+or returns data. -/
 def C10 : Prop :=
   ∀ d st s caller, Honest d → ReachableChain d st → Obs d st s →
     (∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
       callPool d st caller (publishCalldata e) = .ok) ∧
-    (∀ r, 0 < s.credit r → s.credit r ≤ s.balance →
-      callPool d st caller (claimCalldata r) = .ok ∨
-      ∃ g, 15000000 ≤ g ∧ firstPayout d st caller (claimCalldata r) = some (r, s.credit r, g, false))
+    (∀ r < 2 ^ 160, 0 < s.credit r → s.credit r ≤ s.balance →
+      callPool d st caller (claimCalldata r) = .ok ∨ RejectsPayment d st caller r (s.credit r))
 
 end
 
