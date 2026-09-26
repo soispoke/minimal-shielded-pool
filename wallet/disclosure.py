@@ -10,11 +10,12 @@ spend_key itself. Following notes from spend to spend traces funds from a
 public deposit to a withdrawal. A receipt proves these links and amounts, not
 who presents it or where the funds came from before the deposit.
 
-  disclosure.py export --rpc URL --config CONFIG --fixture FIXTURE [--only CM,...] --output PATH
+  disclosure.py export --rpc URL --config CONFIG --fixture FIXTURE (--only CM,... | --all) --output PATH
   disclosure.py verify --rpc URL --config CONFIG --receipt PATH
 """
 import argparse
 import json
+import re
 import sys
 import urllib.request
 from pathlib import Path
@@ -33,6 +34,7 @@ SETTLE_SELECTOR = keccak(b"settle((bytes32,uint64,uint64,bytes32,bytes32,bytes32
                          b"uint256,uint256,address,address))")[:4]
 LEAF_APPENDED = "0x" + keccak(b"LeafAppended(bytes32,uint64,uint32,bytes32)").hex()
 NOTE_SPENT = "0x" + keccak(b"NoteSpent(bytes32)").hex()
+NONCE_MANAGER = "0x" + "00" * 18 + "8250"
 
 
 class ReceiptError(Exception):
@@ -55,12 +57,20 @@ class RpcChain:
             reply = json.loads(urllib.request.urlopen(request, timeout=30).read())
         except (OSError, ValueError) as error:
             raise ReceiptError(f"{method} request failed: {error}") from None
-        if "error" in reply:
-            raise ReceiptError(f"{method} failed: {reply['error']}")
+        if "error" in reply or "result" not in reply:
+            raise ReceiptError(f"{method} failed: {reply.get('error', 'no result')}")
         return reply["result"]
 
     def chain_id(self):
         return int(self.call("eth_chainId", []), 16)
+
+    def finalized_block(self):
+        return int(self.call("eth_getBlockByNumber", ["finalized", False])["number"], 16)
+
+    def nonce_used(self, sender, key):
+        """Whether EIP-8250 has consumed this sender's nonce key."""
+        slot = keccak(sender.to_bytes(32, "big") + key.to_bytes(32, "big"))
+        return int(self.call("eth_getStorageAt", [NONCE_MANAGER, "0x" + slot.hex(), "latest"]), 16) != 0
 
     def transaction(self, tx_hash):
         tx = self.call("eth_getTransactionByHash", [tx_hash])
@@ -68,11 +78,15 @@ class RpcChain:
         if not tx or not receipt:
             raise ReceiptError(f"transaction {tx_hash} is not on this chain")
         try:
-            frames = [{"mode": int(f["mode"], 16), "to": int(f["to"], 16),
+            sender = int(tx.get("sender") or tx["from"], 16)
+            if len(tx.get("frames") or []) != len(receipt.get("frameReceipts") or []):
+                raise ValueError("frames and frame receipts differ in number")
+            # A frame with no target calls the transaction's sender.
+            frames = [{"mode": int(f["mode"], 16), "to": sender if f.get("to") is None else int(f["to"], 16),
                        "data": bytes.fromhex(f["data"][2:]), "status": int(r["status"], 16),
                        "logs": r["logs"]}
                       for f, r in zip(tx.get("frames") or [], receipt.get("frameReceipts") or [])]
-            return {"hash": tx_hash, "sender": int(tx.get("sender") or tx["from"], 16),
+            return {"hash": tx_hash, "sender": sender, "block": int(receipt["blockNumber"], 16),
                     "frames": frames, "logs": receipt["logs"]}
         except (KeyError, TypeError, ValueError) as error:
             raise ReceiptError(f"unexpected RPC response for {tx_hash}: {error!r}") from None
@@ -93,10 +107,13 @@ def appended(log):
     return int(log["topics"][1], 16), int(log["topics"][2], 16), int(log["data"][2:66], 16)
 
 
-def export(chain, chain_id, pool, fixture, only=None, from_block=0):
-    """A receipt for the notes a generator fixture opens. It reads the pool's
-    LeafAppended and NoteSpent logs once and matches them locally, so the RPC
-    does not learn which notes are disclosed. spend_key and rho stay out."""
+def export(chain, chain_id, pool, fixture, only, from_block=0):
+    """A receipt for the chosen notes a generator fixture opens: `only` is a set
+    of commitments, or None for all. It reads the pool's LeafAppended and
+    NoteSpent logs once and matches them locally, so the RPC does not learn
+    which notes are disclosed. spend_key and rho stay out, and only notes the
+    fixture spends get a nullifier key: a payment's output may be someone
+    else's note, whose later spend is theirs to disclose."""
     leaves, spent_in = {}, {}
     for log in chain.logs(pool, [[LEAF_APPENDED, NOTE_SPENT]], from_block):
         if log["topics"][0] == LEAF_APPENDED:
@@ -120,16 +137,25 @@ def export(chain, chain_id, pool, fixture, only=None, from_block=0):
                 note["places"].add((epoch, index))
     out = []
     for cm, n in sorted(notes.items(), key=lambda item: (item[1]["value"] == 0, item[0])):
-        if only and not any(hex32(cm).startswith(prefix.lower()) for prefix in only):
+        if only is not None and cm not in only:
             continue
+        own = bool(n["places"])
         if n["value"] == 0:  # a dummy input is never in the tree; only its spend shows
             places = [(epoch, index, None) for epoch, index in n["places"]]
         else:
-            places = [(e, i, h) for e, i, h in leaves.get(cm, []) if not n["places"] or (e, i) in n["places"]]
+            found = {(e, i): h for e, i, h in leaves.get(cm, [])}
+            places = [(e, i, found.get((e, i))) for e, i in n["places"]] if own else \
+                [(e, i, h) for (e, i), h in found.items()]
         for epoch, index, created in places:
             key = p2(w.domain_scalar(chain_id, pool, epoch), n["sk"])
-            spent = spent_in.get(nullifier(key, cm, index))
-            if n["value"] == 0 and spent is None:
+            nf = nullifier(key, cm, index)
+            spent = spent_in.get(nf) if own else None
+            if own and (spent is None or (created is None and n["value"])) and chain.nonce_used(pool, nf):
+                # ethrex leaves out of eth_getLogs every log of a frame
+                # transaction whose fourth frame failed, settlement included.
+                raise ReceiptError(f"note {hex32(cm)[:18]}... was spent, but this node's logs do not show "
+                                   "the transactions involved; use a node that does")
+            if n["value"] == 0 and spent is None or n["value"] and created is None:
                 continue
             note = {"epoch": epoch, "index": index, "cm": hex32(cm), "inner": hex32(n["inner"]),
                     "value": str(n["value"])}
@@ -173,11 +199,14 @@ def _verify(chain, receipt, pool_check):
     if chain.chain_id() != chain_id:
         raise ReceiptError(f"the RPC is not chain {chain_id}")
     pool_check(pool)
+    finalized = chain.finalized_block()
     txs, spends, notes = {}, {}, []
 
     def tx(h):
         if h not in txs:
             txs[h] = chain.transaction(h)
+            if txs[h]["block"] > finalized:  # evidence that a reorg could undo is not evidence
+                raise ReceiptError(f"{h} is not finalized yet")
         return txs[h]
 
     def spend_of(h):
@@ -188,11 +217,14 @@ def _verify(chain, receipt, pool_check):
     for n in receipt["notes"]:
         cm, epoch, index, value = int(n["cm"], 16), int(n["epoch"]), int(n["index"]), int(n["value"])
         label = f"note {n['cm'][:18]}..."
+        if not 0 <= index < 1 << w.DEPTH:
+            raise ReceiptError(f"{label}: leaf {index} is outside the tree")
         if any((m["cm"], m["epoch"], m["index"]) == (hex32(cm), epoch, index) for m in notes):
             raise ReceiptError(f"{label} is listed twice")  # it would count twice
         if not 0 <= value < w.MAX_VALUE or tagged(TAG_LEAF, int(n["inner"], 16), value) != cm:
             raise ReceiptError(f"{label}: the opening does not match the commitment")
-        seen = {"cm": hex32(cm), "epoch": epoch, "index": index, "value": str(value)}
+        # Without a nullifier key, whether the note was spent is not disclosed.
+        seen = {"cm": hex32(cm), "epoch": epoch, "index": index, "value": str(value), "spent": "not disclosed"}
         if n.get("dummy"):
             if value != 0 or "spent" not in n:
                 raise ReceiptError(f"{label}: a dummy input has value 0 and a spend")
@@ -229,7 +261,7 @@ def _verify(chain, receipt, pool_check):
         shown = {(n["cm"], n["epoch"], n["index"]): n["value"] for n in notes if n["origin"] == f"output of {h}"}
         summary[h] = {"complete": {s["nf1"], s["nf2"]} <= {n["nf"] for n in inputs},
                       "inputValue": str(sum(int(n["value"]) for n in inputs)),
-                      "outputs": [{"cm": hex32(c), "index": i, "value": shown.get((hex32(c), e, i))}
+                      "outputs": [{"cm": hex32(c), "epoch": e, "index": i, "value": shown.get((hex32(c), e, i))}
                                   for c, e, i in s["outputs"]],
                       "publicAmount": str(s["publicAmount"]), "fee": str(s["fee"]),
                       "recipient": f"0x{s['recipient']:040x}" if s["publicAmount"] else None}
@@ -244,7 +276,8 @@ def main():
     parser.add_argument("--rpc", required=True)
     parser.add_argument("--config", required=True, help="deployment config naming the pool")
     parser.add_argument("--fixture", help="export: the wallet fixture holding the openings")
-    parser.add_argument("--only", help="export: comma-separated commitment prefixes to disclose")
+    parser.add_argument("--only", help="export: comma-separated commitments of the notes to disclose")
+    parser.add_argument("--all", action="store_true", help="export: disclose every note the fixture opens")
     parser.add_argument("--output", help="export: where to write the receipt")
     parser.add_argument("--receipt", help="verify: the receipt to check")
     args = parser.parse_args()
@@ -253,9 +286,16 @@ def main():
         if args.command == "export":
             if not args.fixture or not args.output or Path(args.output).exists():
                 raise ReceiptError("export needs --fixture and a new --output path")
+            if bool(args.only) == args.all:
+                raise ReceiptError("export needs --only with the notes to disclose, or --all")
+            only = None
+            if args.only:
+                chosen = args.only.split(",")
+                if not all(re.fullmatch(r"0x[0-9a-fA-F]{64}", c) for c in chosen):
+                    raise ReceiptError("--only takes full commitments: 0x and 64 hex digits each")
+                only = {int(c, 16) for c in chosen}
             receipt = export(chain, int(cfg["chainId"]), int(cfg["pool"], 16),
-                             json.loads(Path(args.fixture).read_text()),
-                             args.only.split(",") if args.only else None, int(cfg.get("deploymentBlock", 0)))
+                             json.loads(Path(args.fixture).read_text()), only, int(cfg.get("deploymentBlock", 0)))
             Path(args.output).write_text(json.dumps(receipt, indent=1) + "\n")
             print(f"wrote {args.output}: {len(receipt['notes'])} notes")
         else:
@@ -265,8 +305,11 @@ def main():
             def pool_check(pool):
                 if pool != int(cfg["pool"], 16):
                     raise ReceiptError("the receipt names another pool than the config")
-                check_deployed_profile(args.rpc, pool, int(cfg["chainId"]),
-                                       int(cfg["logic"], 16), int(cfg["verifier"], 16))
+                try:
+                    check_deployed_profile(args.rpc, pool, int(cfg["chainId"]),
+                                           int(cfg["logic"], 16), int(cfg["verifier"], 16))
+                except (SystemExit, RuntimeError, KeyError) as error:
+                    raise ReceiptError(f"pool check failed: {error}") from None
             receipt = json.loads(Path(args.receipt).read_text()) if args.receipt else None
             if not isinstance(receipt, dict):
                 raise ReceiptError("verify needs --receipt naming a disclosure receipt")

@@ -148,23 +148,26 @@ wallet/disclosure.py
 
 `wallet/disclosure.py` lets a user show, after the fact, where funds in the
 pool came from and where they went, like Tornado Cash's compliance tool but
-without handing over a note's secrets. For each spent note, a receipt gives
-the nullifier key `K = Poseidon2(D, spend_key)` instead of the spending key.
-Anyone can recompute the note's nullifier from `K` and its position and find
-the spend that consumed it, while `K` cannot spend anything. A receipt can
-follow notes from a public deposit through private transfers to a
-withdrawal, and fully explains a spend when both of its inputs are disclosed.
+without giving anyone the power to spend. For each note you spent, a receipt
+gives its nullifier key `K = Poseidon2(D, spend_key)`. With `K` and the
+note's position, anyone can confirm on chain which spend used up the note,
+but `K` cannot spend anything. A receipt can follow notes from a public
+deposit through private transfers to a withdrawal, and fully explains a
+spend when both of its inputs are disclosed.
 
 ```sh
 python3 wallet/disclosure.py export --rpc URL --config devnet/deploy_config.json \
-  --fixture FIXTURE --output receipt.json
+  --fixture FIXTURE --only CM[,CM...] --output receipt.json
 python3 wallet/disclosure.py verify --rpc URL --config devnet/deploy_config.json \
   --receipt receipt.json
 ```
 
-The verifier checks the receipt against the chain and the pool's deployed
-code. A receipt proves links and amounts, not who presents it or where the
-funds came from before the deposit. See
+Export discloses only the notes you name, and gives a nullifier key only for
+notes you spent. Verify checks the receipt against finalized blocks and the
+pool's deployed code. It trusts its config and its node, so use your own copy
+of the config and a node you control; a public node also learns which
+transactions you look up. A receipt proves links and amounts, not who
+presents it or where the funds came from before the deposit. See
 [SECURITY.md](SECURITY.md#privacy-limits) for what a receipt reveals.
 
 ## Deployment
