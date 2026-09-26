@@ -50,6 +50,20 @@ def SETTLE_SELECTOR : List UInt8 := [0x92, 0x1f, 0xca, 0xc7]
 /-- EIP-8272's source for the pool's epoch `e` (`sourceId` in the dispatcher). -/
 def sourceId (a e : ℕ) : ℕ := K (addr20 a ++ u256 e)
 
+def RR_ENTRY_DOMAIN : ℕ := K "RECENT_ROOT_ENTRY".toUTF8.toList
+def RR_STORAGE_DOMAIN : ℕ := K "RECENT_ROOT_STORAGE".toUTF8.toList
+
+/-- EIP-8272: the Keccak input of the entry committed for `(source, slot, root)`. -/
+def rrEntryMsg (src sl root : ℕ) : List UInt8 := u256 RR_ENTRY_DOMAIN ++ u256 src ++ u64be sl ++ u256 root
+
+/-- EIP-8272: the Keccak input of the storage key of ring index `i` of `source`. -/
+def rrKeyMsg (src i : ℕ) : List UInt8 := u256 RR_STORAGE_DOMAIN ++ u256 src ++ u64be i
+
+/-- The Keccak inputs of the logic's storage slots `withdrawalCredit[r]` (slot 23)
+and `finalRoot[e]` (slot 25). -/
+def creditMsg (r : ℕ) : List UInt8 := u256 r ++ u256 23
+def finalRootMsg (e : ℕ) : List UInt8 := u256 e ++ u256 25
+
 /-- The settlement data words after the selector, in the `Spend` order. -/
 structure SettleData where
   root : ℕ
