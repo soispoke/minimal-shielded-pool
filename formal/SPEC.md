@@ -397,7 +397,9 @@ Declarations marked `opaque` are bound to the artifacts in later steps: the
 hashes and constraint system in step 3, and the EVM semantics in step 5, where
 `ChainStep`, `eventsOf`, `approvalsIn`, `firstPayout` and the
 other chain declarations must
-come from one semantics applied to the pinned bytecode.
+come from one semantics applied to the pinned bytecode. `formal/Sanity/` holds
+proofs, written during review, that parts of the specification mean what they
+should; they are not proofs of the claims.
 
 ## 8. Limits
 
