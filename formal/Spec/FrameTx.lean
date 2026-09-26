@@ -99,7 +99,8 @@ def SignsCanonicalHash (tx : FrameTx) (signer : ℕ) : Prop :=
 
 /-- D15. The pool at `A` on chain `c` accepts `tx` in its frame 1.
 `verifies π pub` means the linked verifier's return value for proof words `π`
-and public signals `pub` is exactly 1; whether 500,000 gas suffices is C2c's
+and public signals `pub` is exactly 1 (C9 fixes that call at 500,000 gas); whether
+frame 1's limit leaves the verifier enough gas is C2c's
 concern. `current` is the executing
 frame index. -/
 def Acc (A c : ℕ) (verifies : List UInt8 → F × F × F → Prop) (current : ℕ) (tx : FrameTx) : Prop :=

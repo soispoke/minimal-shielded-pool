@@ -152,7 +152,8 @@ opaque RawTx.view : RawTx → FrameTx
 /-- P5 to P7: `t` is valid in `st`. -/
 opaque ValidTx : ChainState → RawTx → Prop
 /-- The validity conditions frame 1 and later frames do not decide: EIP-8141's
-static rules and gas caps, the fee caps against the base fee, the reservations
+static rules and gas caps, EIP-8250's decoding rules, EIP-1559's fee-field
+checks, the fee caps against the base fee, the reservations
 of each gas dimension against the block's remaining gas, the chain ID,
 EIP-8250's nonce sequences, signature validation, and success of every frame
 before frame 1. -/
@@ -206,8 +207,10 @@ balance, fee caps, block gas) count as passed: they do not involve the pool. -/
 opaque callPool : Deployment → ChainState → ℕ → List UInt8 → Outcome
 
 /-- The first `CALL`, `CALLCODE` or `STATICCALL` made during a `callPool` by code
-whose `ADDRESS` is the pool's (a `DELEGATECALL` does not count): whether it is a `CALL`, recipient, value, calldata, gas forwarded,
-whether the value was transferred and execution at the recipient began (its
+whose `ADDRESS` is the pool's (a `DELEGATECALL` does not count): whether it is a
+`CALL`, recipient, value, calldata, the execution gas the recipient's call frame
+starts with (after EIP-150's 63/64 cap and including any value stipend, not the
+gas operand), whether the value was transferred and execution at the recipient began (its
 code, its EIP-7702 delegate's code, or a precompile), whether it succeeded, and
 the size of its return data. -/
 structure Payout where
@@ -238,7 +241,7 @@ def RecipientRejected (d : Deployment) (st : ChainState) (caller r v : ℕ) : Pr
 out a covered credit, which fails only if the recipient rejects a plain payment
 or returns at least 64 KiB. -/
 def C10 : Prop :=
-  ∀ d st s caller, Honest d → ReachableChain d st → Obs d st s →
+  ∀ d st s caller, Honest d → ReachableChain d st → Obs d st s → caller ≠ addrOf d →
     (∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
       callPool d st caller (publishCalldata e) = .ok) ∧
     (∀ r < 2 ^ 160, 0 < s.credit r → s.credit r ≤ s.balance →

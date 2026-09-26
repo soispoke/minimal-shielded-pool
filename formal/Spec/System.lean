@@ -385,6 +385,18 @@ def C5h (P : Pool) : Prop :=
       BadEventWith P evs s (openingQueries P o.e o.i sk ρ v) ∨
       (nf (D P.c P.A o.e) sk ((s.leaves o.e).getD o.i 0) o.i).val ∉ s.keys
 
+/-- C5i. A spend that consumes an occurrence as a nonzero-value input, under any
+opening of its leaf, extracts that opening's key and randomness. So taking a
+note needs its holder's key, which §8's premises keep secret. -/
+def C5i (P : Pool) : Prop :=
+  ∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' →
+    ∀ (o : Occ) (sk ρ v : F) (k : Fin 2), o.i < (s.leaves o.e).length →
+      (s.leaves o.e).getD o.i 0 = cm (inner sk ρ) v →
+      (witOf (extOf P tx)).v k ≠ 0 →
+      (⟨(settleData tx).epoch, (witOf (extOf P tx)).idx k⟩ : Occ) = o →
+      BadEventWith P (evs ++ [.spend tx g]) s' (openingQueries P o.e o.i sk ρ v) ∨
+      ((witOf (extOf P tx)).sk k = sk ∧ (witOf (extOf P tx)).ρ k = ρ)
+
 /-- The siblings of leaf `i` in the complete tree over `L`: at level `l`, the
 root of the neighboring subtree of height `l`. -/
 def siblingsOf (L : List F) (i : ℕ) : Fin DEPTH → F := fun l =>

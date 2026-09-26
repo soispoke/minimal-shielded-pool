@@ -10,5 +10,7 @@ on Lean's standard axioms, and `lake build` checks them.
 | `C5d.lean` | `C5d P` for every pool |
 | `C3.lean` | `C5e P` for every pool, and `C1 → C3 P` |
 | `C5a.lean` | `C1 → C5a P` |
+| `C5cC4.lean` | `C1 → C5b P → C5c P`, and `C1 → C5b P → C5c P → C4 P` |
 
-Still to prove in the model half: C4, C5b, C5c, C5g, C5h and spendability.
+Still to prove in the model half: C5b, on which C4 and C5c rest, C5g, C5h, C5i
+and spendability.
