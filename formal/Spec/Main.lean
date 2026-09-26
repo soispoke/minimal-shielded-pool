@@ -53,10 +53,14 @@ def W1 : Prop :=
     ¬ BadEvent P (evs ++ [.spend tx g]) s'
 
 /-- Chain non-vacuity: some reachable state of an honest deployment shows a
-leaf and a payout, and the pool approves some valid transaction there. -/
+leaf and a payout, the pool approves there a transaction valid up to frame 1
+and then valid, and some caller other than the pool has a valid environment
+there. -/
 def W2 : Prop :=
-  ∃ d st t, Honest d ∧ ReachableChain d st ∧ ValidTx st t ∧ (1, 3) ∈ approvalsIn d st t ∧
-    st.leafLogs (addrOf d) 0 ≠ [] ∧ ∃ r, st.sentTo (addrOf d) r ≠ 0
+  ∃ d st t, Honest d ∧ ReachableChain d st ∧ PreValid st t ∧ ValidTx st t ∧
+    (1, 3) ∈ approvalsIn d st t ∧
+    st.leafLogs (addrOf d) 0 ≠ [] ∧ (∃ r, st.sentTo (addrOf d) r ≠ 0) ∧
+    ∃ caller env, caller ≠ addrOf d ∧ EnvValid st caller env
 
 end
 

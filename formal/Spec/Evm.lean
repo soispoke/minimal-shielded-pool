@@ -60,11 +60,12 @@ def poolOf (d : Deployment) (ext : List UInt8 → F × F × F → Assignment) : 
 
 /-- The chain state right after the deployment transaction; its `slot` is that block's slot. -/
 opaque chainInit : Deployment → ChainState
-/-- One step: any transaction valid in `st` in the current block, run with
-`SLOTNUM = slot`; or the next slot, which advances `slot` by one and is either
-empty or opens a block with any header the consensus rules allow (number,
-timestamp, fee recipient, prevrandao, base fee, gas limit), together with its
-system calls and withdrawals. -/
+/-- One step: any transaction valid in `st` in the current open block, run with
+`SLOTNUM = slot`; the end of that block, which applies its withdrawals and
+end-of-block system calls; or the next slot, which advances `slot` by one and
+is either empty or opens a block with any header the consensus rules allow
+(number, timestamp, fee recipient, prevrandao, base fee, gas limit), with its
+start-of-block system calls. -/
 opaque ChainStep : Deployment → ChainState → ChainState → Prop
 
 /-- The model state `s` is what the chain state shows, up to ghost fields. Every
@@ -210,8 +211,9 @@ prevrandao, base fee, gas limit and blob base fee, and the transaction's nonce,
 gas price and fee caps. -/
 def Env : Type := EnvImpl.type
 
-/-- A non-frame transaction from `caller` with one 36-byte call to the pool,
-value 0, a 16,000,000 gas limit and `env`'s fields is valid in `st`: in the
+/-- A non-frame EIP-1559 transaction from `caller`, with an empty access list,
+no authorization list and no blobs, whose only call is one 36-byte call to the
+pool, with value 0, a 16,000,000 gas limit and `env`'s fields, is valid in `st`: in the
 current block with its header, or first in a next block whose header, `env`'s,
 the consensus rules allow. -/
 opaque EnvValid : ChainState → ℕ → Env → Prop

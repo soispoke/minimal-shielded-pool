@@ -14,7 +14,8 @@ on Lean's standard axioms, and `lake build` checks them.
 | `Path.lean` | the path walk: a Merkle path whose root is `TR L`, without a collision against `L`'s tree queries, starts at `L`'s leaf |
 | `C5i.lean` | `C5b P → C5i P` |
 | `C5b.lean` | `C1 → C5b P` |
+| `Model.lean` | `C1 → C5g P`, `C1 → C5h P`, `C1 → Spendable P`, and `model_theorem : ModelTheorem` |
 
-So C3, C4, C5a to C5e and C5i hold for every pool from C1.
-
-Still to prove in the model half: C5g, C5h and spendability.
+`ModelTheorem` is proven: every model claim holds for every pool from C1. What
+remains is C1 and C1c against the constraint system (step 3) and the chain half
+(step 5).

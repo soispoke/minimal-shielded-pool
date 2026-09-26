@@ -158,7 +158,7 @@ efficient party outputs.
 
 - **P1 Poseidon.** `H2`, `H3`, `H10` are the concrete functions of D2. Finding a Poseidon collision, or an input with output 0, among a run's queries is assumed infeasible.
 - **P2 Keccak.** The same for Keccak collisions and outputs below `2^64`, for distinct `(c, a, e)` with equal `D`, and for a run query other than `addr20(A) ‖ u256(e)` whose output is `K(addr20(A) ‖ u256(e))` for some `e < 2^64`, or an output `K(addr20(A) ‖ u256(e))` below `2^64`; and, used only for liveness, for a Keccak collision between the `NONCE_MANAGER` storage key of a key a spend selects and that of any key consumed on the chain, by any sender.
-- **P3 Groth16.** For the committed verification key, from snarkjs's two-phase setup (`γ = [1]₂`, `δ` from phase 2) run honestly, knowledge soundness: for every efficient algebraic machine that produces the run's transactions, honest provers included, whose group inputs are the whole setup transcript (the phase-1 powers of tau and the phase-2 contributions), an extractor that does not rewind, and reads the machine's representations of its group outputs over that transcript, maps each proof that Groth16's verification for the committed key accepts (`Groth16Accepts`) to a satisfying assignment of the pinned `spend.r1cs` with the verified public signals. Bowe, Gabizon and Miers (2017) argue this in the generic group model, and Kohlweiss, Maller, Siim and Volkhov (2021) prove that setup's ceremony secure; Fuchsbauer, Kiltz and Loss (2018) cover Groth's original reference string, not this one. Every claim holds for every extractor, and an approved spend whose extraction fails is a bad event. An approved spend's proof is 256 bytes the linked verifier accepts, so with C9 it is one that `Groth16Accepts`, and P3 bounds its extraction failure. No claim assumes extraction for every accepted proof: a Groth16 verifier accepts some proof for every public input. Knowledge soundness over a machine that includes honest provers says nothing about who knew a witness, so it gives no spend authority against any party that sees honest proofs, on chain or before inclusion. Beyond C5i, spend authority needs weak simulation extractability, so that a spend of new public signals yields a witness from its sender's view alone, and zero knowledge with Poseidon one-wayness, so that no other party learns a holder's key (§8). The pinned zkey comes from a local test setup with one phase-2 contribution and an unrecorded phase 1, so it is not known to meet P3.
+- **P3 Groth16.** For the committed verification key, from snarkjs's two-phase setup (`γ = [1]₂`, `δ` from phase 2) run honestly, knowledge soundness: for every efficient algebraic machine that produces the run's transactions, honest provers included, whose group inputs include the whole setup transcript (the phase-1 powers of tau and the phase-2 contributions) and every other group element it sees, including other setups built on the same phase 1, an extractor that does not rewind, and reads the machine's representations of its group outputs over those inputs, maps each proof that Groth16's verification for the committed key accepts (`Groth16Accepts`) to a satisfying assignment of the pinned `spend.r1cs` with the verified public signals. Bowe, Gabizon and Miers (2017) argue this in the generic group model, and Kohlweiss, Maller, Siim and Volkhov (2021) prove knowledge soundness for that ceremony, including the beacon version used in practice, against algebraic adversaries in the random oracle model with one honest party per phase; Fuchsbauer, Kiltz and Loss (2018) cover Groth's original reference string, not this one. Every claim holds for every extractor, and an approved spend whose extraction fails is a bad event. An approved spend's proof is 256 bytes the linked verifier accepts, so with C9 it is one that `Groth16Accepts`, and P3 bounds its extraction failure. No claim assumes extraction for every accepted proof: a Groth16 verifier accepts some proof for every public input. Knowledge soundness over a machine that includes honest provers says nothing about who knew a witness, so it gives no spend authority against any party that sees honest proofs, on chain or before inclusion. Beyond C5i, spend authority needs weak simulation extractability, so that a spend of new public signals yields a witness from its sender's view alone, and zero knowledge with Poseidon one-wayness, so that no other party learns a holder's key (§8). The pinned zkey comes from a local test setup with one phase-2 contribution and an unrecorded phase 1, so it is not known to meet P3.
 - **P3c Groth16 completeness.** For every satisfying assignment there are eight proof words that Groth16's verification for the committed key accepts for its public signals; with C9 the linked verifier accepts them. Used only for liveness (§5).
 - **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. For every efficient machine producing the run and every efficient extractor, this has negligible probability. For these fixed, unkeyed functions that is an assumption about what the run outputs, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
 - **P5 EIP-8141.** A transaction is valid only if its `chain_id` is the chain's. Frames run in order. A VERIFY frame changes nothing but through `APPROVE`; if it fails, the transaction is invalid. `APPROVE` reverts the current frame unless `ADDRESS` is the frame's resolved target and the scope is among the frame's flags; `APPROVE` with payment reverts if the payer's balance is below `max_cost`. Approval flags are excluded from atomic batches. `APPROVE(3)` from frame 1 makes `A` sender and payer. A SENDER frame's caller is `sender`, a DEFAULT frame's the entry point. A failed non-VERIFY frame reverts its own effects, or its whole atomic batch's. `TXPARAM`, `FRAMEPARAM` and `SIGPARAM` return the EIP's table values, with EIP-8250's `TXPARAM(0x01) = nonce_seq`, `0x0E` = key count, `0x0F = K(u256(n) ‖ u256(k_1) ‖ … ‖ u256(k_n))`. Frame data read with `FRAMEDATALOAD` or, in the running frame, `CALLDATALOAD` is the frame's data. A `msg` is empty, signing the canonical hash, or a nonzero 32-byte digest, so `SIGPARAM(i, 0x02) = 0` exactly when signature `i` signs the canonical hash, which covers every field except the raw bytes of such signatures. The payer pays at most `max_cost`.
@@ -259,8 +259,8 @@ covers, and the call succeeds unless the first `CALL`, `CALLCODE` or
 `L` does not count) is a plain `CALL` paying the credit to `r` with at least
 15,000,000 gas and the recipient (its code, its
 EIP-7702 delegate or a precompile) rejects it or returns at least 64 KiB. Each
-call is the only call of a non-frame transaction with a 16,000,000 gas limit,
-and carries no value. *Prevents* permanently locking notes or credits.
+call is the only call of a plain EIP-1559 transaction (no access list,
+authorizations or blobs) with a 16,000,000 gas limit, and carries no value. *Prevents* permanently locking notes or credits.
 
 **Refinement.** Along every run of the chain from an honest deployment, for
 every extractor, the model events of the deployment and of the run's steps form
@@ -279,9 +279,9 @@ balance. A step's events are the calls to `shield`, `publishEpochRoot` and
 or not they change state, decoded from the call (a shield's `inner` is its calldata
 word and its value the `CALLVALUE`); each spend, meaning a transaction whose
 frame 1 the pool approved, with the gas the pool paid, whether or not its
-settlement succeeds; each foreign EIP-8272 write; and the slots. A chain step is any valid transaction, or the next slot, empty
-or opening a block with any header the consensus rules allow, so refinement
-covers every block environment. A step's
+settlement succeeds; each foreign EIP-8272 write; and the slots. A chain step is any valid transaction, the end of a block with its
+withdrawals, or the next slot, empty or opening a block with any header the
+consensus rules allow, so refinement covers every block environment. A step's
 events are in execution order, with a spend at its settlement, before the
 events of its later frames. `receive`
 events account for the balance at deployment and for exactly the ETH that later
@@ -334,7 +334,7 @@ C5i and to the dummy's key directly.
 | Duplicate commitments not independently spendable | C1 (R2), C1c, refinement; spendability shows why R2 needs the index |
 | Notes from different epochs mixed, or a nullifier from another epoch | C2 (A3, A5), C5b |
 | A dummy input reproducing a funded note's nullifier | C1 (R2), C5g |
-| Membership not gated by value | C1 (R3) |
+| Membership not gated by value | C1c if it bound dummies too; C1 (R3) if it keyed on another signal |
 | The same note in both inputs | C1 (R8), P6 |
 | Fee below the maximum cost | C2 (A7), C5c |
 | A fourth frame draining the pool | C5c, refinement |
@@ -357,8 +357,9 @@ failing chain claim protects.
 settlement passes every check and no bad event, with a verifier that accepts
 exactly the public signals of satisfying assignments and an extractor that maps
 every accepted proof to such an assignment (`IdealVerifier`); `W2` states that some
-reachable state of an honest deployment shows a leaf and a payout, and the pool
-approves a valid transaction there. The live testnet
+reachable state of an honest deployment shows a leaf and a payout, the pool
+approves there a transaction valid up to frame 1 and then valid, and some
+caller other than the pool has a valid environment there. The live testnet
 transactions of the `position-notes-v2` deployment are informal evidence:
 deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 `0x93d07a20…978e` and swap withdrawal `0x8a551c3f…2f01`.
@@ -392,12 +393,12 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 | D1 to D10 | definitions, `R` | `Basic`, `Hash`, `Relation` |
 | D11, D15 | `FrameTx`, `RawTx`, `RawTx.view`, `Acc`, `PointsNotInfinity`, `SettleData`, `SettleData.decode`, `SettleData.stmt`, `settleData`, `RECENT_ROOT`, `SETTLE_SELECTOR`, `RR_ENTRY_DOMAIN`, `RR_STORAGE_DOMAIN`, `keysHash`, `sourceId`, `SignsCanonicalHash` | `FrameTx`, `Evm` |
 | D12 | `Deployment`, `Honest`, `addrOf`, `chainOf`, `verifierOf`, `poolOf`, `NONCE_MANAGER` | `Evm` |
-| D13, D14 | `PoolState`, `PoolState.init`, `PoolState.append`, `rollsOver`, `CAPACITY`, `Event`, `Step`, `Run`, `Occ` | `System`, `Tree` |
+| D13, D14 | `Pool`, `PoolState`, `PoolState.init`, `PoolState.append`, `rollsOver`, `CAPACITY`, `Event`, `Step`, `Run`, `Occ` | `System`, `Tree` |
 | P3, P4, P13, C4's checks, bad events | `Pool.ext`, `extOf`, `proofOf`, `verifiedPublics`, `Query.collide`, `Query.degenerate`, `BadEvent`, `pathQueries`, `newCount`, `ExtractionFailure`, `CompressionBreak`, `Bounded`, `SettlePre` | `System` |
 | C1, C1c, C9's key | `C1`, `C1c`, `Assignment`, `Satisfied`, `stmtOf`, `witOf`, `publicOf`, `Groth16Accepts` | `Circuit` |
 | C2, C2c, C8, C9, C10 | same names, `ValidTx`, `PreValid`, `approvalsIn`, `libHash2`, `libHash3`, `Env`, `EnvValid`, `callPool`, `publishCalldata`, `claimCalldata`, `firstPayout`, `Payout`, `RecipientRejected` | `Evm` |
 | C3, C4, C5a to C5e, C5g to C5i, spendability | same names, `Spendable`, `owed`, `inputsOf`, `newLeaves`, `lastWrite`, `openingQueries`, `mkSpend`, `siblingsOf` | `System` |
-| C6 | `C6`, `ZEROS`, `EMPTY_ROOT_CONST`, `zeroConst`, `insertLoop`, `LogicTree.insert`, `LogicTree.root` | `Tree` |
+| C6 | `C6`, `LogicTree`, `LogicTree.empty`, `ZEROS`, `EMPTY_ROOT_CONST`, `zeroConst`, `insertLoop`, `LogicTree.insert`, `LogicTree.root` | `Tree` |
 | Refinement, C5f, C7 | `Refines`, `Obs`, `ChainState`, `ChainStep`, `eventsOf`, `passiveInflow`, `receivedIn`, `eventsAlong`, `chainInit`, `historyEvents`, `initEvents`, `modelEvents`, `ChainRun`, `ReachableChain` | `Evm` |
 | Main theorem | `MainTheorem`, `ModelTheorem`, `ChainTheorem`, `ChainCorollary`, `Composes` | `Main` |
 | Non-vacuity | `W1`, `W2`, `IdealVerifier` | `Main`, `System` |
@@ -421,8 +422,8 @@ come from one semantics applied to the pinned bytecode, and where step 5 proves
 the bytecode's `_zeros`, `EMPTY_ROOT`, `_insert` and `_computeRoot` equal
 `ZEROS`, `EMPTY_ROOT_CONST`, `LogicTree.insert` and `LogicTree.root`. `formal/Sanity/` holds
 proofs, written during review, that parts of the specification mean what they
-should. `formal/Proofs/` holds proofs of claims, with the hashes kept opaque: C3,
-C4, C5a to C5e and C5i follow from C1.
+should. `formal/Proofs/` proves `ModelTheorem` with the hashes kept opaque: every
+model claim follows from C1.
 
 ## 8. Limits
 
@@ -431,7 +432,7 @@ not show the premises hold: that the cryptography is secure, that the setup
 was honest, that clients implement the EIPs as modeled, or that the gas
 schedule stays. Spend authority against every party other than the holder,
 and hence liveness, rest on
-Groth16's weak simulation extractability over P3's setup transcript (proven in
+Groth16's weak simulation extractability over P3's group inputs (proven in
 the algebraic group model for Groth's original reference string by Baghery,
 Kohlweiss, Siim and Volkhov 2021, not known for this setup) and zero
 knowledge, on P4 for replayed
@@ -456,10 +457,13 @@ any execution at `A` before deployment, not only transactions with sender `A`;
 only executions since EIP-8272's activation can plant roots. Recording the deployment slot and rejecting root slots at or before
 it would remove these conditions, at the cost of changing the pinned code.
 
-Step 5's definitions of `ChainStep`, `eventsOf`, `passiveInflow`,
-`approvalsIn`, `firstPayout`, `PreValid`, `EnvValid`, `callPool`, `RawTx.view`
-and `Honest` are checked against their docstrings by review only; a looser
-`ChainStep`, `eventsOf` or `passiveInflow` would weaken refinement, a stronger
-`PreValid` C2c, and a looser `EnvValid` or `callPool` C10.
+Step 5's definitions of `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
+`ValidTx`, `PreValid`, `approvalsIn`, `EnvValid`, `callPool`, `firstPayout`,
+`RawTx.view` and `Honest` are checked against their docstrings by review only.
+A narrower `ChainStep`, `EnvValid` or `Honest`, or a wrong `chainInit`, leaves
+states uncovered by refinement, C2, C2c and C10. A looser `eventsOf` or
+`passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
+weakens C2, a stronger `PreValid` weakens C2c, and a looser `callPool` or
+`firstPayout` weakens C10.
 
 Privacy and inclusion are outside this specification.
