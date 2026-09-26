@@ -224,8 +224,8 @@ inserted leaves.
 **C10 Publication and claims.** In every reachable state anyone can call
 `publishEpochRoot(e)` for every `e ≤ E` whose root is nonzero, and the call
 succeeds; and anyone can call `claimWithdrawal(r)` for every credit the balance
-covers, and the call succeeds unless the recipient itself, paid its credit
-plainly with 15 to 16 million gas, rejects it or returns data. Calls carry
+covers, and the call succeeds unless the recipient's own code, paid its credit
+plainly with at least 15,000,000 gas, rejects it or returns data. Calls carry
 16,000,000 gas. *Prevents* permanently locking notes or credits.
 
 **Refinement.** Along every run of the chain from an honest deployment, for
@@ -347,7 +347,7 @@ each step's `eventsOf`. Bad events are `BadEventWith`, over `traceQueries`,
 with `Query.degenerate`, `ExtractionFailure` and `CompressionBreak`.
 Declarations marked `opaque` are bound to the artifacts in later steps: the
 hashes and constraint system in step 3, and the EVM semantics in step 5, where
-`ChainStep`, `eventsOf`, `preEvents`, `approvalsIn`, `callResult` and the
+`ChainStep`, `eventsOf`, `preEvents`, `approvalsIn`, `firstPayout` and the
 other chain declarations must
 come from one semantics applied to the pinned bytecode.
 

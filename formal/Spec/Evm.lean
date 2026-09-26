@@ -178,23 +178,31 @@ def C8 : Prop :=
 16,000,000 gas. -/
 opaque callPool : Deployment → ChainState → ℕ → List UInt8 → Outcome
 
-/-- A message call in `st` with origin, caller, recipient, value, calldata and
-gas: whether it succeeded, and the size of its return data. -/
-opaque callResult : ChainState → ℕ → ℕ → ℕ → ℕ → List UInt8 → ℕ → Bool × ℕ
+/-- The first ETH-carrying call the pool's code makes during a `callPool`:
+recipient, value, calldata, gas forwarded, whether the recipient's code began
+running with the value transferred, whether it succeeded, and the size of its
+return data. -/
+structure Payout where
+  recipient : ℕ
+  value : ℕ
+  data : List UInt8
+  gas : ℕ
+  entered : Bool
+  success : Bool
+  returnSize : ℕ
 
-/-- `r` rejects a plain payment of `v` from the pool, or returns data, for some
-gas between 15,000,000 and 16,000,000, in `st` with `r`'s credit zeroed, as
-`claimWithdrawal` pays. Returned data is copied, which can exhaust the pool's
-gas. This depends on `r` and `st`, not on how the pool pays. -/
-def RejectsPayment (d : Deployment) (st : ChainState) (origin r v : ℕ) : Prop :=
-  let A := addrOf d
-  let st' : ChainState :=
-    { st with storage := Function.update st.storage A (Function.update (st.storage A) (K (creditMsg r)) 0) }
-  ∃ g, 15000000 ≤ g ∧ g ≤ 16000000 ∧
-    ((callResult st' origin A r v [] g).1 = false ∨ 0 < (callResult st' origin A r v [] g).2)
+opaque firstPayout : Deployment → ChainState → ℕ → List UInt8 → Option Payout
 
 def publishCalldata (e : ℕ) : List UInt8 := [0xd0, 0x38, 0x70, 0xb3] ++ u256 e
 def claimCalldata (r : ℕ) : List UInt8 := [0xa3, 0x06, 0x6a, 0xab] ++ u256 r
+
+/-- The recipient's own code rejected, or answered with data, the pool's plain
+payment of `v` with at least 15,000,000 gas. Returned data is copied, which can
+exhaust the pool's gas. A reentrancy guard in the pool may make a recipient
+reject; that is allowed. -/
+def RecipientRejected (d : Deployment) (st : ChainState) (caller r v : ℕ) : Prop :=
+  ∃ po, firstPayout d st caller (claimCalldata r) = some po ∧ po.recipient = r ∧ po.value = v ∧
+    po.data = [] ∧ 15000000 ≤ po.gas ∧ po.entered = true ∧ (po.success = false ∨ 0 < po.returnSize)
 
 /-- C10. Anyone can publish an existing epoch's nonzero root, and anyone can pay
 out a covered credit, which fails only if the recipient rejects a plain payment
@@ -204,7 +212,7 @@ def C10 : Prop :=
     (∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
       callPool d st caller (publishCalldata e) = .ok) ∧
     (∀ r < 2 ^ 160, 0 < s.credit r → s.credit r ≤ s.balance →
-      callPool d st caller (claimCalldata r) = .ok ∨ RejectsPayment d st caller r (s.credit r))
+      callPool d st caller (claimCalldata r) = .ok ∨ RecipientRejected d st caller r (s.credit r))
 
 end
 
