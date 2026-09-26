@@ -48,7 +48,8 @@ instance : Nonempty Deployment := DeploymentImpl.property
 opaque Honest : Deployment → Prop
 opaque addrOf : Deployment → ℕ
 opaque chainOf : Deployment → ℕ
-/-- The linked verifier's return value is 1 for these proof words and public signals. -/
+/-- The linked verifier returns 1 for these proof words and public signals when
+called with 500,000 gas, as the dispatcher calls it. -/
 opaque verifierOf : Deployment → List UInt8 → F × F × F → Prop
 /-- EIP-8250's `NONCE_MANAGER`, chosen by the fork configuration. -/
 opaque NONCE_MANAGER : ℕ

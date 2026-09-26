@@ -14,3 +14,4 @@ Lean's standard axioms; `lake build` checks them with the specification.
 | `c6consts.py` | C6's constants conjunct, checked against `reference/poseidon_bn254.py` |
 | `History.lean` | `historyEvents` of a valid write log is a model run ending at the deployment slot |
 | `Mono.lean` | the trace, and so every bad event, only grows along a run |
+| `C9Guard.lean` | with C9, an approved spend's proof is 256 bytes that `Groth16Accepts`, which P3 needs |
