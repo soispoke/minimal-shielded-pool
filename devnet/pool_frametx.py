@@ -26,21 +26,24 @@ proof bytes, gas, fees and the exact tuple. The tuple's slot is read from EIP-78
 `slotNumber`; timestamp derivation is intentionally unsupported.
 
 Usage (append --dry-run to simulate without submitting):
-  pool_frametx.py <rpc> config.json fixture.json shield   <funded-private-key>
-  pool_frametx.py <rpc> config.json fixture.json publish  <funded-private-key> [--epoch N]
-  pool_frametx.py <rpc> config.json fixture.json transfer <unused>
-  pool_frametx.py <rpc> config.json fixture.json withdraw <unused>
-  pool_frametx.py ... transfer|withdraw <unused> --action-target 0x... \
+  pool_frametx.py <rpc> config.json fixture.json shield
+  pool_frametx.py <rpc> config.json fixture.json publish [--epoch N]
+  pool_frametx.py <rpc> config.json fixture.json transfer
+  pool_frametx.py <rpc> config.json fixture.json withdraw
+  pool_frametx.py ... transfer|withdraw --action-target 0x... \
       --action-call 0x... --action-gas N --action-state-gas N
-  pool_frametx.py ... withdraw <unused> --no-tail
+  pool_frametx.py ... withdraw --no-tail
 
-Spend signing keys come from the fixture's proof-bound
+shield and publish pay from a funded account. Its key is read from standard
+input, with a hidden prompt on a terminal, because any local user can read a
+command line. Spend signing keys come from the fixture's proof-bound
 `authorizer_private_key`. `--root-slot N` supplies the consensus slot in which
 `publishEpochRoot(epoch)` committed the root. `--allow-failed-claim` sends a
 withdrawal whose default claim tail is expected to revert, leaving
 withdrawalCredit for a later claim. Negative-vector flags include
 `--flip-proof`, `--nonce-keys`, `--settle-gas`, and `--sender`.
 """
+import getpass
 import json
 import os
 import subprocess
@@ -783,8 +786,21 @@ def wait_published_slot(url, rcpt, timeout=180):
     return int(slot, 0) if isinstance(slot, str) else int(slot)
 
 
+def funded_key():
+    """The shield or publish payer's key, from standard input: a hidden prompt
+    on a terminal, one line from a pipe."""
+    line = getpass.getpass("funded private key: ") if sys.stdin.isatty() else sys.stdin.readline()
+    try:
+        return keys.PrivateKey(bytes.fromhex(line.strip().removeprefix("0x")))
+    except ValueError:
+        raise SystemExit("standard input did not hold a private key") from None
+
+
 def main():
-    url, cfg_path, fix_path, op, priv = sys.argv[1:6]
+    url, cfg_path, fix_path, op = sys.argv[1:5]
+    if len(sys.argv) > 5 and not sys.argv[5].startswith("--"):
+        raise SystemExit("the CLI no longer takes a key argument, which other local users could "
+                         "read: shield and publish read the funded key from standard input")
     cfg = json.loads(open(cfg_path).read())
     fix = json.loads(open(fix_path).read())
     pool = int(cfg["pool"], 16)
@@ -803,14 +819,13 @@ def main():
             raise SystemExit(f"spends require claimGas/claimStateGas matching {POOL_PROFILE}")
     omit_tail = "--no-tail" in sys.argv
     try:
-        action = action_options(sys.argv[6:])
+        action = action_options(sys.argv[5:])
     except ValueError as error:
         raise SystemExit(str(error)) from None
     if omit_tail and action is not None:
         raise SystemExit("--no-tail cannot be combined with action options")
     if (action is not None or omit_tail) and op not in ("transfer", "withdraw"):
         raise SystemExit("action options and --no-tail are valid only for transfer or withdraw")
-    pk = keys.PrivateKey(bytes.fromhex(priv.removeprefix("0x")))
     dry = "--dry-run" in sys.argv
     sender_override = None
     if "--sender" in sys.argv:
@@ -941,7 +956,7 @@ def main():
         check_shield_fixture(url, pool, cfg["chainId"], fix, leaf, prior_root)
         calldata = cast_calldata("shield(bytes32)", inner)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
-        rcpt = build_and_send(url, pk, pool, value, calldata, dry_run=dry)
+        rcpt = build_and_send(url, funded_key(), pool, value, calldata, dry_run=dry)
         if not dry and rcpt:
             landed = shield_leaf(rcpt, pool)
             print(f"SHIELD_LEAF {landed}", flush=True)
@@ -955,7 +970,7 @@ def main():
         # the Hegotá mempool forever when a non-frame tx fails to apply.
         calldata = cast_calldata("publishEpochRoot(uint64)", str(epoch_override))
         print(f"publishEpochRoot({epoch_override}) via frame tx -> pool {cfg['pool']}")
-        rcpt = build_and_send(url, pk, pool, 0, calldata, dry_run=dry)
+        rcpt = build_and_send(url, funded_key(), pool, 0, calldata, dry_run=dry)
         if not dry and rcpt:
             slot = wait_published_slot(url, rcpt)
             print(f"ROOT_SLOT {slot}", flush=True)

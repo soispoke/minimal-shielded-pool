@@ -100,7 +100,8 @@ def early_guards():
                 path.write_text(json.dumps(settings))
                 configs[(profile, label)] = str(path)
         base = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "RPC_URL": "offline",
-                "DEPLOYER_PK": "0x01", "ALLOW_TESTBED_SETUP": "1", "SMOKE_OUTPUT": str(Path(tmp, "new.json")),
+                "DEPLOYER_KEYSTORE": str(Path(tmp, "keystore")), "DEPLOYER_PASSWORD_FILE": str(Path(tmp, "pw")),
+                "ALLOW_TESTBED_SETUP": "1", "SMOKE_OUTPUT": str(Path(tmp, "new.json")),
                 "FAKE_CONFIG_default": configs[("default", "pinned")],
                 "FAKE_CONFIG_libsmall": configs[("libsmall", "pinned")]}
         existing = Path(tmp, "existing.json")
@@ -120,6 +121,23 @@ def early_guards():
         assert "REACHED" in result.stderr, result.stderr[-400:]
         checked += 1
     return checked
+
+
+def keys_off_command_lines():
+    """Any local user can read a process's arguments, so no key may be one.
+    forge and cast sign from a keystore named in the environment, and the CLI
+    reads the funded key from standard input, filled by the builtin printf."""
+    scripts = sorted(SCRIPT.parent.glob("*.sh")) + sorted((SCRIPT.parent.parent / "wallet").glob("*.sh"))
+    for script in scripts:
+        assert "--private-key" not in script.read_text(), script
+    uses = [line.strip() for line in SCRIPT.read_text().splitlines() if re.search(r"\$DEPLOYER_KEY\b", line)]
+    assert uses == ["funded_key() { printf '%s\\n' \"$DEPLOYER_KEY\"; }"], uses
+    cli = SCRIPT.parent / "pool_frametx.py"
+    for op in ("shield", "publish", "transfer", "withdraw"):
+        old = subprocess.run([sys.executable, str(cli), "http://127.0.0.1:1", "cfg.json", "fix.json", op, "01" * 32],
+                             capture_output=True, text=True)
+        assert old.returncode != 0 and "no longer takes a key argument" in old.stderr, (op, old.stderr[-300:])
+    return len(scripts) + 2
 
 
 def real_forge_settings():
@@ -174,9 +192,11 @@ def main():
             assert accepts(calls[kind], env) == expected, (kind, env)
     calls = call_sites()
     guards = early_guards() + real_forge_settings()
+    key_checks = keys_off_command_lines()
     print(f"PASS: {len(cases)} deployment-check cases; mismatched code, wrong Poseidon addresses "
           "and failed reads are rejected even when an earlier line fails and a later one passes; "
-          f"{calls} call sites refuse on failure; {guards} early-guard checks stop before cast or an unpinned build")
+          f"{calls} call sites refuse on failure; {guards} early-guard checks stop before cast or an unpinned build; "
+          f"{key_checks} checks keep keys off command lines")
 
 
 if __name__ == "__main__":
