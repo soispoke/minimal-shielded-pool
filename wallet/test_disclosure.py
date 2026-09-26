@@ -274,6 +274,28 @@ def main():
             assert result.returncode != 0 and expected in result.stderr, (extra, result.stderr[-300:])
             checked += 1
 
+    # Receipts are created readable only by their owner, and never replace an
+    # existing file or follow a link planted at the output path.
+    import os
+    import stat
+    with tempfile.TemporaryDirectory() as tmp:
+        old = os.umask(0o022)
+        try:
+            d.write_new_private(Path(tmp, "r.json"), "{}")
+        finally:
+            os.umask(old)
+        assert stat.S_IMODE(Path(tmp, "r.json").stat().st_mode) == 0o600
+        Path(tmp, "target").write_text("keep")
+        Path(tmp, "link").symlink_to(Path(tmp, "target"))
+        for existing in ("r.json", "link"):
+            try:
+                d.write_new_private(Path(tmp, existing), "new")
+            except d.ReceiptError:
+                checked += 1
+            else:
+                raise AssertionError(f"export replaced {existing}")
+        assert Path(tmp, "target").read_text() == "keep" and Path(tmp, "r.json").read_text() == "{}"
+
     print(f"PASS: {checked} disclosure checks: honest receipts verify; altered keys, positions, values, "
           "epochs, transactions, chains and pools are rejected")
 

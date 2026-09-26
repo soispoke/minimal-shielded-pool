@@ -15,6 +15,7 @@ who presents it or where the funds came from before the deposit.
 """
 import argparse
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -270,6 +271,17 @@ def _verify(chain, receipt, pool_check):
     return {"chainId": chain_id, "pool": f"0x{pool:040x}", "notes": notes, "spends": summary}
 
 
+def write_new_private(path, text):
+    """Create path readable only by its owner, refusing any existing file or link.
+    A receipt is shared on purpose, not with every account on the machine."""
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        raise ReceiptError(f"{path} exists") from None
+    with os.fdopen(fd, "w") as f:
+        f.write(text)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("command", choices=["export", "verify"])
@@ -296,7 +308,7 @@ def main():
                 only = {int(c, 16) for c in chosen}
             receipt = export(chain, int(cfg["chainId"]), int(cfg["pool"], 16),
                              json.loads(Path(args.fixture).read_text()), only, int(cfg.get("deploymentBlock", 0)))
-            Path(args.output).write_text(json.dumps(receipt, indent=1) + "\n")
+            write_new_private(args.output, json.dumps(receipt, indent=1) + "\n")
             print(f"wrote {args.output}: {len(receipt['notes'])} notes")
         else:
             sys.path.insert(0, str(HERE.parent / "devnet"))
