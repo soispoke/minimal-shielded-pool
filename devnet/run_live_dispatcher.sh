@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # Deploy the single supported minimal-pool architecture to the ethrex testnet.
-# Required: RPC_URL, DEPLOYER_PK. The repository key is a single-party testbed
+# Required: RPC_URL, DEPLOYER_KEYSTORE (a Foundry keystore file, made once with
+# `cast wallet import NAME --interactive`) and DEPLOYER_PASSWORD_FILE (its
+# password, readable only by you). No key goes on a command line, where any
+# local user could read it. The repository key is a single-party testbed
 # setup, so public-testnet use must explicitly set ALLOW_TESTBED_SETUP=1.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 RPC=${RPC_URL:?set RPC_URL}
-: "${DEPLOYER_PK:?set DEPLOYER_PK}"
+: "${DEPLOYER_KEYSTORE:?set DEPLOYER_KEYSTORE to a Foundry keystore file}"
+: "${DEPLOYER_PASSWORD_FILE:?set DEPLOYER_PASSWORD_FILE to its password file}"
+# forge and cast sign with the keystore these name.
+export ETH_KEYSTORE=$DEPLOYER_KEYSTORE ETH_PASSWORD=$DEPLOYER_PASSWORD_FILE
 [[ ${ALLOW_TESTBED_SETUP:-0} == 1 ]] || {
   echo "refusing deployment: set ALLOW_TESTBED_SETUP=1 for the disposable testnet key" >&2
   echo "a production deployment requires a separately verified multi-party zkey" >&2
@@ -77,12 +83,17 @@ HEAD=$(cast rpc --rpc-url "$RPC" eth_getBlockByNumber latest false)
   echo "RPC does not expose EIP-7843 slotNumber" >&2; exit 1;
 }
 
-DEPLOYER=$(cast wallet address --private-key "$DEPLOYER_PK")
+DEPLOYER=$(cast wallet address)
+# The CLI signs frame transactions itself. It gets the key once, decrypted into
+# this shell, and reads it from a pipe that the builtin printf fills.
+DEPLOYER_KEY=$(CAST_UNSAFE_PASSWORD=$(cat "$DEPLOYER_PASSWORD_FILE") cast wallet decrypt-keystore \
+  --keystore-dir "$(dirname "$DEPLOYER_KEYSTORE")" "$(basename "$DEPLOYER_KEYSTORE")" | awk '{print $NF}')
+funded_key() { printf '%s\n' "$DEPLOYER_KEY"; }
 echo "==> deployer $DEPLOYER"
 cast balance "$DEPLOYER" --rpc-url "$RPC" --ether || true
 
 echo "==> Groth16 verifier (TESTBED zkey)"
-VERIFIER=$(forge create --root "$BN" --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "${PRICE[@]}" \
+VERIFIER=$(forge create --root "$BN" --rpc-url "$RPC" "${PRICE[@]}" \
   --gas-limit 6000000 --broadcast src/Groth16Verifier.sol:Groth16Verifier | deployed)
 VERIFIER_CODE=$(forge inspect --root "$BN" src/Groth16Verifier.sol:Groth16Verifier deployedBytecode)
 [[ $(cast code "$VERIFIER" --rpc-url "$RPC") == "$VERIFIER_CODE" ]] || {
@@ -91,9 +102,9 @@ VERIFIER_CODE=$(forge inspect --root "$BN" src/Groth16Verifier.sol:Groth16Verifi
 echo "    verifier=$VERIFIER"
 
 echo "==> immutable Poseidon libraries"
-T3=$(FOUNDRY_PROFILE=libsmall forge create --root "$BN" --rpc-url "$RPC" --private-key "$DEPLOYER_PK" \
+T3=$(FOUNDRY_PROFILE=libsmall forge create --root "$BN" --rpc-url "$RPC" \
   "${PRICE[@]}" --gas-limit 12500000 --broadcast src/PoseidonT3.sol:PoseidonT3 | deployed)
-T4=$(FOUNDRY_PROFILE=libsmall forge create --root "$BN" --rpc-url "$RPC" --private-key "$DEPLOYER_PK" \
+T4=$(FOUNDRY_PROFILE=libsmall forge create --root "$BN" --rpc-url "$RPC" \
   "${PRICE[@]}" --gas-limit 16000000 --broadcast src/PoseidonT4.sol:PoseidonT4 | deployed)
 T3_CODE=$(FOUNDRY_PROFILE=libsmall forge inspect --root "$BN" src/PoseidonT3.sol:PoseidonT3 deployedBytecode)
 T4_CODE=$(FOUNDRY_PROFILE=libsmall forge inspect --root "$BN" src/PoseidonT4.sol:PoseidonT4 deployedBytecode)
@@ -102,7 +113,7 @@ verify_library_runtime "$T3" "$T3_CODE" || { echo "PoseidonT3 runtime mismatch";
 verify_library_runtime "$T4" "$T4_CODE" || { echo "PoseidonT4 runtime mismatch"; exit 1; }
 
 echo "==> settlement logic"
-LOGIC=$(forge create --root "$BN" --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "${PRICE[@]}" \
+LOGIC=$(forge create --root "$BN" --rpc-url "$RPC" "${PRICE[@]}" \
   --gas-limit 14000000 --broadcast src/ShieldedPoolLogic.sol:ShieldedPoolLogic \
   --constructor-args "$T3" "$T4" | deployed)
 LOGIC_BYTECODE=$(forge inspect --root "$BN" src/ShieldedPoolLogic.sol:ShieldedPoolLogic bytecode)
@@ -118,7 +129,7 @@ echo "==> immutable dispatcher/pool"
 # The pinned initcode, not a fresh compile, linked to the verified logic and verifier.
 DISP_ARGS=$(cast abi-encode 'f(address,address)' "$LOGIC" "$VERIFIER")
 DISP_INIT="$(cat build/shielded_pool_dispatcher_init.hex)${DISP_ARGS#0x}"
-POOL=$(cast send --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "${PRICE[@]}" --gas-limit 4000000 \
+POOL=$(cast send --rpc-url "$RPC" "${PRICE[@]}" --gas-limit 4000000 \
   --create "$DISP_INIT" --json | addr_of)
 verify_created_runtime "$POOL" "$DISP_INIT" || {
   echo "dispatcher runtime mismatch" >&2; exit 1;
@@ -129,7 +140,7 @@ DOMAIN=$(cast call "$POOL" 'domain(uint64)(bytes32)' 0 --rpc-url "$RPC")
 echo "    pool=$POOL source0=$SOURCE0 domain=$DOMAIN"
 
 echo "==> RejectEther recipient (starts rejecting so a seed claim can leave credit)"
-REJECTER=$(forge create --root "$BN" --rpc-url "$RPC" --private-key "$DEPLOYER_PK" "${PRICE[@]}" \
+REJECTER=$(forge create --root "$BN" --rpc-url "$RPC" "${PRICE[@]}" \
   --gas-limit 1000000 --broadcast test/DispatcherPool.t.sol:RejectEther | deployed)
 echo "    rejecter=$REJECTER"
 
@@ -151,14 +162,14 @@ with open("deploy_config.json", "w") as f:
 PY
 
 echo "==> shield fixture note"
-python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" shield "$DEPLOYER_PK"
+funded_key | python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" shield
 
 # Publish the current tree root and echo the EIP-7843 slot its block landed in. Each
 # spend proof is bound to the root that existed when it was generated, so a spend that
 # changes the tree invalidates the root the next one needs: the transfer and the withdraw
 # are bound to different roots and each needs its own publication.
 publish_root() {
-  python3 -u pool_frametx.py "$RPC" deploy_config.json deploy_config.json publish "$DEPLOYER_PK" --epoch 0 \
+  funded_key | python3 -u pool_frametx.py "$RPC" deploy_config.json deploy_config.json publish --epoch 0 \
     | tee /dev/stderr \
     | sed -n 's/^ROOT_SLOT //p' | tail -1
 }
@@ -214,7 +225,7 @@ echo "    root slot=$ROOT_SLOT_DEC (EIP-7843 slotNumber, not block timestamp)"
 # SPEND=0 skips them for a deployment that is only publishing a pool.
 if [[ ${SPEND:-1} == 1 ]]; then
   echo "==> transfer (shielded spend, note -> note)"
-  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" transfer "$DEPLOYER_PK"
+  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" transfer
 
   # The transfer inserted two commitments, so the root the withdraw proof was generated
   # against is the post-transfer one, not the post-shield one already published. Publish
@@ -235,7 +246,7 @@ PY
   # credit_before + publicAmount check is not vacuously 0 + publicAmount.
   # Alice's change exits to the same recipient; sinks do not change the root.
   echo "==> seed prior credit (withdraw_seed claim expected to revert)"
-  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw "$DEPLOYER_PK" \
+  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw \
     --spend-key withdraw_seed --allow-failed-claim
 
   RECIPIENT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["recipient"])' "$SMOKE_OUTPUT")
@@ -244,12 +255,12 @@ PY
   CREDIT_BEFORE=$(cast_uint "$(cast call "$POOL" 'withdrawalCredit(address)(uint256)' "$RECIPIENT" --rpc-url "$RPC")")
   [[ "$CREDIT_BEFORE" == "$SEED_AMOUNT" && "$CREDIT_BEFORE" != 0 ]] || {
     echo "seed did not leave expected credit: got $CREDIT_BEFORE want $SEED_AMOUNT" >&2; exit 1; }
-  cast send "$REJECTER" 'setReject(bool)' false --rpc-url "$RPC" --private-key "$DEPLOYER_PK" \
+  cast send "$REJECTER" 'setReject(bool)' false --rpc-url "$RPC" \
     "${PRICE[@]}" --gas-limit 100000 >/dev/null
   BEFORE=$(cast_uint "$(cast balance "$RECIPIENT" --rpc-url "$RPC")")
   EXPECTED=$(python3 -c 'import sys; print(int(sys.argv[1]) + int(sys.argv[2]))' "$CREDIT_BEFORE" "$PUBLIC_AMOUNT")
   echo "==> withdraw (shielded spend + claim, note -> recipient $RECIPIENT, expecting +$EXPECTED wei including prior credit $CREDIT_BEFORE)"
-  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw "$DEPLOYER_PK"
+  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw
   AFTER=$(cast_uint "$(cast balance "$RECIPIENT" --rpc-url "$RPC")")
   CREDIT_AFTER=$(cast_uint "$(cast call "$POOL" 'withdrawalCredit(address)(uint256)' "$RECIPIENT" --rpc-url "$RPC")")
   # Balances outgrow bash's 64-bit arithmetic after a few ETH, so subtract in python.

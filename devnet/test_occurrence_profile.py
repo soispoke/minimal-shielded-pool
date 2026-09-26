@@ -13,6 +13,7 @@ import pool_frametx as builder
 from gas_profile import POOL_PROFILE, PREVIOUS_POOL_PROFILE
 
 ROOT = Path(__file__).resolve().parent.parent
+FUNDED = "01" * 32
 sys.path.insert(0, str(ROOT / "wallet"))
 import wallet as w  # noqa: E402
 
@@ -36,7 +37,7 @@ def check_profile_labels():
                 result = subprocess.run([
                     sys.executable, str(ROOT / "devnet/pool_frametx.py"),
                     "http://127.0.0.1:1", str(path), str(ROOT / "wallet/smoke_fixture.json"),
-                    operation, "01" * 32, "--dry-run",
+                    operation, "--dry-run",
                 ], capture_output=True, text=True)
                 assert result.returncode != 0, (profile, operation)
                 assert f"{operation} requires profile={POOL_PROFILE}" in result.stderr, result.stderr
@@ -181,7 +182,7 @@ def check_cli_runs_deployed_gate():
 
     for operation in ("shield", "transfer", "withdraw"):
         argv = ["pool_frametx.py", "http://node", str(cfg_path),
-                str(ROOT / "wallet/smoke_fixture.json"), operation, "01" * 32]
+                str(ROOT / "wallet/smoke_fixture.json"), operation]
         with mock.patch.object(builder, "rpc", rpc), mock.patch.object(sys, "argv", argv), \
                 contextlib.redirect_stdout(io.StringIO()):
             try:
@@ -217,13 +218,13 @@ def check_shield_binds_fixture():
             cfg_path, fix_path = Path(tmp, "config.json"), Path(tmp, "fixture.json")
             cfg_path.write_text(json.dumps(config))
             fix_path.write_text(json.dumps(fix))
-            argv = ["pool_frametx.py", "http://node", str(cfg_path), str(fix_path), "shield",
-                    "01" * 32, *extra]
+            argv = ["pool_frametx.py", "http://node", str(cfg_path), str(fix_path), "shield", *extra]
             with mock.patch.object(builder, "rpc", rpc), \
                     mock.patch.object(builder, "check_deployed_profile"), \
                     mock.patch.object(builder, "build_and_send",
                                       lambda *a, **k: sent.append(a) or receipt(*landed)), \
-                    mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
+                    mock.patch.object(sys, "argv", argv), mock.patch.object(sys, "stdin", io.StringIO(FUNDED + "\n")), \
+                    contextlib.redirect_stdout(io.StringIO()):
                 try:
                     builder.main()
                 except SystemExit as error:
@@ -232,6 +233,8 @@ def check_shield_binds_fixture():
 
     error, sent = run(fixture)
     assert error is None and len(sent) == 1, error
+    # The funded key comes from standard input, not the command line.
+    assert sent[0][1].to_hex() == "0x" + FUNDED, sent[0][1]
     other_pool = f"0x{pool ^ 1:040x}"
     refused = {
         "another chain": (fixture, (0, 0, empty), dict(cfg, chainId=chain_id + 1), "not 0x"),
