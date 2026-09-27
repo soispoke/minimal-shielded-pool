@@ -213,9 +213,10 @@ else's transaction.
 **C2c Approval completeness.** In every reachable state, the pool approves every transaction with
 `Acc(A, c, tx)` that is valid up to frame 1 (EIP-8141's static rules and gas
 caps, EIP-8250's decoding rules, EIP-1559's fee-field checks, the fee caps
-against the base fee, each gas dimension's reservation
-against the block's remaining gas, room under the block's RLP size limit
-(EIP-7934), the chain ID, the nonce sequences,
+against the base fee, room in the open block under every per-block limit for
+the transaction's whole execution (each gas dimension's reservation, EIP-7934's
+RLP size and EIP-7928's access-list items, among others), the chain ID, the
+nonce sequences,
 signature validation and frame 0),
 with frame 1 limits of at least 216,141 execution gas (the measured minimum
 under `G`) and 195,840 state gas (two first-use keys) and

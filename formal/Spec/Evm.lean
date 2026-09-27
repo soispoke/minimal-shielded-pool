@@ -168,11 +168,11 @@ under every consensus rule. -/
 opaque ValidTx : ChainState → RawTx → Prop
 /-- The validity conditions frame 1 and later frames do not decide: EIP-8141's
 static rules and gas caps, EIP-8250's decoding rules, EIP-1559's fee-field
-checks, the fee caps against the base fee, the reservations
-of each gas dimension against the block's remaining gas, room for the
-transaction under the block's RLP size limit (EIP-7934), the chain ID,
-EIP-8250's nonce sequences, signature validation, and success of every frame
-before frame 1. -/
+checks, the fee caps against the base fee, room in the open block under every
+per-block limit for the transaction's whole execution (each gas dimension's
+reservation, EIP-7934's RLP size and EIP-7928's access-list items, among
+others), the chain ID, EIP-8250's nonce sequences, signature validation, and
+success of every frame before frame 1. -/
 opaque PreValid : ChainState → RawTx → Prop
 /-- Every `APPROVE` that does not revert its frame, executed while `t` runs from
 `st` by code whose `ADDRESS` is the pool's, in any frame: its frame index and
