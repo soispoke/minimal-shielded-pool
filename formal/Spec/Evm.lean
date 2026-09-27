@@ -36,8 +36,9 @@ structure ChainState where
   rootWrites : List (ℕ × ℕ × ℕ × ℕ)
   /-- every persisting `CALL`, `CALLCODE`, `CREATE` or `CREATE2` made by code whose
   `ADDRESS` is each address, other than a `CALL` with empty calldata and nonzero
-  value: the callee or created address, the value, and the calldata or initcode -/
-  extCalls : ℕ → List (ℕ × ℕ × List UInt8)
+  value: whether it is a `CALL`, the callee or created address, the value, and
+  the calldata or initcode -/
+  extCalls : ℕ → List (Bool × ℕ × ℕ × List UInt8)
   slot : ℕ
   rest : ChainRest
 
@@ -95,7 +96,7 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
     st.storage RECENT_ROOT (K (rrKeyMsg (sourceId A e) (sl % 8192))) =
       K (rrEntryMsg (sourceId A e) sl r)) ∧
   (∀ r, st.sentTo A r = s.paid r) ∧
-  (∀ c ∈ st.extCalls A, c.1 = RECENT_ROOT ∧ c.2.1 = 0 ∧ c.2.2.length = 64) ∧
+  (∀ c ∈ st.extCalls A, c.1 = true ∧ c.2.1 = RECENT_ROOT ∧ c.2.2.1 = 0 ∧ c.2.2.2.length = 64) ∧
   (∀ w ∈ st.rootWrites, w.1 = A → w.2.1 < 2 ^ 64 ∧ (sourceId A w.2.1, w.2.2.1, w.2.2.2) ∈ s.roots) ∧
   st.slot = s.slot
 

@@ -317,8 +317,9 @@ count, current and final roots, the logs of appended leaves, the latest
 recent-root entry of each of the pool's sources in the usable window, the ETH
 paid to each address by plain calls with empty calldata (so a payout that runs
 code of the pool's choosing at the recipient breaks refinement), that the pool
-made no call or creation other than those plain payouts and zero-value 64-byte
-root writes to `0x8272`, each of which the model's publication also makes
+made no call or creation other than those plain payouts and zero-value
+64-byte `CALL`s to `0x8272`, and that each EIP-8272 write it made is one the
+model's publication also makes
 (static and delegate calls aside: code it delegates to runs with the pool's
 address, so its calls are counted too, and the pool sets no state elsewhere
 that could redirect a later payout), and the slot. Refinement does
