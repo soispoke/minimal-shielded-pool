@@ -144,7 +144,7 @@ the events its steps denote form a run of the model whose state the chain
 shows, or the run has a bad event; if the model cannot follow some event, the
 run up to and including that event has a bad event, which voids the
 conclusion for every user from then on. `receive` accounts for exactly the ETH
-that arrives other than by a call. -/
+that arrives other than by a call into the pool or as a gas refund. -/
 def Refines : Prop :=
   ∀ d ext, Honest d → ∀ h, ChainRun d h →
     ((∃ s, Run (poolOf d ext) (modelEvents d h) s ∧

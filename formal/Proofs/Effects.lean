@@ -1,6 +1,6 @@
 import Proofs.Model
 
-/-! C5j, C5k, C5l and `StepFunctional` from C1, and `model_theorem`. -/
+/-! C5j to C5n and `StepFunctional` from C1, and `model_theorem`. -/
 
 namespace MSP
 noncomputable section
@@ -16,7 +16,10 @@ theorem tr_query_in_trace (P : Pool) (evs : List Event) (s : PoolState) (hcap : 
   show _ ∈ treeQueries 19 _ ++ treeQueries 19 _ ++ [_]
   exact List.mem_append_right _ (List.mem_singleton_self _)
 
-theorem c5k (P : Pool) : C5k P := by
+theorem c5k_exhibit (P : Pool) : ∀ evs s, Run P evs s → ∀ e ≤ s.E, e < 2 ^ 64 →
+    BadEvent P evs s ∨
+    Step P s (.publish e)
+      { s with roots := s.roots ++ [(sourceId P.A e, s.slot, (TR (s.leaves e)).val)] } := by
   intro evs s hrun e he he64
   have finv := finInv_run P evs s hrun
   have hcap := capInv_run P evs s hrun
@@ -379,12 +382,15 @@ end MSP
 
 namespace MSP
 
+noncomputable section
+open Classical
+
 theorem c5m (P : Pool) : C5m P := by
   intro s e s' hs
   cases e with
   | shield inr v => obtain ⟨-, -, -, -, -, rfl⟩ := hs; show (s.append _).roots = _; unfold PoolState.append; split_ifs <;> rfl
   | publish e => trivial
-  | rootWrite a salt r => trivial
+  | rootWrite a salt r => obtain ⟨-, -, rfl⟩ := hs; exact ⟨_, rfl⟩
   | claim r => obtain ⟨-, -, rfl⟩ := hs; rfl
   | receive v => subst hs; rfl
   | tick => subst hs; rfl
@@ -393,8 +399,54 @@ theorem c5m (P : Pool) : C5m P := by
     dsimp only
     split_ifs <;> first | rfl | (unfold PoolState.append; split_ifs <;> rfl)
 
+theorem c5k (P : Pool) : C5k P := ⟨fun _ _ _ h => ⟨h.2.1, h.1⟩, c5k_exhibit P⟩
+
+theorem append_E (s : PoolState) (new : List (F × ℕ)) :
+    (s.append new).E = if rollsOver s new.length then s.E + 1 else s.E := by
+  unfold PoolState.append; split_ifs <;> rfl
+
+theorem newLeaves_length (sd : SettleData) (w : Witness) : (newLeaves sd w).length = newCount sd := by
+  unfold newLeaves newCount; split_ifs <;> simp
+
+theorem c5n (P : Pool) : C5n P := by
+  intro s e s' h
+  cases e with
+  | shield inr v =>
+    obtain ⟨-, -, -, -, -, rfl⟩ := h
+    show (s.append _).E = s.E ∨ ((s.append _).E = s.E + 1 ∧ rollsOver s 1)
+    rw [append_E]; simp only [List.length_singleton]
+    split_ifs with hr
+    · exact Or.inr ⟨rfl, hr⟩
+    · exact Or.inl rfl
+  | publish e => obtain ⟨-, -, -, rfl⟩ := h; exact Or.inl rfl
+  | rootWrite a salt r => obtain ⟨-, -, rfl⟩ := h; exact Or.inl rfl
+  | claim r => obtain ⟨-, -, rfl⟩ := h; exact Or.inl rfl
+  | receive v => subst h; exact Or.inl rfl
+  | tick => subst h; exact Or.inl rfl
+  | spend tx g =>
+    obtain ⟨-, -, -, -, -, -, -, rfl⟩ := h
+    by_cases hp : SettlePre s P (settleData tx)
+    · have key : ∀ t : PoolState, t.E = (PoolState.append
+          { s with keys := s.keys ++ tx.nonceKeys,
+                   spent := s.spent ++ inputsOf (settleData tx) (witOf (extOf P tx)),
+                   balance := s.balance - g } (newLeaves (settleData tx) (witOf (extOf P tx)))).E →
+          t.E = s.E ∨ (t.E = s.E + 1 ∧ SettlePre s P (settleData tx) ∧
+            rollsOver s (newCount (settleData tx))) := by
+        intro t ht
+        rw [ht, append_E, newLeaves_length]
+        split_ifs with hr
+        · exact Or.inr ⟨rfl, hp, hr⟩
+        · exact Or.inl rfl
+      simp only [if_pos hp]
+      split_ifs with h0
+      · exact key _ rfl
+      · exact key _ rfl
+    · simp only [if_neg hp]; first | exact Or.inl rfl | exact Or.inl trivial | simp
+
 theorem model_theorem : ModelTheorem :=
-  model_theorem_of (fun P h => c5j P h) (fun P _ => c5k P) (fun P h => c5l P h) c5m
+  model_theorem_of (fun P h => c5j P h) (fun P _ => c5k P) (fun P h => c5l P h) c5m c5n
     step_functional
+
+end
 
 end MSP

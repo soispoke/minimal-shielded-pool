@@ -140,7 +140,7 @@ inductive Event
   | rootWrite (a salt root : ℕ)
   /-- `claimWithdrawal(r)`, paying `r` -/
   | claim (r : ℕ)
-  /-- ETH reaching the pool other than by a call into it (as `eventsOf` defines one), or held at deployment -/
+  /-- ETH reaching the pool other than by a call into it (as `eventsOf` defines one) or as a gas refund, or held at deployment -/
   | receive (v : ℕ)
   /-- a frame transaction whose frame 1 the pool approved, and the gas the pool paid -/
   | spend (tx : FrameTx) (gasPaid : ℕ)
@@ -424,29 +424,44 @@ def C5j (P : Pool) : Prop :=
       (s'.leaves s'.E).getD i 0 = cm (w.oi k) (w.ov k) ∧
       (s'.vals s'.E).getD i 0 = (w.ov k).val ∧ (⟨s'.E, i⟩ : Occ) ∉ s'.spent)
 
-/-- C5k. Anyone can publish an existing epoch `e < 2 ^ 64`, and publishing writes
-exactly `TR` of all of that epoch's leaves, changing nothing else. With
-`StepFunctional`, no publish step writes anything else. -/
+/-- C5k. Only an existing epoch `e < 2 ^ 64` can be published; anyone can publish
+one, and publishing writes exactly `TR` of all of that epoch's leaves, changing
+nothing else. With `StepFunctional`, every publish step is this one. -/
 def C5k (P : Pool) : Prop :=
+  (∀ s e s', Step P s (.publish e) s' → e ≤ s.E ∧ e < 2 ^ 64) ∧
   ∀ evs s, Run P evs s → ∀ e ≤ s.E, e < 2 ^ 64 → BadEvent P evs s ∨
     Step P s (.publish e)
       { s with roots := s.roots ++ [(sourceId P.A e, s.slot, (TR (s.leaves e)).val)] }
 
-/-- C5m. Only a publish or another address's write adds an EIP-8272 write: a
-shield, claim, spend, receive or tick leaves the root writes unchanged, so no
-event but publication can replace a published root. -/
+/-- C5m. Only a publish or another address's write adds an EIP-8272 write, the
+latter one write under its own source at the current slot; a shield, claim,
+spend, receive or tick leaves the root writes unchanged. So a published root is
+replaced only by a publication in the same slot, or by a foreign write whose
+source collides with the pool's (a bad event). -/
 def C5m (P : Pool) : Prop :=
   ∀ s e s', Step P s e s' →
     match e with
-    | .publish _ | .rootWrite _ _ _ => True
+    | .publish _ => True
+    | .rootWrite a salt _ => ∃ r, s'.roots = s.roots ++ [(K (addr20 a ++ u256 salt), s.slot, r)]
     | _ => s'.roots = s.roots
+
+/-- C5n. The epoch counter moves only by a rollover: by one, on a shield or a
+settled spend whose new leaves do not fit in the current epoch. -/
+def C5n (P : Pool) : Prop :=
+  ∀ s e s', Step P s e s' →
+    s'.E = s.E ∨
+    (s'.E = s.E + 1 ∧ match e with
+      | .shield _ _ => rollsOver s 1
+      | .spend tx _ => SettlePre s P (settleData tx) ∧ rollsOver s (newCount (settleData tx))
+      | _ => False)
 
 /-- C5l. Value accounting for every event: how the balance, the credits, the
 payouts and what the pool owes change. Nothing but a shield or a receive adds
-value, nothing but a claim pays it out, only a spend's gas leaves the balance
-and only a settled spend's fee leaves what the pool owes, and a settlement's
-credit goes to its recipient. A failing settlement, which C4 excludes in
-bounded runs without a bad event, burns its inputs. -/
+value; value leaves the balance only as a claim's payout (its credit, to its
+recipient) or a spend's gas, and leaves what the pool owes only as a claim's
+payout, a settled spend's fee or a failing settlement's inputs, which C4
+excludes in bounded runs without a bad event; a settlement credits `pub` to its
+recipient. -/
 def C5l (P : Pool) : Prop :=
   ∀ evs s e s', Run P evs s → Step P s e s' → BadEvent P (evs ++ [e]) s' ∨
     match e with
