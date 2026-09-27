@@ -18,15 +18,15 @@
   "formal/Proofs/AuditCommand.lean": "0586c5f3c0aa2bf2e24ead3db7df17a0d1ad6d365a3cdb50899b9b4414dc459c",
   "formal/Proofs/AxiomAudit.lean": "21dc89ae1aa705f7cb3278ec85abed6ce88e6880bc8a2ce87f17dbef65fbf26a",
   "formal/Proofs/CircuitGadgets.lean": "9a27851516ddca61da6f35c846e7eaf64b0df72a50d3d9f4c321857367051a66",
-  "formal/SPEC.md": "ccee41398e47476bf089284bdc805995ccf6978402956dd4507c4426cfaf7f6a",
+  "formal/SPEC.md": "fcbffbc8dc0e20316b2dbca56a37eec56f414321c14ba90c4565258eb7a9a126",
   "formal/Spec.lean": "17eb68c9778dc67e4238112341bb6a6a79c14e781df391761a75a2a5ddf4a58a",
   "formal/Spec/Basic.lean": "3fba49840fd2a60d241cbbb4e4a0381f22ab58d84508b35095b27fb073572b7e",
   "formal/Spec/Circuit.lean": "8c1222907d7709c0c4423896ed1c0aef41ba38843fcc899e4e481438e594e6cf",
-  "formal/Spec/Evm.lean": "abefd5071adca09c6b093dd0d8ca4c0c87fe10fcf6b8e86f41f3b0182d9d08f3",
+  "formal/Spec/Evm.lean": "6aca61b00efdbdebab0f4c4675c11a7ef4788e75a03de57924612b38e3bda261",
   "formal/Spec/FrameTx.lean": "34ac13363452469bf438a4cf55aeb60cf0bd1edb6520aed34aac454c80710e2e",
   "formal/Spec/Hash.lean": "a3e66bc20a289d75094655f75c5ee248bdb3e6db0623a6e6a73393b4bd2bce04",
   "formal/Spec/Main.lean": "84b09adc8b0ee14bec2678d2c058fa4a6c8d15a22f0a9285f38836ee4d779e3b",
   "formal/Spec/Relation.lean": "ef8e29d80b313a39dc0d650591555c0b98e00f647206021dae35879b72ca7c60",
-  "formal/Spec/System.lean": "2e6a5f708fcb864104c8fe3e449a19413aeb3967481ccd7ce1b463cbebcc42c8",
+  "formal/Spec/System.lean": "4b9a17ecb2b929c9338e2d466e02adff25f15323270557661c166399cf6faec0",
   "formal/Spec/Tree.lean": "d269fbc7d37aceb14538e59c3f6f980f2d6e55c53017fb32cd0b679ab8f24254"
 }

@@ -34,11 +34,16 @@ structure ChainState where
   sentTo : ℕ → ℕ → ℕ
   /-- every persisting EIP-8272 write, in order: writer, salt, slot, root word -/
   rootWrites : List (ℕ × ℕ × ℕ × ℕ)
+  /-- every persisting `CALL`, `CALLCODE`, `CREATE` or `CREATE2` made by code whose
+  `ADDRESS` is each address, other than a `CALL` with empty calldata and nonzero
+  value: the callee or created address, the value, and the calldata or initcode -/
+  extCalls : ℕ → List (ℕ × ℕ × List UInt8)
   slot : ℕ
   rest : ChainRest
 
 instance : Nonempty ChainState :=
-  ⟨⟨fun _ => 0, fun _ _ => 0, fun _ _ => [], fun _ _ => 0, [], 0, Classical.choice inferInstance⟩⟩
+  ⟨⟨fun _ => 0, fun _ _ => 0, fun _ _ => [], fun _ _ => 0, [], fun _ => [], 0,
+    Classical.choice inferInstance⟩⟩
 instance : Inhabited ChainState := Classical.inhabited_of_nonempty inferInstance
 
 opaque DeploymentImpl : NonemptyType.{0}
@@ -90,6 +95,7 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
     st.storage RECENT_ROOT (K (rrKeyMsg (sourceId A e) (sl % 8192))) =
       K (rrEntryMsg (sourceId A e) sl r)) ∧
   (∀ r, st.sentTo A r = s.paid r) ∧
+  (∀ c ∈ st.extCalls A, c.1 = RECENT_ROOT ∧ c.2.1 = 0 ∧ c.2.2.length = 64) ∧
   st.slot = s.slot
 
 /-- The model events of a chain step, in execution order: each call into the

@@ -47,7 +47,7 @@ deriving DecidableEq
 /-- D13. Ghost fields are not on chain: they record openings, consumed
 occurrences and cumulative credits, so that claims can name them. `paid`, the
 cumulative payouts, is not in the pool's storage, but `Obs` reads it from the
-ETH the pool sent (`sentTo`). -/
+ETH the pool sent by `CALL`s with empty calldata (`sentTo`). -/
 structure PoolState where
   leaves : ℕ → List F
   /-- ghost: each leaf's value, from its opening -/
@@ -440,9 +440,10 @@ def C5k (P : Pool) : Prop :=
 
 /-- C5m. Only a publish or another address's write adds an EIP-8272 write, the
 latter one write under its own source at the current slot; a shield, claim,
-spend, receive or tick leaves the root writes unchanged. So a published root is
-replaced only by a publication in the same slot, or by a foreign write whose
-source collides with the pool's (a bad event). -/
+spend, receive or tick leaves the root writes unchanged. With C5k and
+determinism, a published root is replaced only by a publication in the same
+slot, or by a foreign write whose source collides with the pool's (a bad
+event). -/
 def C5m (P : Pool) : Prop :=
   ∀ s e s', Step P s e s' →
     match e with
