@@ -26,7 +26,7 @@ def MainTheorem : Prop := C1 ∧ C1c ∧ ModelTheorem ∧ ChainTheorem
 
 /-- What §5 means for the chain: along every chain run of an honest deployment,
 for every extractor, the pool is solvent, no occurrence is consumed twice, and
-every root under one of its sources is a real root of its tree, or some prefix
+every root under the source of an epoch `e < 2 ^ 64` is a real root of its tree, or some prefix
 of the run has a bad event. A bad event, even among queries only the adversary
 chose, voids the conclusion for every user from then on. -/
 def ChainCorollary : Prop :=

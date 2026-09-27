@@ -287,7 +287,7 @@ allow, can call
 `publishEpochRoot(e)` for every `e ≤ E` whose root is nonzero, while `E` is
 below `2^64`, and the call succeeds (`Obs` reads `E` as a whole storage word,
 which exceeds the contract's `uint64` counter only through a degenerate storage
-key, a bad event refinement accounts for); and they can call `claimWithdrawal(r)` for every credit the balance
+key, a bad event refinement accounts for); and they can call `claimWithdrawal(r)` for every recipient `r < 2^160` whose credit the balance
 covers, and the call succeeds unless the first `CALL`, `CALLCODE` or
 `STATICCALL` made by code running at `A` (the dispatcher's `DELEGATECALL` into
 `L` does not count) is a plain `CALL` paying the credit to `r` with at least
@@ -334,7 +334,7 @@ verifier and extractor, from C1) and the chain half (C2, C2c, C6, C8, C9, C10
 and refinement). `Composes` states that the main theorem implies `ChainCorollary`:
 for every extractor, along every run of an honest deployment, the chain shows a
 model state in which the pool is solvent, no occurrence is consumed twice, and
-every root under one of its sources is a real root of its tree, or some prefix
+every root under the source of an epoch `e < 2^64` is a real root of its tree, or some prefix
 of the run has a bad event (for a root, one that may use that source's Keccak
 input, as in C5e). Such a bad event, including one among queries only the
 adversary chose or a failed extraction of its own spend, voids these

@@ -501,7 +501,8 @@ def mkSpend (P : Pool) (e : ℕ) (L : List F) (i : ℕ) (sk ρ v skd ρd f rcp a
 
 /-- Spendability. Whoever holds an opening `(sk, ρ, v)` of an unspent occurrence can spend it
 against any root of its epoch that contains it, for every choice of dummy input,
-fee below the value, recipient and authorizer, as long as the dummy is fresh:
+fee below the value, and recipient and authorizer that are nonzero and below
+`2 ^ 160`, as long as the dummy is fresh:
 the canonical spend is valid and its keys are nonzero and unconsumed. Quantifying over the dummy, rather than asking for
 one, keeps a proof from choosing a dummy whose hashes collide. With C1c and C2c
 the spend is then approved. -/
