@@ -344,9 +344,6 @@ theorem c5i (P : Pool) (hC1 : C1) : C5i P := c5i_of P (c5b P hC1)
 theorem c5c (P : Pool) (hC1 : C1) : C5c P := c5c_of P hC1 (c5b P hC1)
 theorem c4 (P : Pool) (hC1 : C1) : C4 P := c4_of P hC1 (c5b P hC1) (c5c P hC1)
 
-#print axioms c5b
-#print axioms c5i
-#print axioms c4
 
 end
 end MSP

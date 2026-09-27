@@ -1,4 +1,4 @@
-import Proofs.Model
+import Proofs.Effects
 import Proofs.Composition
 import Proofs.CircuitArithmetic
 import Proofs.CircuitGadgets
@@ -21,7 +21,14 @@ elab "assert_standard_axioms " n:ident : command => do
   unless extra.isEmpty do
     throwError "{n} depends on nonstandard axioms: {extra}"
 
-assert_standard_axioms model_theorem
+assert_standard_axioms MSP.model_theorem
+assert_standard_axioms MSP.c5j
+assert_standard_axioms MSP.c5k
+assert_standard_axioms MSP.c5l
+assert_standard_axioms MSP.c5m
+assert_standard_axioms MSP.c5n
+assert_standard_axioms MSP.step_functional
+assert_standard_axioms MSP.run_nodup
 assert_standard_axioms MSP.spent_nodup_of_c5b
 assert_standard_axioms MSP.composes
 assert_standard_axioms MSP.nat_eq_of_field_eq

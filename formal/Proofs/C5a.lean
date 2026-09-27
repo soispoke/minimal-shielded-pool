@@ -136,6 +136,5 @@ theorem c5a (P : Pool) (hC1 : C1) : C5a P := by
   obtain ⟨a, b, c, d, f⟩ := this
   exact ⟨hl.symm, a, b, c, d, f⟩
 
-#print axioms c5a
 end
 end MSP

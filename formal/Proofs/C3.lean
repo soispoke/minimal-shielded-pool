@@ -217,7 +217,5 @@ theorem c3 (P : Pool) (hC1 : C1) : C3 P := by
     rw [hk, u256_inj hk0 hmin h0, u256_inj hk1 hmax h1]
   · rw [← hw2, hroot, ZMod.natCast_zmod_val]
 
-#print axioms c5e
-#print axioms c3
 end
 end MSP

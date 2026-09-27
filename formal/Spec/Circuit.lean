@@ -40,7 +40,8 @@ def C1c : Prop :=
 
 /-- Groth16's verification for the committed key in
 `contracts/vectors/spend_vkey.json`: the eight proof words are coordinates below
-`q` of points `A` and `C` of G1 and `B` of G2, on the curves, in the prime-order
+`q` of points `A` and `C` of G1 and `B` of G2, in EIP-197's encoding (each G2
+coordinate imaginary part first), on the curves, in the prime-order
 subgroups and none at infinity, and the pairing equation holds for the public
 signals. Step 3 defines it from the key. -/
 opaque Groth16Accepts : List UInt8 → F × F × F → Prop

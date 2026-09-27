@@ -87,23 +87,24 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
   (∀ r, st.sentTo A r = s.paid r) ∧
   st.slot = s.slot
 
-/-- The model events of a chain step, in execution order: each original message
-call entering the pool whose calldata selects `shield`, `publishEpochRoot` or
-`claimWithdrawal`, which returns successfully and whose effects persist,
-whether or not it changes state. Include ordinary transaction calls, non-VERIFY
-frame calls and `CALL`s to the pool; exclude execution within VERIFY and calls
-that merely execute the pool's code at another address. Decode the original
-entry's calldata and value before any delegation (a shield's `inner` is its
-calldata word and `v` its `CALLVALUE`); do not decode a second event from the
-pool's `DELEGATECALL` into its logic contract. Each spend, a
+/-- The model events of a chain step, in execution order: each call into the
+pool whose calldata begins with the selector of `shield`, `publishEpochRoot` or
+`claimWithdrawal` and that returns successfully and whose effects persist,
+whether or not it changes state, decoded from that call's own calldata and
+`CALLVALUE` (a shield's `inner` is its calldata word and `v` its `CALLVALUE`).
+A call into the pool is a message call whose recipient is the pool: the
+top-level call of a non-frame transaction whose `to` is the pool, a `CALL`
+whose recipient is the pool, or a non-VERIFY frame whose resolved target is the
+pool; not the pool's own `DELEGATECALL` into its logic, and not another
+contract's `DELEGATECALL` or `CALLCODE` to the pool's code. Then: each spend, a
 transaction whose frame 1 the pool approved, with the gas the pool paid, placed
 at its settlement, before the events of its later frames; each
 EIP-8272 write by another address; `receive` for ETH credited to the pool other
-than by a call to it or as a gas refund; and `tick` at a new slot. Any other
+than by a call into it (as `eventsOf` defines one) or as a gas refund; and `tick` at a new slot. Any other
 successful call must leave what `Obs` reads unchanged. -/
 opaque eventsOf : Deployment → ChainState → ChainState → List Event
 
-/-- ETH credited to the pool in a step other than by a call to it or a gas refund:
+/-- ETH credited to the pool in a step other than by a call into it (as `eventsOf` defines one) or a gas refund:
 priority fees, `SELFDESTRUCT` beneficiaries, withdrawals. -/
 opaque passiveInflow : Deployment → ChainState → ChainState → ℕ
 
@@ -141,8 +142,9 @@ def ReachableChain (d : Deployment) (st : ChainState) : Prop := ∃ h, ChainRun 
 /-- Refinement, which also gives C5f and C7. For every extractor, along every chain run
 the events its steps denote form a run of the model whose state the chain
 shows, or the run has a bad event; if the model cannot follow some event, the
-run up to and including that event has a bad event. `receive` accounts for
-exactly the ETH that arrives other than by a call. -/
+run up to and including that event has a bad event, which voids the
+conclusion for every user from then on. `receive` accounts for exactly the ETH
+that arrives other than by a call into the pool or as a gas refund. -/
 def Refines : Prop :=
   ∀ d ext, Honest d → ∀ h, ChainRun d h →
     ((∃ s, Run (poolOf d ext) (modelEvents d h) s ∧
@@ -192,6 +194,8 @@ def C2c : Prop :=
     t.view.maxCost ≤ st.balance (addrOf d) →
     ValidTx st t ∧ (1, 3) ∈ approvalsIn d st t
 
+/-- The result of `callPool`'s transaction: `ok` if the call to the pool returned
+without reverting, `reverted`, or `outOfGas`. -/
 inductive Outcome | ok | reverted | outOfGas
 deriving DecidableEq, Inhabited
 

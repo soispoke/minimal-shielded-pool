@@ -102,7 +102,9 @@ def newCount (sd : SettleData) : ℕ :=
   (if sd.o1 = (SINK 0).val then 0 else 1) + (if sd.o2 = (SINK 1).val then 0 else 1)
 
 /-- Every revert condition of `settle`: its checks, the ABI decoder's range
-checks, and checked arithmetic on the epoch counter and the credit. -/
+checks, and checked arithmetic on the epoch counter and the credit. The decoder
+checks a calldata field only when it is read, and `settle` never reads
+`rootSlot`; the spend step's `Acc` (A3) bounds it anyway. -/
 def SettlePre (s : PoolState) (P : Pool) (sd : SettleData) : Prop :=
   sd.epoch < 2 ^ 64 ∧ sd.rcp < 2 ^ 160 ∧ sd.auth < 2 ^ 160 ∧
   sd.nf1 ≠ 0 ∧ sd.nf2 ≠ 0 ∧ sd.auth ≠ 0 ∧ sd.domain = (D P.c P.A sd.epoch).val ∧ sd.epoch ≤ s.E ∧
@@ -125,11 +127,10 @@ def newLeaves (sd : SettleData) (w : Witness) : List (F × ℕ) :=
 def inputsOf (sd : SettleData) (w : Witness) : List Occ :=
   ((List.finRange 2).filter fun k => w.v k ≠ 0).map fun k => ⟨sd.epoch, w.idx k⟩
 
-/-- Original message calls entering the pool that return successfully and whose
+/-- Calls into the pool (as `eventsOf` defines them: decoded from the outer call,
+not the pool's `DELEGATECALL` into its logic) that return successfully and whose
 effects persist, whether or not they change state, and the other chain actions
-the pool observes. Function events use the entry's calldata and value before
-delegation, as specified by `eventsOf`; internal delegation does not add another
-event. A reverted call or execution within VERIFY has no function-call event. -/
+the pool observes. A reverted call has no event. -/
 inductive Event
   /-- `shield(inner)` with `msg.value = v` -/
   | shield (inner : F) (v : ℕ)
@@ -139,7 +140,7 @@ inductive Event
   | rootWrite (a salt root : ℕ)
   /-- `claimWithdrawal(r)`, paying `r` -/
   | claim (r : ℕ)
-  /-- ETH reaching the pool other than by a call to it, or held at deployment -/
+  /-- ETH reaching the pool other than by a call into it (as `eventsOf` defines one) or as a gas refund, or held at deployment -/
   | receive (v : ℕ)
   /-- a frame transaction whose frame 1 the pool approved, and the gas the pool paid -/
   | spend (tx : FrameTx) (gasPaid : ℕ)
@@ -319,7 +320,8 @@ def C3 (P : Pool) : Prop :=
 /-- P13's bound: the epoch counter can still roll over, and the balance is a word. -/
 def Bounded (s : PoolState) : Prop := s.E + 1 < 2 ^ 64 ∧ s.balance < 2 ^ 256
 
-/-- C4 over the model: an approved spend's settlement passes every check. -/
+/-- C4 over the model: an approved spend's settlement passes every check unless
+P13's bound fails. -/
 def C4 (P : Pool) : Prop :=
   ∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' →
     BadEvent P (evs ++ [.spend tx g]) s' ∨ ¬ Bounded s ∨ SettlePre s P (settleData tx)
@@ -334,8 +336,8 @@ def C5a (P : Pool) : Prop :=
       ∃ inr, (s.leaves e).getD i 0 = cm inr ((s.vals e).getD i 0 : F)
 
 /-- C5b. Each nonzero-value input of an approved spend is an existing, unspent
-occurrence of the spend's epoch, holding the witness's leaf and value, and a
-spend's two inputs differ. -/
+occurrence of the spend's epoch, holding the witness's leaf and value, and when
+both inputs have nonzero value they are different occurrences. -/
 def C5b (P : Pool) : Prop :=
   ∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' →
     BadEvent P (evs ++ [.spend tx g]) s' ∨
@@ -399,6 +401,87 @@ def C5i (P : Pool) : Prop :=
       (⟨(settleData tx).epoch, (witOf (extOf P tx)).idx k⟩ : Occ) = o →
       BadEventWith P (evs ++ [.spend tx g]) s' (openingQueries P o.e o.i sk ρ v) ∨
       ((witOf (extOf P tx)).sk k = sk ∧ (witOf (extOf P tx)).ρ k = ρ)
+
+/-- `Step` is a function: a state and an event allow at most one next state. With
+it, a claim that exhibits a step from `s` on `e` describes every step from `s`
+on `e`. -/
+def StepFunctional (P : Pool) : Prop :=
+  ∀ s e s₁ s₂, Step P s e s₁ → Step P s e s₂ → s₁ = s₂
+
+/-- C5j. Deposits and settlements insert what they should: a shield inserts its
+commitment, and a settlement that passes its checks inserts each nonzero-value
+output, as a new unspent occurrence holding that commitment and value. -/
+def C5j (P : Pool) : Prop :=
+  (∀ evs s inr v s', Run P evs s → Step P s (.shield inr v) s' →
+    BadEvent P (evs ++ [.shield inr v]) s' ∨
+    ∃ i, (s.leaves s'.E).length ≤ i ∧ i < (s'.leaves s'.E).length ∧
+      (s'.leaves s'.E).getD i 0 = cm inr (v : F) ∧ (s'.vals s'.E).getD i 0 = v ∧
+      (⟨s'.E, i⟩ : Occ) ∉ s'.spent) ∧
+  (∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' → SettlePre s P (settleData tx) →
+    BadEvent P (evs ++ [.spend tx g]) s' ∨
+    let w := witOf (extOf P tx)
+    ∀ k : Fin 2, w.ov k ≠ 0 → ∃ i, (s.leaves s'.E).length ≤ i ∧
+      i < (s'.leaves s'.E).length ∧
+      (s'.leaves s'.E).getD i 0 = cm (w.oi k) (w.ov k) ∧
+      (s'.vals s'.E).getD i 0 = (w.ov k).val ∧ (⟨s'.E, i⟩ : Occ) ∉ s'.spent)
+
+/-- C5k. Only an existing epoch `e < 2 ^ 64` can be published; anyone can publish
+one, and publishing writes exactly `TR` of all of that epoch's leaves, changing
+nothing else. With `StepFunctional`, every publish step is this one. -/
+def C5k (P : Pool) : Prop :=
+  (∀ s e s', Step P s (.publish e) s' → e ≤ s.E ∧ e < 2 ^ 64) ∧
+  ∀ evs s, Run P evs s → ∀ e ≤ s.E, e < 2 ^ 64 → BadEvent P evs s ∨
+    Step P s (.publish e)
+      { s with roots := s.roots ++ [(sourceId P.A e, s.slot, (TR (s.leaves e)).val)] }
+
+/-- C5m. Only a publish or another address's write adds an EIP-8272 write, the
+latter one write under its own source at the current slot; a shield, claim,
+spend, receive or tick leaves the root writes unchanged. So a published root is
+replaced only by a publication in the same slot, or by a foreign write whose
+source collides with the pool's (a bad event). -/
+def C5m (P : Pool) : Prop :=
+  ∀ s e s', Step P s e s' →
+    match e with
+    | .publish _ => True
+    | .rootWrite a salt _ => ∃ r, s'.roots = s.roots ++ [(K (addr20 a ++ u256 salt), s.slot, r)]
+    | _ => s'.roots = s.roots
+
+/-- C5n. The epoch counter moves only by a rollover: by one, on a shield or a
+settled spend whose new leaves do not fit in the current epoch. -/
+def C5n (P : Pool) : Prop :=
+  ∀ s e s', Step P s e s' →
+    s'.E = s.E ∨
+    (s'.E = s.E + 1 ∧ match e with
+      | .shield _ _ => rollsOver s 1
+      | .spend tx _ => SettlePre s P (settleData tx) ∧ rollsOver s (newCount (settleData tx))
+      | _ => False)
+
+/-- C5l. Value accounting for every event: how the balance, the credits, the
+payouts and what the pool owes change. Nothing but a shield or a receive adds
+value; value leaves the balance only as a claim's payout (its credit, to its
+recipient) or a spend's gas, and leaves what the pool owes only as a claim's
+payout, a settled spend's fee or a failing settlement's inputs, which C4
+excludes in bounded runs without a bad event; a settlement credits `pub` to its
+recipient. -/
+def C5l (P : Pool) : Prop :=
+  ∀ evs s e s', Run P evs s → Step P s e s' → BadEvent P (evs ++ [e]) s' ∨
+    match e with
+    | .shield _ v =>
+        s'.balance = s.balance + v ∧ s'.credit = s.credit ∧ s'.paid = s.paid ∧
+        owed s' = owed s + v
+    | .receive v =>
+        s'.balance = s.balance + v ∧ s'.credit = s.credit ∧ s'.paid = s.paid ∧ owed s' = owed s
+    | .claim r =>
+        s'.balance + s.credit r = s.balance ∧ s'.credit = s.credit.erase r ∧
+        s'.paid = s.paid + Finsupp.single r (s.credit r) ∧ owed s' + s.credit r = owed s
+    | .spend tx g =>
+        s'.balance + g = s.balance ∧ s'.paid = s.paid ∧
+        (SettlePre s P (settleData tx) →
+          s'.credit = s.credit + Finsupp.single (settleData tx).rcp (settleData tx).pub ∧
+          owed s' + (settleData tx).fee = owed s) ∧
+        (¬ SettlePre s P (settleData tx) → s'.credit = s.credit ∧ owed s' ≤ owed s)
+    | _ =>
+        s'.balance = s.balance ∧ s'.credit = s.credit ∧ s'.paid = s.paid ∧ owed s' = owed s
 
 /-- The siblings of leaf `i` in the complete tree over `L`: at level `l`, the
 root of the neighboring subtree of height `l`. -/

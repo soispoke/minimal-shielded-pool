@@ -175,7 +175,6 @@ theorem path_walk (T : List Query) (hNC : NoColl T)
   simp only [pfold, List.range_zero, List.foldl_nil, pow_zero, Nat.div_one, treeRoot, blk, mul_one] at h0
   rw [h0, headD_drop_take]
 
-#print axioms path_walk
 
 end
 end MSP
