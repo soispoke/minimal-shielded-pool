@@ -48,8 +48,8 @@ constraint is correctly rejected. Evidence is saved in
 
 ## Concrete G2 and Groth16 continuation
 
-The four circuit mutation gates are committed in `05bee6c`. The next increment
-proves the full G2 subgroup has cardinality `p`, its standard EIP-197 generator
+The four circuit mutation gates are committed in `05bee6c`. Checkpoint
+`4856dd1` proves the full G2 subgroup has cardinality `p`, its standard EIP-197 generator
 spans it, and scalar multiplication gives a unique scalar-field representative.
 A checked order-10069 twist point excludes `p²` dividing the ambient cardinality
 using the `2q²+1` coordinate bound. No full twist cardinality is assumed.

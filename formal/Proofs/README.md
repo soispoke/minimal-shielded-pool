@@ -50,7 +50,7 @@ Its exact ordered coverage accounts for every pinned constraint. The result
 preserves all private witness fields and works for every alpha.
 
 Remaining completion gates include C2/C2c/C8/C9/C10 and refinement,
-the required concrete key/verifier/library/bytecode bindings, W2, and the
+the required verifier/library/bytecode execution bindings, W2, and the
 remaining semantic mutation failures in `SPEC.md`. The four circuit gates
 (R3/R5/R7/R8) have full kernel-checked counterexamples in `../Mutations/`;
 these go beyond the decoder's negative tests. End-to-end formal verification
