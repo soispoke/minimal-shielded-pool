@@ -28,7 +28,8 @@ Lean's standard logical axioms for the principal results listed below.
 refinement of the actual bytecode to that algorithm remains open.
 
 [The artifact proofs](../Artifacts/README.md) establish the compression
-polynomial from the complete pinned R1CS. They do not yet establish its beta
+polynomial and the first input's 128-bit bound from the complete pinned R1CS.
+They do not yet establish its beta
 digest, the complete spend relation, or C1/C1c. The arithmetic and gadget
 lemmas above are reusable proof components, not a substitute for that binding.
 [The concrete Poseidon definitions](../Poseidon/README.md) still require a

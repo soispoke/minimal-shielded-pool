@@ -4,6 +4,7 @@ import Proofs.CircuitArithmetic
 import Proofs.CircuitGadgets
 import Proofs.C6
 import Artifacts.FullCompression
+import Artifacts.Range
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 
@@ -37,3 +38,4 @@ assert_standard_axioms MSP.c6
 assert_standard_axioms MSP.Artifacts.Compression.gamma_of_constraints
 assert_standard_axioms MSP.Artifacts.Compression.gamma_of_system
 assert_standard_axioms MSP.Artifacts.FullCompression.gamma_of_pinned_r1cs
+assert_standard_axioms MSP.Artifacts.Range.first_input_range

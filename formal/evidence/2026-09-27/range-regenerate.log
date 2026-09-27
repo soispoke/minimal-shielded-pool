@@ -1,0 +1,4 @@
+$ python3 formal/tools/range_fragment.py
+RangeData.lean matches exact constraints 13870..13997; five other amount gates remain open.
+
+exit=0

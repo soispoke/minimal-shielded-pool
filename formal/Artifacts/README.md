@@ -69,7 +69,7 @@ python3 formal/tools/r1cs_artifact.py --export-lean formal/Artifacts/Spend.lean
 
 The exporter uses eight-constraint definitions and grouped concatenation to
 keep Lean elaboration depth bounded. The complete generated file typechecked
-on 2026-09-27 with `lake env lean`, as did `lake build Artifacts`. All ten
+on 2026-09-27 with `lake env lean`, as did `lake build Artifacts`. All twelve
 extractor Python tests, exact circuit recompilation and the independent decoder check
 also passed. `#print axioms` for the four semantic lemmas lists only `propext`
 and `Quot.sound`, with no admissions.
@@ -118,6 +118,31 @@ other projected values with all remaining gadgets, C1, or C1c. The code leaves
 no admissions.
 The Python test suite also checks exact fragment reproduction and rejects a
 one-byte artifact mutation and a mutated generated Lean constraint.
+
+## First input range proof
+
+`Range.first_input_range` proves `(w 10).val < 2^128` for every assignment
+satisfying the complete pinned R1CS. Its only premise is full-system
+satisfaction. Constraints 13870 through 13997 hold 127 retained Boolean bits
+and the eliminated top bit's actual linear combination. A kernel-checked
+coefficient identity reconstructs wire 10 from these bits; its bound follows
+in the integers because `2^128 ≤ p`. The proof also checks exact equality and
+membership of this constraint slice in `Spend.system`.
+
+```sh
+python3 formal/tools/range_fragment.py
+cd formal
+lake build Artifacts.Range Proofs.AxiomAudit
+```
+
+With `--sym /path/to/reproduced/spend.sym`, the generator also checks the exact
+pinned symbol map, including wire 10's first input value and all 128 bit
+signals (the last is eliminated). That check passed for the reproduced symbols.
+The other five amount range gates and the complete
+circuit relation remain open. `RangeLemmas.lean` provides the shared algebra
+for reconstructing an eliminated high bit. All named range theorems depend
+only on standard Lean logical axioms. The parser suite includes exact range
+fragment regeneration and rejection of a mutated source artifact.
 
 ## Exact serialization exception
 
