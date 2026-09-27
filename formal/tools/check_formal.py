@@ -4,7 +4,8 @@
   statements  SPEC.md, every project module `Spec` imports, transitively,
               the import closure of Mutations/Soundness.lean and the four
               Mutations/*Certificate.lean modules, which define the mutants
-              the audit pins, Proofs/AxiomAudit.lean, which pins the principal
+              the audit pins, Proofs/PinClaims.lean and its imports, which
+              state the other pinned results, Proofs/AxiomAudit.lean, which pins the principal
               theorems' types,
               and Proofs/AuditCommand.lean, the audit command it uses, match
               formal/STATEMENTS.lock
@@ -61,9 +62,10 @@ def statement_files():
     """SPEC.md, the import closure of `Spec` within this project (every module
     that fixes what a claim means, including the concrete hashes and circuit),
     the import closure of the four circuit mutants and `Mutations.C1For`,
-    which fix what the pinned mutation results mean, and the audit that pins
+    which fix what the pinned mutation results mean, Proofs.PinClaims, which
+    states the other results the audit pins by name, and the audit that pins
     each principal theorem to its claim, with its audit command."""
-    seen, stack = set(), ['Spec', 'Mutations.Soundness'] + [
+    seen, stack = set(), ['Spec', 'Mutations.Soundness', 'Proofs.PinClaims'] + [
         f'Mutations.{case}Certificate' for case in ('Membership', 'Range', 'Duplicate', 'Sink')]
     while stack:
         name = stack.pop()

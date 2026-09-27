@@ -25,6 +25,7 @@ class CheckFormal(unittest.TestCase):
                      'Mutations/MembershipTable.lean', 'Mutations/DuplicateChunk0.lean'):
             self.assertIn(name, names)
         self.assertNotIn('Mutations/SinkCounterexample.lean', names)
+        self.assertIn('Proofs/PinClaims.lean', names)
         self.assertNotIn('Proofs/Model.lean', names)
 
     def test_import_forms(self):

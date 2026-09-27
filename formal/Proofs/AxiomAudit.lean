@@ -45,6 +45,7 @@ import Mutations.MembershipCounterexample
 import Mutations.RangeCounterexample
 import Mutations.DuplicateCounterexample
 import Mutations.SinkCounterexample
+import Proofs.PinClaims
 import Proofs.AuditCommand
 
 /-! Fail the build if a checked theorem starts depending on an admission or
@@ -206,9 +207,7 @@ theorem pin_membership_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_membership_counterexample
 
-theorem pin_membership_clause : ∃ a : MSP.Assignment, MSP.Mutations.Membership.system.Satisfied a ∧
-    ∃ k, (MSP.witOf a).v k ≠ 0 ∧
-      MSP.MR ((MSP.witOf a).leaf k) ((MSP.witOf a).idx k) ((MSP.witOf a).sib k) ≠ (MSP.stmtOf a).root :=
+theorem pin_membership_clause : MSP.PinClaims.membershipClause :=
   MSP.Mutations.Membership.clause_fails
 
 assert_standard_axioms pin_membership_clause
@@ -224,8 +223,7 @@ theorem pin_range_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_range_counterexample
 
-theorem pin_range_clause : ∃ a : MSP.Assignment, MSP.Mutations.Range.system.Satisfied a ∧
-    ¬ ((MSP.witOf a).v 0).val < 2 ^ 128 :=
+theorem pin_range_clause : MSP.PinClaims.rangeClause :=
   MSP.Mutations.Range.clause_fails
 
 assert_standard_axioms pin_range_clause
@@ -241,8 +239,7 @@ theorem pin_duplicate_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_duplicate_counterexample
 
-theorem pin_duplicate_clause : ∃ a : MSP.Assignment, MSP.Mutations.Duplicate.system.Satisfied a ∧
-    (MSP.stmtOf a).nf1 = (MSP.stmtOf a).nf2 :=
+theorem pin_duplicate_clause : MSP.PinClaims.duplicateClause :=
   MSP.Mutations.Duplicate.clause_fails
 
 assert_standard_axioms pin_duplicate_clause
@@ -258,8 +255,7 @@ theorem pin_sink_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_sink_counterexample
 
-theorem pin_sink_clause : ∃ a : MSP.Assignment, MSP.Mutations.Sink.system.Satisfied a ∧
-    (MSP.witOf a).ov 0 = 0 ∧ (MSP.witOf a).oi 0 ≠ 1 :=
+theorem pin_sink_clause : MSP.PinClaims.sinkClause :=
   MSP.Mutations.Sink.clause_fails
 
 assert_standard_axioms pin_sink_clause
@@ -279,17 +275,9 @@ assert_standard_axioms MSP.Groth16.verificationEquation_iff
 assert_standard_axioms MSP.groth16_accepts_iff
 assert_standard_axioms MSP.groth16_accepts_point_orders
 
-private theorem pin_g2_card : Nat.card (MSP.Groth16.Subgroup.primeTorsion
-    MSP.Groth16.TwistPoint) = MSP.p := MSP.Groth16.g2Point_natCard
+private theorem pin_g2_card : MSP.PinClaims.g2Card := MSP.Groth16.g2Point_natCard
 assert_standard_axioms pin_g2_card
 
-private theorem pin_groth16_accepts (bytes : List UInt8) (pub : MSP.F × MSP.F × MSP.F) :
-    MSP.Groth16Accepts bytes pub ↔
-      ∃ π : MSP.Groth16.ProofCoordinates,
-        bytes.length = 256 ∧ MSP.Groth16.fromWords (MSP.Groth16.proofWords bytes) = π ∧
-        π.Canonical ∧ π.Nonzero ∧ ∃ hc : π.OnCurve,
-          ∃ hb : MSP.p • π.b.toTwistPoint hc.2.1 = 0,
-            MSP.Groth16.VerificationEquation (π.a.toPoint hc.1)
-              ⟨π.b.toTwistPoint hc.2.1, hb⟩ (π.c.toPoint hc.2.2) pub :=
-  MSP.groth16_accepts_iff bytes pub
+private theorem pin_groth16_accepts : MSP.PinClaims.groth16AcceptsIff :=
+  MSP.groth16_accepts_iff
 assert_standard_axioms pin_groth16_accepts
