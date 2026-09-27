@@ -189,7 +189,16 @@ assert_standard_axioms pin_circuit_model
 assert_standard_axioms pin_main_theorem_of_chain
 assert_standard_axioms pin_chain_corollary_of_chain
 
-assert_standard_axioms MSP.Mutations.Membership.c1_fails
+theorem pin_original_c1_iff :
+    MSP.Mutations.C1For MSP.Artifacts.Spend.system ↔ MSP.C1 :=
+  MSP.Mutations.original_c1_iff
+
+assert_standard_axioms pin_original_c1_iff
+
+theorem pin_membership_c1_fails : ¬ MSP.Mutations.C1For MSP.Mutations.Membership.system :=
+  MSP.Mutations.Membership.c1_fails
+
+assert_standard_axioms pin_membership_c1_fails
 
 theorem pin_membership_counterexample : ∃ a : MSP.Assignment,
     MSP.Mutations.Membership.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=
@@ -197,7 +206,10 @@ theorem pin_membership_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_membership_counterexample
 
-assert_standard_axioms MSP.Mutations.Range.c1_fails
+theorem pin_range_c1_fails : ¬ MSP.Mutations.C1For MSP.Mutations.Range.system :=
+  MSP.Mutations.Range.c1_fails
+
+assert_standard_axioms pin_range_c1_fails
 
 theorem pin_range_counterexample : ∃ a : MSP.Assignment,
     MSP.Mutations.Range.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=
@@ -205,7 +217,10 @@ theorem pin_range_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_range_counterexample
 
-assert_standard_axioms MSP.Mutations.Duplicate.c1_fails
+theorem pin_duplicate_c1_fails : ¬ MSP.Mutations.C1For MSP.Mutations.Duplicate.system :=
+  MSP.Mutations.Duplicate.c1_fails
+
+assert_standard_axioms pin_duplicate_c1_fails
 
 theorem pin_duplicate_counterexample : ∃ a : MSP.Assignment,
     MSP.Mutations.Duplicate.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=
@@ -213,7 +228,10 @@ theorem pin_duplicate_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_duplicate_counterexample
 
-assert_standard_axioms MSP.Mutations.Sink.c1_fails
+theorem pin_sink_c1_fails : ¬ MSP.Mutations.C1For MSP.Mutations.Sink.system :=
+  MSP.Mutations.Sink.c1_fails
+
+assert_standard_axioms pin_sink_c1_fails
 
 theorem pin_sink_counterexample : ∃ a : MSP.Assignment,
     MSP.Mutations.Sink.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=

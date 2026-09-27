@@ -21,6 +21,10 @@ class CheckFormal(unittest.TestCase):
         self.assertIn('Primality/PrattCertificate.lean', names)  # a `public import`
         self.assertIn('Proofs/AxiomAudit.lean', names)
         self.assertIn('Proofs/AuditCommand.lean', names)
+        for name in ('Mutations/Soundness.lean', 'Mutations/Check.lean', 'Mutations/SinkCertificate.lean',
+                     'Mutations/MembershipTable.lean', 'Mutations/DuplicateChunk0.lean'):
+            self.assertIn(name, names)
+        self.assertNotIn('Mutations/SinkCounterexample.lean', names)
         self.assertNotIn('Proofs/Model.lean', names)
 
     def test_import_forms(self):

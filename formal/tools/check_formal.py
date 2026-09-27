@@ -57,9 +57,11 @@ def module_path(name):
 def statement_files():
     """SPEC.md, the import closure of `Spec` within this project (every module
     that fixes what a claim means, including the concrete hashes and circuit),
-    and the audit that pins each principal theorem to its claim, with its
-    audit command."""
-    seen, stack = set(), ['Spec']
+    the import closure of the four circuit mutants and `Mutations.C1For`,
+    which fix what the pinned mutation results mean, and the audit that pins
+    each principal theorem to its claim, with its audit command."""
+    seen, stack = set(), ['Spec', 'Mutations.Soundness'] + [
+        f'Mutations.{case}Certificate' for case in ('Membership', 'Range', 'Duplicate', 'Sink')]
     while stack:
         name = stack.pop()
         if name in seen or not module_path(name).exists():

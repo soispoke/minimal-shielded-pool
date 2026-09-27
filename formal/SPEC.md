@@ -435,7 +435,7 @@ caller other than the pool has a valid environment there. The 2026-09-25 run
 of the `position-notes-v2` deployment recorded in `SECURITY.md` (pool and block
 in `devnet/deploy_config.json`) is informal evidence.
 
-**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements, not results: none has been checked formally. As tests, not proofs, `wallet/test_occurrence.py` (run in CI's `test` job) builds three circuits, each without the range check on one output value or the fee (not those on the input values or the public amount), and one without the membership, sink, distinctness and other listed constraints together, and shows each admits a complete witness violating R5, R3, R7 or R8 that the pinned R1CS rejects.
+**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements. The first four, the circuit rows, have kernel-checked counterexamples over the complete compiled mutants (§7), whose binding to their source and binaries is external to Lean; no other row has been checked formally. As tests, not proofs, `wallet/test_occurrence.py` (run in CI's `test` job) builds three circuits, each without the range check on one output value or the fee (not those on the input values or the public amount), and one without the membership, sink, distinctness and other listed constraints together, and shows each admits a complete witness violating R5, R3, R7 or R8 that the pinned R1CS rejects.
 
 | Mutation | Claim that must fail |
 |---|---|
@@ -587,9 +587,11 @@ every table value. The statement files are this file,
 `Proofs/AxiomAudit.lean`, the audit command it uses (`Proofs/AuditCommand.lean`,
 which imports only core Lean) and every project module that `Spec` imports,
 transitively: besides `Spec.lean` and `Spec/`, the modules of `Artifacts/`,
-`Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` from which the concrete
-hashes, the circuit and its projections are built, including lemma modules such
-as `Proofs/CircuitGadgets.lean`. `.github/CODEOWNERS` assigns this
+`Groth16/`, `Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` from which the
+concrete hashes, the circuit, its projections and `Groth16Accepts` are built,
+including lemma modules such as `Proofs/CircuitGadgets.lean`, and the
+modules of `Mutations/` that define the four circuit mutants and `C1For`,
+which the audit's mutation pins refer to. `.github/CODEOWNERS` assigns this
 file, `Spec.lean`, `Spec/`, the lock and the files that enforce it (CI,
 the tools under `tools/`, including the differential test, the audit and the
 Lake configuration) to the owner, so

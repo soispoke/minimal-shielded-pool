@@ -272,9 +272,11 @@ lake build Artifacts.CircuitSoundness Artifacts.CircuitCompleteness Proofs.Axiom
 
 ## Remaining proof frontier
 
-Groth16's concrete key/pairing relation, hardened verifier, deployed libraries
-and chain semantics (including the EVM's Keccak) remain separate bindings. The
-complete semantic mutation gates, W2 and both gas dimensions remain open; W1 is
+`Groth16Accepts` is now the concrete pinned-key predicate in `Groth16/`; the
+linked verifier's execution (C9), the deployed libraries and chain semantics
+(including the EVM's Keccak) remain separate bindings. The four circuit
+mutation gates are proved in `Mutations/`; the other semantic mutation gates,
+W2 and both gas dimensions remain open; W1 is
 proved in `Proofs/NonVacuityFixtureVerified.lean`. Setup honesty (P3)
 and zkey/R1CS consistency (P9) remain the explicit premises in `SPEC.md`;
 missing original powers-of-tau evidence is not a new completion requirement.
