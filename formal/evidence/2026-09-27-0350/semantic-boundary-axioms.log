@@ -1,0 +1,4 @@
+'MSP.Artifacts.SemanticAssignment.output_eq_of_bindings' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Artifacts.SemanticAssignment.small_output_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Artifacts.SemanticAssignment.small_output_wire' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Artifacts.SemanticAssignment.small_boundary' depends on axioms: [propext, Classical.choice, Quot.sound]

@@ -27,6 +27,8 @@ import Artifacts.AssignmentRecoverySmall
 import Artifacts.HashAssignmentCompletenessSmall
 import Artifacts.ConstraintCoverage
 import Artifacts.AssignmentAssembly
+import Artifacts.CircuitCompleteness
+import Proofs.CircuitModel
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 
@@ -109,3 +111,8 @@ assert_standard_axioms MSP.Artifacts.AssignmentRecoverySmall.realizes
 assert_standard_axioms MSP.Artifacts.HashAssignmentCompletenessSmall.complete
 assert_standard_axioms MSP.Artifacts.ConstraintCoverage.satisfied_of_fragments
 assert_standard_axioms MSP.Artifacts.AssignmentAssembly.satisfied
+
+assert_standard_axioms MSP.c1c
+
+assert_standard_axioms MSP.circuit_model
+assert_standard_axioms MSP.chain_corollary_of_chain

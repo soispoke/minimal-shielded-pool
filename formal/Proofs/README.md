@@ -24,11 +24,13 @@ Lean's standard logical axioms for the principal results listed below.
 | `PoseidonConstants.lean` | kernel-checked equality of all 21 zero-tree constants with concrete Poseidon |
 | `C6.lean` | `MSP.c6 : C6`, for the specified incremental-tree algorithm and concrete Poseidon |
 | `../Artifacts/CircuitSoundness.lean` | `MSP.c1 : C1`, for the complete pinned R1CS and concrete projections |
-| `CircuitCompleteness.lean` | canonical Boolean witness construction; whole C1c remains open |
+| `CircuitCompleteness.lean` | canonical Boolean witness construction |
+| `../Artifacts/CircuitCompleteness.lean` | `MSP.c1c : C1c`, complete pinned-R1CS assignment construction with exact projections |
+| `CircuitModel.lean` | discharged circuit/model conjunction; the main theorem and chain corollary from the remaining chain obligations |
 | `AxiomAudit.lean` | build-time admission checks for the principal proofs, including full-R1CS compression |
 
 `ModelTheorem` is proven: every model claim holds for every pool from C1.
-C1 is now discharged for the pinned circuit. `Composes` and C6 are also proven. C6 establishes the Lean tree algorithm;
+C1 and C1c are now discharged for the pinned circuit. `Composes` and C6 are also proven. C6 establishes the Lean tree algorithm;
 refinement of the actual bytecode to that algorithm remains open.
 
 [The artifact proofs](../Artifacts/README.md) derive the entire canonical
@@ -39,12 +41,12 @@ instances, the beta gadget, all range/control/path gates and the private
 projection are connected. Universal optimized/reference Poseidon equivalence
 is proved for all three widths. Keccak and Groth16 verification remain opaque.
 
-`PinnedRangeCompleteness` proves the eight actual range fragments hold when
-their retained bits are assigned canonically, including each eliminated top
-bit. `InputCompleteness` handles the nonzero-input inverse. Whole-circuit
-assignment construction and exact projection recovery are still C1c obligations.
+`CircuitCompleteness` assembles actual complete hash, range, path, control and
+compression witnesses using checked wire ownership and shared-value agreement.
+Its exact ordered coverage accounts for every pinned constraint. The result
+preserves all private witness fields and works for every alpha.
 
-Remaining completion gates include C1c, C2/C2c/C8/C9/C10 and refinement,
+Remaining completion gates include C2/C2c/C8/C9/C10 and refinement,
 the required concrete key/verifier/library/bytecode bindings, W1/W2, and the
 semantic mutation failures in `SPEC.md`. The decoder's negative tests do not
 discharge those mutation gates. End-to-end formal verification is incomplete.

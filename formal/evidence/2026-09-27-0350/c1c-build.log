@@ -1,0 +1,132 @@
+ℹ [3127/3350] Replayed Proofs.CircuitGadgets
+info: Proofs/CircuitGadgets.lean:83:0: 'MSP.scalar_prime' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:84:0: 'MSP.boolean_constraint' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:85:0: 'MSP.isZero_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:86:0: 'MSP.isZero_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:87:0: 'MSP.bitsValue_cast' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:88:0: 'MSP.bitsValue_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:89:0: 'MSP.num2Bits_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3128/3350] Replayed Artifacts.RangeLemmas
+info: Artifacts/RangeLemmas.lean:66:0: 'MSP.Artifacts.RangeLemmas.bitsField_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:67:0: 'MSP.Artifacts.RangeLemmas.bitsField_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:68:0: 'MSP.Artifacts.RangeLemmas.weightedWires_eval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:69:0: 'MSP.Artifacts.RangeLemmas.bitsField_wires_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:70:0: 'MSP.Artifacts.RangeLemmas.num2Bits_wires_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3141/3350] Replayed Artifacts.PathCompleteness
+info: Artifacts/PathCompleteness.lean:96:0: 'MSP.Artifacts.PathCompleteness.complete_index' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3142/3350] Replayed Proofs.CircuitArithmetic
+info: Proofs/CircuitArithmetic.lean:47:0: 'MSP.nat_eq_of_field_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:48:0: 'MSP.value_conservation_iff' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:49:0: 'MSP.input_sum_pos' depends on axioms: [propext, Quot.sound]
+ℹ [3143/3350] Replayed Artifacts.BaseAssignment
+info: Artifacts/BaseAssignment.lean:174:0: 'MSP.Artifacts.BaseAssignment.statementOf' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/BaseAssignment.lean:175:0: 'MSP.Artifacts.BaseAssignment.ofAssignment' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/BaseAssignment.lean:176:0: 'MSP.Artifacts.BaseAssignment.projections_of_agreement' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3144/3350] Replayed Artifacts.PathCompletenessGates
+info: Artifacts/PathCompletenessGates.lean:210:0: 'MSP.Artifacts.PathCompleteness.complete_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:211:0: 'MSP.Artifacts.PathCompleteness.constraints_mem' depends on axioms: [propext, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:212:0: 'MSP.Artifacts.PathCompleteness.complete_holds_of_MR' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:213:0: 'MSP.Artifacts.PathCompleteness.complete_path' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3153/3350] Replayed Artifacts.SmallHashGatesCertificates
+info: Artifacts/SmallHashGatesCertificates.lean:285:0: 'MSP.Artifacts.SmallHashGatesCertificates.signs' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3154/3350] Replayed Artifacts.SmallHashGates
+info: Artifacts/SmallHashGates.lean:57:0: 'MSP.Artifacts.SmallHashGates.sigma_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:58:0: 'MSP.Artifacts.SmallHashGates.full_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:59:0: 'MSP.Artifacts.SmallHashGates.partial_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3159/3350] Replayed Poseidon.Optimized3Equivalence
+warning: Poseidon/Optimized3Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [3164/3350] Replayed Poseidon.Optimized4Equivalence
+warning: Poseidon/Optimized4Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [3172/3350] Replayed Artifacts.HashAssignmentCompletenessAffine
+warning: Artifacts/HashAssignmentCompletenessAffine.lean:91:28: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Artifacts/HashAssignmentCompletenessAffine.lean:170:0: 'MSP.Artifacts.HashAssignmentCompleteness.input_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/HashAssignmentCompletenessAffine.lean:171:0: 'MSP.Artifacts.HashAssignmentCompleteness.output_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3403/3517] Replayed Artifacts.SinkGates
+info: Artifacts/SinkGates.lean:137:0: 'MSP.Artifacts.SinkGates.sink_rules' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3404/3517] Replayed Artifacts.InputNonzero
+info: Artifacts/InputNonzero.lean:35:0: 'MSP.Artifacts.InputNonzero.sum_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/InputNonzero.lean:36:0: 'MSP.Artifacts.InputNonzero.positive_input_value' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3405/3517] Replayed Artifacts.InputCompleteness
+info: Artifacts/InputCompleteness.lean:28:0: 'MSP.Artifacts.InputCompleteness.input_gate_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3406/3517] Replayed Artifacts.ControlCompleteness
+info: Artifacts/ControlCompleteness.lean:219:0: 'MSP.Artifacts.ControlCompleteness.complete_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:220:0: 'MSP.Artifacts.ControlCompleteness.constraints_mem' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:221:0: 'MSP.Artifacts.ControlCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:222:0: 'MSP.Artifacts.ControlCompleteness.complete_holds_of_relation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+ℹ [3407/3517] Replayed Artifacts.RangeCompleteness
+info: Artifacts/RangeCompleteness.lean:66:0: 'MSP.Artifacts.RangeCompleteness.gate_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3415/3517] Replayed Artifacts.PinnedRangeCompleteness
+info: Artifacts/PinnedRangeCompleteness.lean:129:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:130:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:131:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_output_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:132:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_output_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:133:0: 'MSP.Artifacts.PinnedRangeCompleteness.public_amount_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:134:0: 'MSP.Artifacts.PinnedRangeCompleteness.fee_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:135:0: 'MSP.Artifacts.PinnedRangeCompleteness.recipient_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:136:0: 'MSP.Artifacts.PinnedRangeCompleteness.authorizer_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3416/3517] Replayed Artifacts.RangeAssignmentCompleteness
+info: Artifacts/RangeAssignmentCompleteness.lean:134:0: 'MSP.Artifacts.RangeAssignmentCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3419/3517] Replayed Artifacts.ConstraintCoverage
+info: Artifacts/ConstraintCoverage.lean:60:0: 'MSP.Artifacts.ConstraintCoverage.ordered_eq' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:61:0: 'MSP.Artifacts.ConstraintCoverage.covers' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:62:0: 'MSP.Artifacts.ConstraintCoverage.satisfied_of_fragments' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:63:0: 'MSP.Artifacts.ConstraintCoverage.small_count' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:64:0: 'MSP.Artifacts.ConstraintCoverage.family_counts' depends on axioms: [propext]
+ℹ [3420/3517] Replayed Artifacts.AssignmentAssembly
+info: Artifacts/AssignmentAssembly.lean:95:0: 'MSP.Artifacts.AssignmentAssembly.satisfied' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3422/3517] Replayed Artifacts.CircuitAssemblyLayoutExclusive
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:63:0: 'MSP.Artifacts.CircuitAssemblyLayout.exclusive' depends on axioms: [propext, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:64:0: 'MSP.Artifacts.CircuitAssemblyLayout.hash_boundary_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:65:0: 'MSP.Artifacts.CircuitAssemblyLayout.nonhash_boundary' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3446/3517] Replayed Artifacts.BetaGatesSigma
+info: Artifacts/BetaGatesSigma.lean:50:0: 'MSP.Artifacts.BetaGates.sigma_triple' depends on axioms: [propext, Quot.sound]
+ℹ [3447/3517] Replayed Artifacts.BetaGatesPartialCertificates
+info: Artifacts/BetaGatesPartialCertificates.lean:343:0: 'MSP.Artifacts.BetaGatesCertificates.partial_steps' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3448/3517] Replayed Poseidon.OptimizedEquivalence
+warning: Poseidon/OptimizedEquivalence.lean:93:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+ℹ [3450/3517] Replayed Artifacts.GammaCompleteness
+info: Artifacts/GammaCompleteness.lean:86:0: 'MSP.Artifacts.GammaCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/GammaCompleteness.lean:87:0: 'MSP.Artifacts.GammaCompleteness.base_complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/GammaCompleteness.lean:88:0: 'MSP.Artifacts.GammaCompleteness.preserves_projections' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3451/3517] Replayed Artifacts.CircuitAssemblyLayoutBindings
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:589:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_writes' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:590:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:591:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_output_form' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:592:0: 'MSP.Artifacts.CircuitAssemblyLayout.beta_writes' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:593:0: 'MSP.Artifacts.CircuitAssemblyLayout.coverage' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3512/3517] Replayed Artifacts.CircuitAssemblyLayoutSupport
+info: Artifacts/CircuitAssemblyLayoutSupport.lean:125:0: 'MSP.Artifacts.CircuitAssemblyLayout.supported' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3516/3517] Replayed Artifacts.RangeAssignmentCompletenessRelation
+info: Artifacts/RangeAssignmentCompletenessRelation.lean:23:0: 'MSP.Artifacts.RangeAssignmentCompleteness.complete_holds_of_relation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+ℹ [3517/3517] Built Artifacts.CircuitCompleteness (1.8s)
+info: Artifacts/CircuitCompleteness.lean:186:0: 'MSP.c1c' depends on axioms: [propext, Classical.choice, Quot.sound]
+Build completed successfully (3517 jobs).

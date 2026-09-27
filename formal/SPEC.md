@@ -479,7 +479,9 @@ should. `Spec.Hash` uses concrete reference Poseidon functions generated from
 the pinned D2 constants. Universal optimized/reference equivalence is now
 proved for all three widths. `Spec.Circuit` uses the complete pinned R1CS and
 concrete projections; `Artifacts.CircuitSoundness` proves C1, including every
-note/path hash and both compression outputs. C1c remains open.
+note/path hash and both compression outputs. `Artifacts.CircuitCompleteness`
+proves C1c by constructing and checking the complete assignment, including
+exact statement, private witness and public projections for every alpha.
 `formal/Proofs/` proves `ModelTheorem`, every model claim from C1, and `Composes`.
 It also proves C6 for the specified tree algorithm, including kernel-checked
 zero constants. The bytecode refinement remains open.

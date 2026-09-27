@@ -21,14 +21,16 @@ still owns that work. The activation gate has since been strengthened to bind
 the verifier-used JSON key fields to the zkey. It still reports `setup: partial`.
 
 **Current ownership, September 27 heartbeat:** this Codex heartbeat owns the durable checkout.
-C1 is now proved for all 14,802 pinned constraints, including the complete
-private relation and beta/gamma outputs. The prior artifact checkpoint is
-`f20a7eb`; the C1 commit follows it. Current bounded subagents are constructing
-C1c's canonical semantic seed, beta assignment and global wire-ownership
-certificates. Root owns integration and documentation. Before taking ownership,
-inspect fresh task status, relevant Claude log timestamps and actual proof
-processes. A quota reset or resident parent process alone does not transfer
-ownership. Do not edit files while another worker is making progress.
+C1 and C1c are proved for all 14,802 pinned constraints with only standard Lean
+axioms. C1's checkpoint is `7c96e43`; the subsequent C1c commit includes the
+full assignment, exact projections, read/write boundaries and constraint
+coverage. The default `lake build` passes 3,563 jobs. Current bounded
+subagents are proving compact tree-query support for W1, implementing concrete
+Keccak, and binding the pinned Groth16 key and proof decoding. Root owns
+integration and documentation. Before taking ownership, inspect fresh task
+status, relevant Claude log timestamps and actual proof processes. A quota
+reset or resident parent process alone does not transfer ownership. Do not
+edit files while another worker is making progress.
 
 Original Claude session: `e9529fa7-10f6-4fd3-a0b1-195641fd261d`.
 Original checkout:
@@ -40,7 +42,7 @@ The durable Git object store does not depend on that temporary checkout.
 `SPEC.md` is the canonical functional-verification scope. Read
 `Proofs/README.md` for proven claims; `Spec/Main.lean` states the completion
 theorems. Abstract model proofs do not discharge concrete circuit or chain
-semantics bindings. C1 is discharged; C1c, the chain half, W1/W2 and the
+semantics bindings. C1 and C1c are discharged; the chain half, W1/W2 and the
 required semantic mutation gates remain open. C6 is now discharged for
 the specified algorithm, but not for the deployed bytecode.
 
@@ -162,8 +164,9 @@ These parser and differential tests are not the spec's semantic mutation gates.
 The complete C1 target passes 3,325 jobs. The stable aggregate command
 `lake build Spec Sanity Proofs Poseidon Primality Artifacts.CircuitSoundness Artifacts.PinnedRangeCompleteness Artifacts.InputCompleteness`
 passes 3,334 jobs. The subsequent expanded stable-library build and axiom audit
-pass 3,489 jobs, including every completed constructive component. C1 depends only on
-`propext`, `Classical.choice` and `Quot.sound`. All 77 current artifact tests
+pass 3,489 jobs, including every completed constructive component. The later complete
+`lake build` passes 3,563 jobs with C1c in the standard-axiom audit. C1 depends only on
+`propext`, `Classical.choice` and `Quot.sound`. All 83 current artifact tests
 pass with the environment below; seven optimized-data provenance tests passed
 in the preceding batch. All 54 small-hash affine certificate modules build.
 An independently changed affine output certificate is rejected by Lean.
@@ -185,24 +188,22 @@ required complete semantic mutation gates.
 
 ## Remaining obligations and next action
 
-C1c is the active frontier. Completed constructive pieces are canonical bits,
-all eight pinned range fragments, the input-sum inverse, all 26 control
-constraints from 19 auxiliary wires, complete optimized hash traces, and a
-kernel-certified recovery for beta and all 54 small hashes. The small hashes
-now each have an explicit complete assignment satisfying their actual slice.
-Canonical source projections, path selectors and roots, range-bit assignment,
-control auxiliaries and Horner auxiliaries are proved. Exact ordered coverage
-of every constraint is kernel checked in `ConstraintCoverage`. The checked
-assignment plan covers every wire and constraint and finds an acyclic hash
-and selector dependency graph; this external plan is not a full Lean proof.
+C1c is discharged in `Artifacts/CircuitCompleteness.lean`. Its explicit
+assignment combines 59 independently checked components, preserving the shared
+semantic boundary and exact projections. `Proofs/CircuitModel.lean` connects
+the completed circuit/model proofs to `MainTheorem` and `ChainCorollary`,
+with only the still-open chain obligations as arguments.
 
-Finish the beta adapter, construct one canonical semantic seed and prove the
-finite write/read boundaries. Then use `AssignmentAssembly` to combine all
-independently constructed fragments while preserving shared values. Prove every constraint and exact statement/witness/public
-projections for each valid spend and arbitrary alpha, then discharge C1c.
-Do not assume satisfaction, the desired relation or hash equations in place
-of constructing the assignment. The optimized/reference equivalences and
-C1 use universal proofs with kernel-checked finite certificates, not tests.
+The current independent work is W1's compact tree-query/collision support,
+concrete Keccak, and exact Groth16 key/proof-decoding binding. W1 requires an
+actual approved spend with no bad event; the compact support lemma alone is
+not W1. A concrete K is needed for its source nondegeneracy facts.
+
+P3 setup honesty and P9 key/R1CS consistency are explicit canonical premises.
+The activation gate's partial setup result and missing original powers-of-tau
+file do not add an external blocker or a new requirement to the conditional
+verification goal. Keep the gate's precise report, while continuing the actual
+key/pairing/verifier semantics binding.
 
 C2/C2c/C8/C9/C10 and refinement still need one faithful chain semantics, real
 bytecode, custom instructions and both gas dimensions. W1/W2 and required

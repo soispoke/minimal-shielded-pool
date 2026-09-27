@@ -1,0 +1,9 @@
+'MSP.Artifacts.HashAssignmentCompletenessBeta.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Artifacts.HashAssignmentCompletenessBeta.complete_beta' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Artifacts.HashAssignmentCompletenessBeta.complete_preserves' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'MSP.Artifacts.HashAssignmentCompletenessBeta.statement_preserved' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'MSP.Artifacts.HashAssignmentCompletenessBetaData.affine' depends on axioms: [propext, Classical.choice, Quot.sound]

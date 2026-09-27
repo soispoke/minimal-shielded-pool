@@ -4,14 +4,16 @@
 pinned R1CS: every satisfying raw assignment yields the canonical spend
 relation and correct beta/gamma signals. All note, Merkle and compression
 hashes are tied to the concrete reference Poseidon functions. Its dependency
-closure contains only Lean's standard logical axioms.
+closure contains only Lean's standard logical axioms. `MSP.c1c` in
+`CircuitCompleteness.lean` constructs a satisfying assignment for every valid
+canonical witness and every alpha, with exactly the specified statement,
+private witness and public signals.
 
 The extractor checks every constraint and wire label, reproduces the exact
 binary and symbol file with the pinned compiler, and exports the constraints
 as Lean data interpreted by `R1CS.lean`. `Spec.Circuit` now uses that system and
 the concrete statement, private witness and public projections. The external
-parser/source binding is described below. C1c and verifier/chain bindings
-remain open.
+parser/source binding is described below. Verifier and chain bindings remain open.
 
 The full artifact SHA-256 is
 `e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf`.
@@ -138,8 +140,8 @@ certificates. The constant first capacity S-box uses wire zero equals one.
 optimized/reference Poseidon10 equivalence. `compression_of_pinned_r1cs`
 therefore establishes both canonical beta and gamma from full-system
 satisfaction, with no hash equation as a premise. Its dependency closure uses
-only standard Lean logical axioms. Keccak, the private relation, completeness
-and verifier/chain bindings remain separate.
+only standard Lean logical axioms. The complete relation and completeness are
+proved by C1/C1c; Keccak and verifier/chain bindings remain separate.
 
 ## Amount and address range proofs
 
@@ -245,17 +247,32 @@ fixture, invalid headers/counts/sections/coefficients/maps, an excessive
 allocation-count request, the pinned exception, and mutated artifact rejection.
 These are decoder tests, **not** SPEC.md's required semantic circuit mutations.
 
-## Remaining proof frontier
+## Complete witness construction
 
-C1c must construct all retained wires for every valid canonical witness and
-alpha, then prove satisfaction and exact projection recovery. The range
-completeness lemmas now cover all eight actual range fragments, and
-`InputCompleteness` supplies the nonzero-input inverse gate. These do not yet
-construct the complete assignment. `assignment-plan.json` records complete
-wire/constraint coverage and finite affine recovery data; its numerical checks
-still need the corresponding Lean reconstruction proofs.
+`CircuitCompleteness.assignment` constructs one physical witness from each
+valid relation witness and alpha. `SemanticAssignment` first supplies canonical
+source inputs, note hashes, selectors and every intermediate Merkle state.
+Each of the 55 hash constructors fills retained squares, fourth powers and
+recovered affine outputs. The remaining constructors fill all range bits,
+control auxiliaries and Horner intermediates.
+
+`CircuitAssemblyLayout` checks exclusive writes and the exact read support of
+59 components. A hash's only shared output agrees with the semantic seed;
+other shared wires are preserved. `AssignmentAssembly` combines the local
+witnesses. `ConstraintCoverage` checks ordered coverage of all 14,802
+constraints, preserving repetitions. Source agreement then gives exact
+statement, private witness and public projections. `MSP.c1c` discharges the
+unchanged canonical proposition with only standard Lean logical axioms.
+
+```sh
+cd formal
+lake build Artifacts.CircuitSoundness Artifacts.CircuitCompleteness Proofs.AxiomAudit
+```
+
+## Remaining proof frontier
 
 Groth16's concrete key/pairing relation, hardened verifier, Keccak, deployed
 libraries and chain semantics remain separate bindings. The complete semantic
-mutation gates, W1/W2 and both gas dimensions remain open. Keep the explicit
-cryptographic, deployment, fork and lifetime premises in `SPEC.md`.
+mutation gates, W1/W2 and both gas dimensions remain open. Setup honesty (P3)
+and zkey/R1CS consistency (P9) remain the explicit premises in `SPEC.md`;
+missing original powers-of-tau evidence is not a new completion requirement.
