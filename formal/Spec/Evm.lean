@@ -163,12 +163,14 @@ def RawTx : Type := RawTxImpl.type
 signers; `maxCost` is its `TXPARAM(0x06)`. -/
 opaque RawTx.view : RawTx → FrameTx
 
-/-- P5 to P7: `t` is valid in `st`. -/
+/-- P5 to P7: `t` is valid in `st`, meaning includable in the current open block
+under every consensus rule. -/
 opaque ValidTx : ChainState → RawTx → Prop
 /-- The validity conditions frame 1 and later frames do not decide: EIP-8141's
 static rules and gas caps, EIP-8250's decoding rules, EIP-1559's fee-field
 checks, the fee caps against the base fee, the reservations
-of each gas dimension against the block's remaining gas, the chain ID,
+of each gas dimension against the block's remaining gas, room for the
+transaction under the block's RLP size limit (EIP-7934), the chain ID,
 EIP-8250's nonce sequences, signature validation, and success of every frame
 before frame 1. -/
 opaque PreValid : ChainState → RawTx → Prop
