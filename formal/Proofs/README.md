@@ -12,7 +12,7 @@ Lean's standard logical axioms for the principal results listed below.
 | `C3.lean` | `C5e P` for every pool, and `C1 → C3 P` |
 | `C5a.lean` | `C1 → C5a P` |
 | `C5cC4.lean` | `C1 → C5b P → C5c P`, and `C1 → C5b P → C5c P → C4 P` |
-| `Path.lean` | the path walk: a Merkle path whose root is `TR L`, without a collision against `L`'s tree queries, starts at `L`'s leaf |
+| `Path.lean` | the path walk: for `i < 2^20`, a Merkle path whose root is `TR L` starts at `L`'s leaf when its queries and `L`'s tree queries lie in one query list with no collision |
 | `C5i.lean` | `C5b P → C5i P` |
 | `C5b.lean` | `C1 → C5b P` |
 | `Model.lean` | `C1 → C5g P`, `C1 → C5h P`, `C1 → Spendable P`, and `model_theorem_of` |
