@@ -46,7 +46,9 @@ instance : Nonempty Deployment := DeploymentImpl.property
 
 /-- P9. The deployment matches D12 and the committed artifacts. -/
 opaque Honest : Deployment → Prop
+/-- D12. The pool's address `A`. -/
 opaque addrOf : Deployment → ℕ
+/-- D12. The chain ID `c` of the pool's chain (P11). -/
 opaque chainOf : Deployment → ℕ
 /-- The linked verifier returns 1 for these proof words and public signals when
 its call frame starts with 500,000 gas (the dispatcher's gas operand; frame 1's
@@ -206,6 +208,7 @@ def C9 : Prop :=
 
 /-- `hash2` and `hash3` of the linked libraries: the returned word and the gas used. -/
 opaque libHash2 : Deployment → F → F → Option (ℕ × ℕ)
+/-- `hash3` of the linked library, as for `libHash2`. -/
 opaque libHash3 : Deployment → F → F → F → Option (ℕ × ℕ)
 
 /-- C8. The libraries return `H2` and `H3` within 200,000 gas. -/
@@ -247,6 +250,7 @@ structure Payout where
   success : Bool
   returnSize : ℕ
 
+/-- The `Payout` of that `callPool`, or `none` if the pool made no such call. -/
 opaque firstPayout : Deployment → ChainState → Env → ℕ → List UInt8 → Option Payout
 
 def publishCalldata (e : ℕ) : List UInt8 := [0xd0, 0x38, 0x70, 0xb3] ++ u256 e

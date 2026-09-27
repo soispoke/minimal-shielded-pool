@@ -575,11 +575,14 @@ and transfers after deployment and the model accepted the pool's own earlier
 root writes, which `historyEvents` replays as `rootWrite` events that `Step`
 rejects.
 
-Step 5's definitions of `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
+Step 5's definitions of the opaque types `RawTx`, `Env`, `Deployment` and
+`ChainRest`, and of `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
 `ValidTx`, `PreValid`, `approvalsIn`, `EnvValid`, `callPool`, `firstPayout`,
 `verifierOf`, `libHash2`, `libHash3`, `addrOf`, `chainOf`, `NONCE_MANAGER`,
-`RawTx.view`, `Groth16Accepts` and `Honest` are checked against their docstrings by review only.
-A narrower `ChainStep`, `EnvValid` or `Honest`, or a wrong `chainInit`, leaves
+`RawTx.view`, `Groth16Accepts` and `Honest`, are checked against their
+docstrings and D12 by review only.
+A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep`,
+`EnvValid` or `Honest`, or a wrong `chainInit`, leaves
 states uncovered by refinement, C2, C2c and C10. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
 weakens C2 and a looser one weakens C2c and W2, a stronger `PreValid` weakens
