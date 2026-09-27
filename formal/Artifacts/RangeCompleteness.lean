@@ -2,9 +2,9 @@ import Artifacts.RangeGate
 import Proofs.CircuitCompleteness
 
 /-! Constructive counterpart of the optimized range-gate algebra. Canonical
-low bits force the eliminated high bit to its canonical value. The shape and
-reconstruction equations are to be discharged for each pinned gate; this does
-not yet construct an assignment of the complete spend circuit. -/
+low bits force the eliminated high bit to its canonical value. `PinnedRangeCompleteness`
+discharges the shape and reconstruction equations for each pinned gate, and
+`CircuitCompleteness` builds the complete assignment. -/
 
 namespace MSP.Artifacts.RangeCompleteness
 

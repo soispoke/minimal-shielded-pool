@@ -1,7 +1,8 @@
 # Sanity checks on the specification
 
 Proofs, written during review, that parts of `Spec/` mean what they should.
-They are not proofs of the claims. Each Lean file imports `Spec` and depends
+On their own they do not prove the claims; `Proofs/` uses several of them as
+lemmas, and `C6Proof.C6_third` is C6's insertion conjunct. Each Lean file imports `Spec` and depends
 only on Lean's standard axioms; `lake build` checks them with the
 specification. `c6consts.py` is a separate Python check that `lake build` does
 not run.

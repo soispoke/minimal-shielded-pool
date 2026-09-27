@@ -45,7 +45,9 @@ structure Occ where
 deriving DecidableEq
 
 /-- D13. Ghost fields are not on chain: they record openings, consumed
-occurrences and cumulative credits and payouts, so that claims can name them. -/
+occurrences and cumulative credits, so that claims can name them. `paid`, the
+cumulative payouts, is not in the pool's storage, but `Obs` reads it from the
+ETH the pool sent by `CALL`s with empty calldata (`sentTo`). -/
 structure PoolState where
   leaves : ℕ → List F
   /-- ghost: each leaf's value, from its opening -/
@@ -60,8 +62,9 @@ structure PoolState where
   keys : List ℕ
   /-- ghost: occurrences consumed as nonzero-value inputs -/
   spent : List Occ
-  /-- ghost: total ever credited to, and paid out to, each recipient -/
+  /-- ghost: total ever credited to each recipient -/
   credited : ℕ →₀ ℕ
+  /-- total ever paid out to each recipient, which `Obs` equates with `sentTo` -/
   paid : ℕ →₀ ℕ
   slot : ℕ
 
@@ -148,7 +151,9 @@ inductive Event
   | tick
 
 /-- One transition. A spend's settlement succeeds exactly when `SettlePre`
-holds; refinement requires the chain to agree, gas included (C7). -/
+holds; refinement requires the chain to agree, gas included (C7), except for a
+settlement that inserts no leaf and credits nothing, whose failure it cannot
+tell from success. -/
 def Step (P : Pool) (s : PoolState) : Event → PoolState → Prop
   | .shield inr v, s' =>
       0 < v ∧ v < 2 ^ 128 ∧ cm inr v ≠ SINK 0 ∧ cm inr v ≠ SINK 1 ∧
@@ -258,7 +263,8 @@ def eventQueries (P : Pool) : Event → List Query
   | _ => []
 
 /-- What a run hashed: the sinks the code hardcodes, each event's queries,
-every tree root of every prefix of every epoch, each epoch's domain and root
+every node pair of the tree of every prefix of every epoch up to `E`, each
+epoch's domain and root
 source, each closed epoch's storage slot, and the entry and storage key of every
 EIP-8272 write. -/
 def traceQueries (P : Pool) (evs : List Event) (s : PoolState) : List Query :=
@@ -436,9 +442,10 @@ def C5k (P : Pool) : Prop :=
 
 /-- C5m. Only a publish or another address's write adds an EIP-8272 write, the
 latter one write under its own source at the current slot; a shield, claim,
-spend, receive or tick leaves the root writes unchanged. So a published root is
-replaced only by a publication in the same slot, or by a foreign write whose
-source collides with the pool's (a bad event). -/
+spend, receive or tick leaves the root writes unchanged. With C5k and
+determinism, a published root is replaced only by a publication in the same
+slot, or by a foreign write whose source collides with the pool's (a bad
+event). -/
 def C5m (P : Pool) : Prop :=
   ∀ s e s', Step P s e s' →
     match e with
@@ -500,10 +507,14 @@ def mkSpend (P : Pool) (e : ℕ) (L : List F) (i : ℕ) (sk ρ v skd ρd f rcp a
 
 /-- Spendability. Whoever holds an opening `(sk, ρ, v)` of an unspent occurrence can spend it
 against any root of its epoch that contains it, for every choice of dummy input,
-fee below the value, recipient and authorizer, as long as the dummy is fresh:
+fee below the value, and recipient and authorizer that are nonzero and below
+`2 ^ 160`, as long as the dummy is fresh:
 the canonical spend is valid and its keys are nonzero and unconsumed. Quantifying over the dummy, rather than asking for
-one, keeps a proof from choosing a dummy whose hashes collide. With C1c and C2c
-the spend is then approved. -/
+one, keeps a proof from choosing a dummy whose hashes collide. With C1c and P3c
+the holder can then prove it, and C2c approves it once §5's other conditions
+hold, among them a published root within its window, `max_cost ≤ fee`, frame 1
+limits of at least 216,141 execution and 195,840 state gas, and no other party
+consuming the note or its keys first. -/
 def Spendable (P : Pool) : Prop :=
   ∀ evs s, Run P evs s →
     ∀ (o : Occ) (sk ρ v : F), o.i < (s.leaves o.e).length → o ∉ s.spent →

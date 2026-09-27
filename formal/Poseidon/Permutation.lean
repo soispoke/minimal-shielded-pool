@@ -1,8 +1,8 @@
 import Spec.Basic
 
 /-! The ordinary circomlibjs reference permutation, over the BN254 scalar
-field. The optimized Circom circuit's equivalence to this function remains a
-separate obligation. -/
+field. The optimized Circom circuit's equivalence to this function is proved in
+`Optimized*`, and its binding to the R1CS in `Artifacts`. -/
 
 namespace MSP.Poseidon
 

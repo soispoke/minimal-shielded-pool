@@ -1,0 +1,19 @@
+# The reviewed formal statements. A change here needs the owner's review and a
+# matching update of formal/STATEMENTS.lock, which CI checks. The lock also
+# covers every project module that formal/Spec.lean imports, transitively, and
+# formal/Proofs/AxiomAudit.lean, so a change to one of those fails CI until the
+# owner approves a lock update.
+/formal/SPEC.md @soispoke
+/formal/Spec.lean @soispoke
+/formal/Spec/ @soispoke
+/formal/STATEMENTS.lock @soispoke
+
+# What enforces the lock, the audit and the build.
+/.github/ @soispoke
+/formal/tools/ @soispoke
+/formal/Proofs/AxiomAudit.lean @soispoke
+/formal/Proofs/AuditCommand.lean @soispoke
+/formal/lakefile.toml @soispoke
+/formal/lakefile.lean @soispoke
+/formal/lean-toolchain @soispoke
+/formal/lake-manifest.json @soispoke

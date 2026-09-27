@@ -6,8 +6,9 @@ import Spec.Relation
 # Concrete raw witness and public projections
 
 Private wire indices come from the exact reproduced symbol map in PathBitsData.
-R1 and the gamma equation are proved below. Other circuit claims and complete
-statement/witness binding are separate; `Spec.Circuit`'s opaques are unchanged.
+R1 and the gamma equation are proved below. `Spec.Circuit` defines `Satisfied`,
+`stmtOf`, `witOf` and `publicOf` from these projections; `Artifacts.CircuitSoundness`
+proves C1 over them.
 -/
 
 namespace MSP.Artifacts.ConcreteWitness
@@ -44,7 +45,7 @@ theorem index_cast (w : Assignment) (k : Fin 2) :
   PathBits.index_cast w k
 
 /-- The high-level gamma equation for these concrete public/statement projections.
-The beta/Poseidon equality remains a separate obligation. -/
+Beta is proved in `PublicSignals.beta_of_pinned_r1cs`. -/
 theorem public_gamma (w : Assignment) (h : Spend.system.Satisfied w) :
     (publicOf w).2.1 = MSP.γ (statementOf w) ((publicOf w).2.2 + (publicOf w).1) :=
   FullCompression.gamma_of_pinned_r1cs w h

@@ -7,8 +7,8 @@ import Artifacts.RelationFragments
 This assembly consumes the individual H2/H3 equations on the exact extracted
 instance forms. It derives the note, nullifier, path and output claims without
 assuming R, a whole Merkle-root equation, or a high-level nullifier equation.
-The instance hash equations remain explicit premises until their optimized
-round certificates and reference equivalence have been proved.
+The instance hash equations are premises here; `SmallHashGatesComplete`
+proves them and `CircuitSoundness` discharges them.
 -/
 
 namespace MSP.Artifacts.NoteBindings

@@ -7,8 +7,8 @@ import Artifacts.PathGates
 
 /-! Assemble every non-hash conjunct of the canonical spend relation from the
 complete pinned R1CS. The hash equations and gated Merkle membership are explicit
-remaining premises. This conditional result is not C1 or a binding of the opaque
-`Spec.Circuit` declarations. -/
+remaining premises. `CircuitSoundness` discharges those premises to
+prove C1. -/
 
 namespace MSP.Artifacts.RelationFragments
 
@@ -48,7 +48,8 @@ theorem non_hash_checks (a : Assignment) (h : Spend.system.Satisfied a) :
     · exact SinkGates.second_output_sink_rules a h
 
 /-- All remaining relation obligations are exposed as hash/path premises.
-Discharging them from the actual gates is still required for circuit soundness. -/
+`NoteBindings` discharges them through `relation_of_gadget_hashes`, and
+`CircuitSoundness` concludes C1. -/
 theorem relation_of_hash_bindings (a : Assignment) (h : Spend.system.Satisfied a)
     (hnf1 : (statementOf a).nf1 = nf (statementOf a).d
       ((ofAssignment a).sk 0) ((ofAssignment a).leaf 0) ((ofAssignment a).idx 0))

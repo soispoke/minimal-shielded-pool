@@ -277,7 +277,7 @@ def main():
     print(json.dumps(dict(sha256=PIN, wires=artifact['header']['wires'], constraints=artifact['header']['constraints'],
                          terms=artifact['terms'], symbols_checked=rows is not None, lean_checked=args.check_lean is not None,
                          pinned_section_count_exception=artifact['section_count_defect'],
-                         result='artifact checked; C1/C1c and projections remain unproved'), sort_keys=True))
+                         result='artifact checked; C1 and C1c are proved over it in Lean (Artifacts.CircuitSoundness, Artifacts.CircuitCompleteness)'), sort_keys=True))
 
 
 if __name__ == '__main__':

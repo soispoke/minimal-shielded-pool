@@ -2,8 +2,8 @@ import Artifacts.SmallHashGatesData
 import Spec.Hash
 
 /-! Statement-level interface for the 54 pinned small-hash instances.
-`HashBinding` is an explicit remaining obligation until the optimized affine
-schedules are checked. The note/path assembly may consume it conditionally.
+`HashBinding` is proved for all 54 instances in `SmallHashGatesComplete`.
+The note/path assembly consumes it as a premise.
 -/
 
 namespace MSP.Artifacts.SmallHashGates

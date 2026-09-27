@@ -34,7 +34,7 @@ def main():
         DESTINATION.write_bytes(expected)
     else:
         require(DESTINATION.read_bytes() == expected, 'CompressionData.lean differs from exact constraints 0..8')
-    print('CompressionData.lean matches exact pinned constraints 0..8; full C1/C1c remains open.')
+    print('CompressionData.lean matches exact pinned constraints 0..8.')
 
 
 if __name__ == '__main__':

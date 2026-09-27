@@ -3,10 +3,11 @@ import Spec.Basic
 /-!
 # Explicit R1CS semantics
 
-This module interprets extracted constraints over `Spec.Basic.F`. It neither
-uses `Spec.Relation.R` nor instantiates the opaque declarations in `Spec.Circuit`.
-The Python exporter is outside Lean's trusted kernel: byte decoding and signal
-projections still need an audited binding, and C1/C1c need separate proofs.
+This module interprets extracted constraints over `Spec.Basic.F`; `Spec.Circuit`
+builds its circuit definitions on it, and `Artifacts.CircuitSoundness` and
+`Artifacts.CircuitCompleteness` prove C1 and C1c. The Python exporter is outside
+Lean's trusted kernel: byte decoding and signal projections rest on an audited
+binding.
 -/
 
 namespace MSP.Artifacts

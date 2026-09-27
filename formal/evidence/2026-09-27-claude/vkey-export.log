@@ -1,0 +1,17 @@
+$ snarkjs --version
+snarkjs@0.7.5
+        Copyright (C) 2018  0kims association
+$ snarkjs zkey export verificationkey build/spend_final.zkey <tmp>
+[INFO]  snarkJS: > Detected protocol: groth16
+[INFO]  snarkJS: EXPORT VERIFICATION KEY FINISHED
+$ compare every field with contracts/vectors/spend_vkey.json
+IC: match
+curve: match
+nPublic: match
+protocol: match
+vk_alpha_1: match
+vk_alphabeta_12: match
+vk_beta_2: match
+vk_delta_2: match
+vk_gamma_2: match
+all fields match

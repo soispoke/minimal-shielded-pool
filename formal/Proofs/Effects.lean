@@ -151,7 +151,7 @@ theorem mem_append_getD (L : List F) (Lv : List ℕ) (new : List (F × ℕ)) (hl
   · rw [List.getD_append_right _ _ _ _ (by omega)]; simp [hj]
   · rw [List.getD_append_right _ _ _ _ (by omega)]; simp [hlen, hj]
 
-/-- The strengthened C5j: the occurrences are new (index at or past the old length). -/
+/-- C5j's shield half, strengthened with the balance and `owed` each growing by `v`. -/
 def C5jS (P : Pool) : Prop :=
   (∀ evs s inr v s', Run P evs s → Step P s (.shield inr v) s' →
     BadEvent P (evs ++ [.shield inr v]) s' ∨

@@ -3,8 +3,8 @@ import Artifacts.Witness
 import Poseidon.OptimizedEquivalence
 
 /-! Both compression outputs of the full pinned circuit, under the same
-concrete statement and public-wire projections. This does not yet establish
-the private spend relation or instantiate `Spec.Circuit`. -/
+concrete statement and public-wire projections. `CircuitSoundness`
+combines them with the relation to prove C1. -/
 
 namespace MSP.Artifacts.PublicSignals
 

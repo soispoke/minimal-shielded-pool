@@ -28,15 +28,23 @@ structure ChainState where
   storage : ℕ → ℕ → ℕ
   /-- the `cm` of every persisting `LeafAppended` log each address emitted for each epoch, in order -/
   leafLogs : ℕ → ℕ → List F
-  /-- all ETH each address sent to each other address in transfers that persist, other than gas payments and refunds -/
+  /-- all ETH each address sent to each other address, in transfers that persist,
+  by a `CALL` with empty calldata; value moved any other way (a call with data,
+  `CALLCODE` or `SELFDESTRUCT`), gas payments and refunds are not counted -/
   sentTo : ℕ → ℕ → ℕ
   /-- every persisting EIP-8272 write, in order: writer, salt, slot, root word -/
   rootWrites : List (ℕ × ℕ × ℕ × ℕ)
+  /-- every persisting `CALL`, `CALLCODE`, `CREATE` or `CREATE2` made by code whose
+  `ADDRESS` is each address, other than a `CALL` with empty calldata and nonzero
+  value: whether it is a `CALL`, the callee or created address, the value, and
+  the calldata or initcode -/
+  extCalls : ℕ → List (Bool × ℕ × ℕ × List UInt8)
   slot : ℕ
   rest : ChainRest
 
 instance : Nonempty ChainState :=
-  ⟨⟨fun _ => 0, fun _ _ => 0, fun _ _ => [], fun _ _ => 0, [], 0, Classical.choice inferInstance⟩⟩
+  ⟨⟨fun _ => 0, fun _ _ => 0, fun _ _ => [], fun _ _ => 0, [], fun _ => [], 0,
+    Classical.choice inferInstance⟩⟩
 instance : Inhabited ChainState := Classical.inhabited_of_nonempty inferInstance
 
 opaque DeploymentImpl : NonemptyType.{0}
@@ -46,7 +54,9 @@ instance : Nonempty Deployment := DeploymentImpl.property
 
 /-- P9. The deployment matches D12 and the committed artifacts. -/
 opaque Honest : Deployment → Prop
+/-- D12. The pool's address `A`. -/
 opaque addrOf : Deployment → ℕ
+/-- D12. The chain ID `c` of the pool's chain (P11). -/
 opaque chainOf : Deployment → ℕ
 /-- The linked verifier returns 1 for these proof words and public signals when
 its call frame starts with 500,000 gas (the dispatcher's gas operand; frame 1's
@@ -68,9 +78,14 @@ is either empty or opens a block with any header the consensus rules allow
 start-of-block system calls. -/
 opaque ChainStep : Deployment → ChainState → ChainState → Prop
 
-/-- The model state `s` is what the chain state shows, up to ghost fields. Every
-clause about a hash-indexed storage slot names only keys the model holds, so no
-collision with a key nobody hashed can falsify it. -/
+/-- The part of the model state `s` that the chain state shows, as refinement
+(§4) lists it. The ghost fields `vals`, `spent` and `credited` are not shown;
+credits, consumed keys and final roots are shown only for the recipients with
+a credit, the keys and the closed epochs the model holds; and of the root writes
+only each pool source's latest entry in the usable window, and that each of the
+pool's own writes is one the model makes. Every clause about a hash-indexed
+storage slot names only keys the model holds, so no collision with a key nobody
+hashed can falsify it. -/
 def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
   let A := addrOf d
   st.balance A = s.balance ∧
@@ -85,6 +100,8 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
     st.storage RECENT_ROOT (K (rrKeyMsg (sourceId A e) (sl % 8192))) =
       K (rrEntryMsg (sourceId A e) sl r)) ∧
   (∀ r, st.sentTo A r = s.paid r) ∧
+  (∀ c ∈ st.extCalls A, c.1 = true ∧ c.2.1 = RECENT_ROOT ∧ c.2.2.1 = 0 ∧ c.2.2.2.length = 64) ∧
+  (∀ w ∈ st.rootWrites, w.1 = A → w.2.1 < 2 ^ 64 ∧ (sourceId A w.2.1, w.2.2.1, w.2.2.2) ∈ s.roots) ∧
   st.slot = s.slot
 
 /-- The model events of a chain step, in execution order: each call into the
@@ -161,14 +178,16 @@ def RawTx : Type := RawTxImpl.type
 signers; `maxCost` is its `TXPARAM(0x06)`. -/
 opaque RawTx.view : RawTx → FrameTx
 
-/-- P5 to P7: `t` is valid in `st`. -/
+/-- P5 to P7: `t` is valid in `st`, meaning includable in the current open block
+under every consensus rule. -/
 opaque ValidTx : ChainState → RawTx → Prop
 /-- The validity conditions frame 1 and later frames do not decide: EIP-8141's
 static rules and gas caps, EIP-8250's decoding rules, EIP-1559's fee-field
-checks, the fee caps against the base fee, the reservations
-of each gas dimension against the block's remaining gas, the chain ID,
-EIP-8250's nonce sequences, signature validation, and success of every frame
-before frame 1. -/
+checks, the fee caps against the base fee, room in the open block under every
+per-block limit for the transaction's whole execution (each gas dimension's
+reservation, EIP-7934's RLP size and EIP-7928's access-list items, among
+others), the chain ID, EIP-8250's nonce sequences, signature validation, and
+success of every frame before frame 1. -/
 opaque PreValid : ChainState → RawTx → Prop
 /-- Every `APPROVE` that does not revert its frame, executed while `t` runs from
 `st` by code whose `ADDRESS` is the pool's, in any frame: its frame index and
@@ -204,8 +223,9 @@ committed key accepts. -/
 def C9 : Prop :=
   ∀ d, Honest d → ∀ π pub, π.length = 256 → (verifierOf d π pub ↔ Groth16Accepts π pub)
 
-/-- `hash2` and `hash3` of the linked libraries: the returned word and the gas used. -/
+/-- `hash2` of the linked library: the returned word and the gas used. -/
 opaque libHash2 : Deployment → F → F → Option (ℕ × ℕ)
+/-- `hash3` of the linked library, as for `libHash2`. -/
 opaque libHash3 : Deployment → F → F → F → Option (ℕ × ℕ)
 
 /-- C8. The libraries return `H2` and `H3` within 200,000 gas. -/
@@ -247,6 +267,7 @@ structure Payout where
   success : Bool
   returnSize : ℕ
 
+/-- The `Payout` of that `callPool`, or `none` if the pool made no such call. -/
 opaque firstPayout : Deployment → ChainState → Env → ℕ → List UInt8 → Option Payout
 
 def publishCalldata (e : ℕ) : List UInt8 := [0xd0, 0x38, 0x70, 0xb3] ++ u256 e
@@ -262,13 +283,16 @@ def RecipientRejected (d : Deployment) (st : ChainState) (env : Env) (caller r v
     (po.success = false ∨ 2 ^ 16 ≤ po.returnSize)
 
 /-- C10. Anyone other than the pool, in any valid transaction and block
-environment, can publish an existing epoch's nonzero root and pay out a covered
-credit, which fails only if the recipient rejects a plain payment or returns at
-least 64 KiB. -/
+environment, can publish an existing epoch's nonzero root while the epoch
+counter is below `2 ^ 64`, and pay out a nonzero covered credit to any recipient below
+`2 ^ 160`, which fails only if the
+recipient rejects a plain payment or returns at least 64 KiB. `Obs` reads the
+counter as a whole storage word, which exceeds the contract's `uint64` counter
+only through a degenerate storage key, a bad event refinement accounts for. -/
 def C10 : Prop :=
   ∀ d st s caller env, Honest d → ReachableChain d st → Obs d st s → caller ≠ addrOf d →
     EnvValid st caller env →
-    (∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
+    (s.E < 2 ^ 64 → ∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
       callPool d st env caller (publishCalldata e) = .ok) ∧
     (∀ r < 2 ^ 160, 0 < s.credit r → s.credit r ≤ s.balance →
       callPool d st env caller (claimCalldata r) = .ok ∨

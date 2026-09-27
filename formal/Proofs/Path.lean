@@ -1,8 +1,9 @@
 import Proofs.C5cC4
 import Sanity.TreeLemma
 
-/-! The path walk: a Merkle path whose root equals `TR L`, with no collision
-between its queries and `treeQueries DEPTH L`, starts at `L.getD i 0`. -/
+/-! The path walk: for `i < 2 ^ DEPTH`, a Merkle path whose root equals `TR L`
+starts at `L.getD i 0` when its queries and `treeQueries DEPTH L` all lie in a
+list `T` with `NoColl T`. -/
 
 namespace MSP
 noncomputable section

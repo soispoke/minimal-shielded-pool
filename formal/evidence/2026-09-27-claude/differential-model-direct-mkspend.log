@@ -1,0 +1,63 @@
+$ python3 formal/tools/differential_model.py --seed 20260927 -n 1 --direct-levels 20 --direct-spend 1
+# date: 2026-09-27T06:26:01Z  head: 4956d3a (worktree has uncommitted changes)  toolchain: leanprover/lean4:v4.35.0-rc3
+# Evaluates Spec's own mkSpend (so TR and siblingsOf at depth 20, uncached) on spend/0's inputs, and siblingsOf at all 20 levels directly for tree/0.
+{
+  "result": "pass",
+  "seed": 20260927,
+  "cases_per_category": 1,
+  "direct_siblings_levels": 20,
+  "direct_mkSpend_cases": 1,
+  "cases_and_comparisons_by_kind": {
+    "const": {
+      "cases": 1,
+      "comparisons": 46
+    },
+    "note": {
+      "cases": 1,
+      "comparisons": 5
+    },
+    "cm": {
+      "cases": 1,
+      "comparisons": 1
+    },
+    "domain": {
+      "cases": 1,
+      "comparisons": 1
+    },
+    "smalltree": {
+      "cases": 1,
+      "comparisons": 1
+    },
+    "tree": {
+      "cases": 1,
+      "comparisons": 64
+    },
+    "compression": {
+      "cases": 1,
+      "comparisons": 13
+    },
+    "spend": {
+      "cases": 1,
+      "comparisons": 67
+    },
+    "spenddirect": {
+      "cases": 1,
+      "comparisons": 67
+    }
+  },
+  "total_cases": 9,
+  "total_comparisons": 265,
+  "unexpected_lean_values": 0,
+  "problems": [],
+  "problem_count": 0,
+  "lean_messages": [],
+  "generated_lean_sha256": "8f0041bc7aeee3ff634f9e5f0d022cb9dc560fa45a83b3bb9787bcbeacb39b71",
+  "driver_sha256": "348bd647311d071ac73c42b4552d6ede0a3bd2c26494af83fd47da3d6a015b9d",
+  "lean_seconds": 3448.3,
+  "total_seconds": 3448.5,
+  "scope": "Executable differential test of Spec definitions against wallet.py; not a proof"
+}
+real 3448.65
+user 3195.15
+sys 34.86
+exit status: 0

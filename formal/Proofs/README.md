@@ -1,8 +1,8 @@
 # Proof status
 
 The model proofs were developed with abstract hashes and now build against
-the concrete reference Poseidon definitions in `Spec/Hash.lean`. Keccak remains
-opaque. The claims retain their bad-event alternatives and C1 hypotheses.
+the concrete reference Poseidon definitions in `Spec/Hash.lean` and the concrete
+Keccak-256 in `Keccak/`. The claims retain their bad-event alternatives and C1 hypotheses.
 `lake build` checks the proofs; `AxiomAudit.lean` rejects dependencies outside
 Lean's standard logical axioms for the principal results listed below.
 
@@ -12,7 +12,7 @@ Lean's standard logical axioms for the principal results listed below.
 | `C3.lean` | `C5e P` for every pool, and `C1 → C3 P` |
 | `C5a.lean` | `C1 → C5a P` |
 | `C5cC4.lean` | `C1 → C5b P → C5c P`, and `C1 → C5b P → C5c P → C4 P` |
-| `Path.lean` | the path walk: a Merkle path whose root is `TR L`, without a collision against `L`'s tree queries, starts at `L`'s leaf |
+| `Path.lean` | the path walk: for `i < 2^20`, a Merkle path whose root is `TR L` starts at `L`'s leaf when its queries and `L`'s tree queries lie in one query list with no collision |
 | `C5i.lean` | `C5b P → C5i P` |
 | `C5b.lean` | `C1 → C5b P` |
 | `Model.lean` | `C1 → C5g P`, `C1 → C5h P`, `C1 → Spendable P`, and `model_theorem_of` |
@@ -39,7 +39,7 @@ relation and both compression outputs from the complete pinned R1CS.
 `CircuitSoundness` proves the unchanged C1 statement. All 54 small-hash
 instances, the beta gadget, all range/control/path gates and the private
 projection are connected. Universal optimized/reference Poseidon equivalence
-is proved for all three widths. Keccak and Groth16 verification remain opaque.
+is proved for all three widths. `Groth16Accepts` remains opaque.
 
 `CircuitCompleteness` assembles actual complete hash, range, path, control and
 compression witnesses using checked wire ownership and shared-value agreement.
@@ -47,7 +47,7 @@ Its exact ordered coverage accounts for every pinned constraint. The result
 preserves all private witness fields and works for every alpha.
 
 Remaining completion gates include C2/C2c/C8/C9/C10 and refinement,
-the required concrete key/verifier/library/bytecode bindings, W1/W2, and the
+the required concrete key/verifier/library/bytecode bindings, W2, and the
 semantic mutation failures in `SPEC.md`. The decoder's negative tests do not
 discharge those mutation gates. End-to-end formal verification is incomplete.
 

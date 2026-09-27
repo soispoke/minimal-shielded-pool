@@ -4,8 +4,9 @@ import Mathlib.Tactic.NormNum
 /-!
 # D1: fields, words and byte encodings
 
-The Lean statements mirror `formal/SPEC.md`. They contain no proofs and no
-`sorry`: each claim is a `Prop` that later steps prove.
+The Lean statements mirror `formal/SPEC.md`. They prove no claim and contain
+no `sorry`: each claim is a `Prop` that later steps prove, and the only proofs
+are helpers such as `NeZero p` and `K_lt`.
 -/
 
 namespace MSP

@@ -1,7 +1,8 @@
 import Poseidon.Constants
 
 /-! Concrete reference functions used by `Spec.Hash`'s H2, H3 and H10.
-Equivalence with the optimized circuit and deployed libraries remains open. -/
+Equivalence with the optimized circuit is proved; equivalence with the deployed
+libraries is part of C8 (step 5). -/
 
 namespace MSP.Poseidon
 

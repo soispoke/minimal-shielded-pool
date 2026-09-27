@@ -1,5 +1,16 @@
 # MSP formal verification continuation
 
+## Direct Codex continuation, September 27, 20:08 UTC
+
+The user requested immediate continuation from Claude and explicitly left the
+two-hour automation paused. Claude stopped at `b1a15ef`, with round 37 fixes
+complete; the user interrupted its next review launch at 20:05 UTC. Codex now
+owns this checkout on `codex/formal-continuation`. The round-37 specification
+and checking harness are being reconciled with `7f670d6` and its checked proof
+increments. The older ownership notes below are historical. No scheduler was
+reactivated. Claude’s baseline `lake build` passed 3,640 jobs; its statement,
+artifact-pin and source checks passed before continuation.
+
 ## Ownership update, 2026-09-27 18:40 UTC
 
 Claude session `e9529fa7` stopped on a usage limit at 17:07 UTC during review
