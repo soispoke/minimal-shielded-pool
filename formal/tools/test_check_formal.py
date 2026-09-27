@@ -23,7 +23,7 @@ class CheckFormal(unittest.TestCase):
         self.assertEqual(c.IMPORT.findall(text), ['A.B', 'C', 'D', 'E'])
 
     def test_banned_words_outside_comments(self):
-        for code in ('theorem t : False := sorry', '@[simp] axiom bad : False',
+        for code in ('theorem t : False := sorry', 'def bad : False := sorryAx False false', '@[simp] axiom bad : False',
                      'private unsafe def f : Nat := 0', 'theorem t : 1 = 1 := by native_decide',
                      '@[implemented_by g] def f : Nat := 0',
                      'set_option debug.skipKernelTC true in', 'noncomputable axiom bad : False',
@@ -56,6 +56,12 @@ class CheckFormal(unittest.TestCase):
         # interpolation keeps its code: a banned word inside the braces is still seen
         self.assertTrue(c.BANNED.search(c.strip_comments('def s := s!"x {sorry} y"')))
         self.assertFalse(c.BANNED.search(c.strip_comments('def s := s!"sorry {1 + 1} axiom"')))
+        # after any other ident!, Lean reads a plain string
+        self.assertTrue(c.BANNED.search(c.strip_comments(
+            'def a : Nat := panic!"{"\naxiom evil : False\ndef z : String := "ok"')))
+        self.assertTrue(c.META.search(c.strip_comments(
+            'def a : Nat := panic!"{"\n#eval (pure () : IO Unit)\ndef z : String := "ok"')))
+        self.assertFalse(c.META.search(c.strip_comments('def s := m!"a {1} b" ++ f!"c {2}"')))
         # unprefixed interpolation and guillemet identifiers
         for code in ('#check println! "{ "\\"" }"\nopen Lean in\nrun_cmd pure ()',
                      'def \u00abx"\u00bb : Nat := 0\n#eval 1\ndef \u00aby"\u00bb : Nat := 1'):

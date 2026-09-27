@@ -30,7 +30,7 @@ from pathlib import Path
 FORMAL = Path(__file__).resolve().parents[1]
 ROOT = FORMAL.parent
 LOCK = FORMAL / 'STATEMENTS.lock'
-BANNED = re.compile(r'\b(sorry|admit|native_decide|implemented_by|axiom|unsafe|skipKernelTC|bv_decide)\b'
+BANNED = re.compile(r'\b(sorry|sorryAx|admit|native_decide|implemented_by|axiom|unsafe|skipKernelTC|bv_decide)\b'
                     r'|\+native\b|\bnative\s*:=\s*true')
 # Metaprogramming entry points, allowed only in locked (owner-reviewed) files.
 META = re.compile(r'#eval\b|#guard_msgs\b|\beval%|\b(by_elab|run_cmd|run_elab|run_meta|run_tac|initialize|'
@@ -123,8 +123,9 @@ def strip_comments(text):
     emptied, so a literal can neither hide code nor open a fake comment.
     Plain strings honour escapes; raw strings (`r"..."`, `r#"..."#`) have
     none and become the token `__raw_string__`, which `META` rejects outside
-    the lock; interpolated strings (`s!"...{code}..."`) keep their code, which
-    is lexed again, nested literals included. A plain string containing `{`
+    the lock; interpolated strings (`s!"...{code}..."`, and `m!` and `f!`)
+    keep their code, which is lexed again, nested literals included; after any
+    other `ident!`, such as `panic!"{"`, Lean reads a plain string. A plain string containing `{`
     also becomes `__raw_string__`, since `println!`, `dbg_trace` and
     `throwError` take interpolated strings without a prefix, and a `«...»`
     identifier is skipped whole."""
@@ -169,7 +170,8 @@ def strip_comments(text):
             j = text.find(close, i + raw.end())
             out.append(' __raw_string__ ')
             i = n if j < 0 else j + len(close)
-        elif c == '"' and i > 0 and text[i - 1] == '!' and _ident_before(text, i - 1):
+        elif c == '"' and i > 1 and text[i - 1] == '!' and text[i - 2] in 'smf' \
+                and not _ident_before(text, i - 2):
             out.append('"')
             stack.append(depth)
             mode = 'istr'
