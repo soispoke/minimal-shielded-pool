@@ -209,7 +209,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check the statement lock, artifact pins and Lean sources
-        run: python formal/tools/check_formal.py all
+        run: python -I formal/tools/check_formal.py all
       - name: Install Lean
         run: |
           # Build every project module from source, never from a checked-in output.
@@ -230,7 +230,7 @@ jobs:
         working-directory: formal
         run: |
           lake env lean Proofs/AxiomAudit.lean
-          python tools/check_formal.py all
+          python -I tools/check_formal.py all
           git diff --exit-code
       - name: Differential-test the executable model against the wallet
         run: |

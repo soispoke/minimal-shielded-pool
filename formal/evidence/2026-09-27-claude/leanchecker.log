@@ -1,0 +1,7 @@
+$ cd formal && lake env leanchecker Spec <every module under Spec Sanity Proofs Artifacts Poseidon Primality Keccak Groth16>
+# date: 2026-09-27, head: a97cab4 plus the round-25 working tree, toolchain: leanprover/lean4:v4.35.0-rc3
+# machine: 18 CPUs, 128 GB memory
+# The replay was stopped by hand, unfinished, after `ps` reported for the
+# leanchecker process: 98:49 CPU time (single threaded) and 76.4 GB resident.
+# It had printed nothing. A single small module (`lake env leanchecker Spec.System`)
+# finishes in 6 s. The formal CI job therefore does not run a full replay.

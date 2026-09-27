@@ -511,6 +511,7 @@ refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 
 CI checks this project on every push in two jobs. The `formal` job runs only
 owner-reviewed code before the proofs are checked: `tools/check_formal.py`,
+run under `python -I` so no file beside it can shadow a standard module,
 which checks the statement files against `STATEMENTS.lock` and the artifact
 hashes of §1, and textually rejects, outside comments and string literals,
 `sorry`, `admit`, native evaluation, `debug.skipKernelTC`, `axiom`, `unsafe`
@@ -544,7 +545,8 @@ ban is what stops an unowned proof file from adding a declaration the kernel
 never checked or rewriting the audit mid-build; it is textual, so it raises
 the cost of a hostile change but does not exclude one. Replaying every project
 declaration with `leanchecker` would close that gap, but a local run had used
-76 GB of memory and 99 CPU minutes without finishing, so CI does not run it. Neither job has yet run on GitHub's runners.
+76 GB of memory and 99 CPU minutes without finishing
+(`evidence/2026-09-27-claude/leanchecker.log`), so CI does not run it. Neither job has yet run on GitHub's runners.
 
 ## 8. Limits
 
