@@ -141,7 +141,8 @@ optimized/reference Poseidon10 equivalence. `compression_of_pinned_r1cs`
 therefore establishes both canonical beta and gamma from full-system
 satisfaction, with no hash equation as a premise. Its dependency closure uses
 only standard Lean logical axioms. The complete relation and completeness are
-proved by C1/C1c; Keccak and verifier/chain bindings remain separate.
+proved by C1/C1c; `K` is concrete Keccak-256 (`Keccak/`); verifier and chain
+bindings remain separate.
 
 ## Amount and address range proofs
 
@@ -271,8 +272,9 @@ lake build Artifacts.CircuitSoundness Artifacts.CircuitCompleteness Proofs.Axiom
 
 ## Remaining proof frontier
 
-Groth16's concrete key/pairing relation, hardened verifier, Keccak, deployed
-libraries and chain semantics remain separate bindings. The complete semantic
-mutation gates, W1/W2 and both gas dimensions remain open. Setup honesty (P3)
+Groth16's concrete key/pairing relation, hardened verifier, deployed libraries
+and chain semantics (including the EVM's Keccak) remain separate bindings. The
+complete semantic mutation gates, W2 and both gas dimensions remain open; W1 is
+proved in `Proofs/NonVacuityFixtureVerified.lean`. Setup honesty (P3)
 and zkey/R1CS consistency (P9) remain the explicit premises in `SPEC.md`;
 missing original powers-of-tau evidence is not a new completion requirement.

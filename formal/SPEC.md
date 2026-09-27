@@ -143,8 +143,8 @@ injective: a hash from `F^3` to `F` cannot be, and assuming it would make every
 claim trivially true. Claims that rely on binding end in "or the run has a bad
 event". A bad event anywhere in the run, even one among queries only the
 adversary chose, voids the claims for every user from then on, since it
-persists as the run grows; the guarantee is the premises' bound on the chance
-that the whole run contains one. A *bad event* counts only among what the run itself hashed: the sink
+persists as the run grows; the guarantee is that, under the premises, no
+efficient party can make the run contain one. A *bad event* counts only among what the run itself hashed: the sink
 commitments the code hardcodes, the inputs of every approved spend's extracted
 witness, every shield's commitment, every tree node of every root of every
 prefix, every domain, root source and key-set hash, the entry and storage key
@@ -156,11 +156,16 @@ output of 0 (the empty leaf) or a Keccak output below `2^64` (where empty
 storage and fixed slots live); an approved spend whose extraction fails; or a
 compression break. Collisions that merely exist do not count. Every witness a
 claim ranges over is fixed by an extractor quantified universally, never chosen
-by the proof. The premises bound the probability of a bad event only for
-efficient adversaries (algebraic ones, for extraction failure) and only with
-`ext` taken to be P3's extractor: collisions, degenerate outputs and compression
-breaks are bounded for every efficient machine and efficient extractor (P1, P2,
-P4), extraction failure only for algebraic machines with P3's extractor. The same holds for openings and dummies a
+by the proof. Because `H2`, `H3`, `H10` and `K` are fixed and unkeyed, P1, P2
+and P4 are not probability bounds: collisions exist, and a machine could
+hardcode one. Each such bad event instead exhibits, computably from the run and
+its extracted witnesses, an explicit Poseidon or Keccak collision, a Poseidon
+output of 0, a Keccak output below `2^64`, a run query other than
+`addr20(A) ‖ u256(e)` that hashes to `K(addr20(A) ‖ u256(e))`, or `x ≠ x′`
+with `γ(x − x′, α(x) + H10(x′)) = 0`, and the premises assume no efficient
+party (and efficient extractor) can produce such an object. Only P3 bounds a
+probability, over the setup's randomness, for algebraic machines with `ext`
+taken to be P3's extractor. The same holds for openings and dummies a
 claim names: for one that merely exists, the claim holds through a collision
 with the query that created the leaf, and the bound applies only to openings an
 efficient party outputs.
@@ -169,12 +174,12 @@ efficient party outputs.
 - **P2 Keccak.** The same for Keccak collisions and outputs below `2^64`, for distinct `(c, a, e)` with equal `D`, and for a run query other than `addr20(A) ‖ u256(e)` whose output is `K(addr20(A) ‖ u256(e))` for some `e < 2^64`, or an output `K(addr20(A) ‖ u256(e))` below `2^64`; and, used only for liveness, for a Keccak collision between the `NONCE_MANAGER` storage key of a key a spend selects and that of any key consumed on the chain, by any sender.
 - **P3 Groth16.** For the committed verification key, from snarkjs's two-phase setup (`γ = [1]₂`, `δ` from phase 2) run honestly, knowledge soundness: for every efficient algebraic machine that produces the run's transactions, honest provers included, whose group inputs include the whole setup transcript (the phase-1 powers of tau and the phase-2 contributions) and every other group element it sees, including other setups built on the same phase 1, an efficient extractor that does not rewind, and reads the machine's representations of its group outputs over those inputs, maps, except with negligible probability, each proof that Groth16's verification for the committed key accepts (`Groth16Accepts`) to a satisfying assignment of the pinned `spend.r1cs` with the verified public signals. Bowe, Gabizon and Miers (2017) argue this in the generic group model, and Kohlweiss, Maller, Siim and Volkhov (2021) prove knowledge soundness for that ceremony, including the beacon version used in practice, against algebraic adversaries in the random oracle model with one honest party per phase, though their update proofs put the random-oracle element in G1 rather than snarkjs's G2 and their model excludes honest setups of other relations on the same phase 1 (their §3), so P3's extension to snarkjs's transcript and to such setups is an assumption; Fuchsbauer, Kiltz and Loss (2018) cover Groth's original reference string, not this one. Every claim holds for every extractor, and an approved spend whose extraction fails is a bad event. An approved spend's proof is 256 bytes the linked verifier accepts, so with C9 it is one that `Groth16Accepts`, and P3 bounds its extraction failure. No claim assumes extraction for every accepted proof: a Groth16 verifier accepts some proof for every public input. Knowledge soundness over a machine that includes honest provers says nothing about who knew a witness, so it gives no spend authority against any party that sees honest proofs, on chain or before inclusion. Beyond C5i, spend authority needs weak simulation extractability, so that a spend of new public signals yields a witness from its sender's view alone, and zero knowledge with Poseidon one-wayness, so that no other party learns a holder's key (§8). The pinned zkey comes from a local test setup with one phase-2 contribution and an unrecorded phase 1, so it is not known to meet P3.
 - **P3c Groth16 completeness.** For every satisfying assignment there are eight proof words that Groth16's verification for the committed key accepts for its public signals; with C9 the linked verifier accepts them. Used only for liveness (§5).
-- **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. For every efficient machine producing the run and every efficient extractor, this has negligible probability. For these fixed, unkeyed functions that is an assumption about what the run outputs, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
+- **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. No efficient machine producing the run, with an efficient extractor, outputs one. For these fixed, unkeyed functions that is an assumption about what efficient parties can output, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
 - **P5 EIP-8141.** A transaction is valid only if its `chain_id` is the chain's. Frames run in order. A VERIFY frame changes nothing but through `APPROVE`; if it fails, the transaction is invalid. `APPROVE` reverts the current frame unless `ADDRESS` is the frame's resolved target and the scope is among the frame's flags; `APPROVE` with payment reverts if the payer's balance is below `max_cost`. Approval flags are excluded from atomic batches. `APPROVE(3)` from frame 1 makes `A` sender and payer. A SENDER frame's caller is `sender`, a DEFAULT frame's the entry point. A failed non-VERIFY frame reverts its own effects, or its whole atomic batch's. `TXPARAM`, `FRAMEPARAM` and `SIGPARAM` return the EIP's table values, with EIP-8250's `TXPARAM(0x01) = nonce_seq`, `0x0E` = key count, `0x0F = K(u256(n) ‖ u256(k_1) ‖ … ‖ u256(k_n))`. Frame data read with `FRAMEDATALOAD` or, in the running frame, `CALLDATALOAD` is the frame's data. A `msg` is empty, signing the canonical hash, or a nonzero 32-byte digest, so `SIGPARAM(i, 0x02) = 0` exactly when signature `i` signs the canonical hash, which covers every field except the raw bytes of such signatures. The payer pays at most `max_cost`.
 - **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas.
 - **P7 EIP-8272.** A call from address `a` with data `salt ‖ root` during slot `S` stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, with the target, mode, flags, value, state limit and data length A1 gives it, A3's data and enough execution gas, succeeds exactly when, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. Entries change otherwise only through a reorg; the model follows the canonical chain.
 - **P8 Gas schedule and fork.** A pinned gas schedule `G`: the schedule ethrex 247e2dd2 applies at the pinned fork, with EIP-8037 state gas, EIP-2929's warm and cold access sets priced as EIP-8038 sets them (EIP-8037 requires EIP-8038; how EIP-8038 applies at EIP-8141's frame entry is not settled in the EIPs, and the measured constants follow ethrex), and EIP-150's 63/64 rule. The claims hold while the chain keeps `G` and the pinned EIP revisions; a fork that changes them ends them.
-- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No Lean proof checks the setup. The deployment script checks the deployment and pinned artifact hashes. The activation gate additionally checks the zkey's sizes and A/B coefficient metadata against `spend.r1cs`, and binds both the Solidity constants and every verifier-used field of `spend_vkey.json` to that key. C/IC/L and key-point consistency with the complete constraint system remain unchecked without the original phase-1 powers of tau (§8). No tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment.
+- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No Lean proof checks the setup. The deployment script checks the deployment and the artifact hashes the activation manifest pins (`spend_vkey.json` is bound field by field, not by hash). The activation gate on this branch (added in `6735e3e` and `870dd58`; at `8835be7` it compares only the manifest's hashes, profile and contribution count) additionally checks the zkey's sizes and A/B coefficient metadata against `spend.r1cs`, and binds both the Solidity constants and every verifier-used field of `spend_vkey.json` to that key. C/IC/L and key-point consistency with the complete constraint system remain unchecked without the original phase-1 powers of tau (§8). No tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment.
 - **P10 EVM model.** The Lean EVM and Yul semantics, extended with EIP-8141 frames, EIP-8250 and EIP-8272, match the client, and every chain-level declaration in `Spec/Evm.lean` is defined from it.
 - **P11 Chain identity.** The chain ID never changes on a chain that carries the pool's state.
 - **P12 Signatures.** secp256k1 low-s ECDSA applied to EIP-8141's canonical signature hash is unforgeable as a scheme on transactions: no efficient party without the key outputs a valid transaction whose scheme-1 signature resolves to that key's address, other than one the holder signed or one that differs from it only in that signature's bytes. ECDSA on bare digests is forgeable, so collision resistance of the hash alone does not give this; Brown (2005) argues it in the generic group model from collision resistance and uniformity of the hash, pseudorandom signing nonces, and a condition on the conversion from `R` to `r`. Used only to read C3's signature conclusion as "only the holder of `auth`'s key authorized this transaction".
@@ -323,10 +328,11 @@ every root under one of its sources is a real root of its tree, or some prefix
 of the run has a bad event (for a root, one that may use that source's Keccak
 input, as in C5e). Such a bad event, including one among queries only the
 adversary chose or a failed extraction of its own spend, voids these
-conclusions for every user from then on; the guarantee is the premises' bound,
-with `ext` taken to be P3's extractor, on the probability that an efficient
-algebraic adversary makes the run contain any bad
-event, and it does not shrink to the notes involved.
+conclusions for every user from then on. The guarantee is that an efficient
+algebraic adversary, with `ext` taken to be P3's extractor, makes the run
+contain a bad event only by exhibiting an object P1, P2 or P4 assumes no one can
+produce, or with the probability P3 bounds; it does not shrink to the notes
+involved.
 
 Liveness composes from the same claims and is argued, not stated in Lean. The
 holder of an unspent note worth more than the spend's maximum cost builds the
@@ -415,7 +421,7 @@ in `devnet/deploy_config.json`) is informal evidence.
 | Logic: make `claimWithdrawal` or `publishEpochRoot` always revert | C10 |
 | Verifier: generated from another zkey | C9 |
 | Verifier: skip the canonical-coordinate or infinity checks | C9 |
-| Set up the zkey from `spend.r1cs` minus one constraint | none: violates P9; tooling checks A/B metadata and count, while full setup remains assumed (§8) |
+| Set up the zkey from `spend.r1cs` minus one constraint | none: violates P9; this branch's gate checks A/B terms and counts (the gate at `8835be7` does not), while full setup remains assumed (§8) |
 
 **Model mutants.** Refinement certifies any code that matches `Step`, so the
 model claims must also reject a wrong `Step`. Each variant below makes the named
@@ -465,10 +471,10 @@ storage layout: slot 21 is the leaf count, 22 the current root, 23 the credits,
 `treeQueries`, `eventQueries` and the Keccak inputs `rrEntryMsg`, `rrKeyMsg`,
 `creditMsg` and `finalRootMsg`. Bad events are `BadEventWith`, over `traceQueries`,
 with `Query.degenerate`, `ExtractionFailure` and `CompressionBreak`.
-Declarations still marked `opaque` are bound to the artifacts in later steps:
-`Groth16Accepts` (textbook Groth16
-verification with the key in `spend_vkey.json`, not the verifier's code) in
-step 3, and the EVM semantics in step 5, where
+Declarations still marked `opaque` are bound to the artifacts in step 5:
+`Groth16Accepts` (textbook Groth16 verification with the key in
+`spend_vkey.json`, not the verifier's code), which only C9 uses, and the EVM
+semantics, where
 `ChainStep`, `eventsOf`, `approvalsIn`, `firstPayout` and the
 other chain declarations must
 come from one semantics applied to the pinned bytecode, and where step 5 proves
@@ -482,13 +488,19 @@ concrete projections; `Artifacts.CircuitSoundness` proves C1, including every
 note/path hash and both compression outputs. `Artifacts.CircuitCompleteness`
 proves C1c by constructing and checking the complete assignment, including
 exact statement, private witness and public projections for every alpha.
+Both rest on an external binding: `formal/tools/r1cs_artifact.py` decodes
+`build/spend.r1cs` into `Artifacts/Spend.lean` and maps signals to wires
+through the reproduced symbol file, cross-checked by `crosscheck_r1cs.cjs`.
+Lean does not parse the binary.
 `formal/Proofs/` proves `ModelTheorem`, every model claim from C1, and `Composes`.
 It also proves C6 for the specified tree algorithm, including kernel-checked
 zero constants. `K` is concrete Ethereum Keccak-256, with kernel-checked
 source/domain fixtures. `Proofs.NonVacuityFixtureVerified` proves W1 using
 an actual satisfying circuit assignment, the specified ideal verifier, an
 encoded accepted spend and the complete finite bad-event query support.
-W2 and the bytecode refinement remain open.
+W2 and the chain half of `MainTheorem` remain open: C2, C2c, C8, C9, C10 and
+refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
+`MainTheorem` and `ChainCorollary` from exactly those obligations.
 
 ## 8. Limits
 
@@ -505,14 +517,18 @@ proofs, on P12, and on no efficient party computing `sk` from `inner`, `cm` and
 `nf` (Poseidon one-wayness), argued on paper. Liveness is argued from the
 claims (§5), not proven as one theorem.
 
-Tooling checks the zkey's A/B metadata and both verification-key representations,
-including the JSON's canonical coordinates and IC points. Those comparisons
-catch stale or mismatched artifacts; they do not prove that the zkey's C/IC/L
-points were derived from the complete R1CS. The original phase-1 powers of tau
+On this branch, tooling checks the zkey's sizes and A/B terms against `spend.r1cs`, and both
+verification-key representations against the zkey. Those comparisons catch a
+key whose sizes or A/B terms differ from `spend.r1cs`, and a Solidity or JSON
+key that differs from the zkey's. They miss a key set up from an R1CS that
+differs only in C terms, and they do not prove that any of the zkey's points
+were derived from the complete R1CS. The original phase-1 powers of tau
 is not recorded. Full setup consistency therefore remains part of P9. The gate
 reports `setup: partial`; its `--ptau` path requires a manifest-pinned file and
 runs snarkjs's full check. The unused JSON pairing cache is outside the native
-gate, although an independent export matches the complete pinned JSON. Until a ceremony
+gate, although snarkjs 0.7.5's `zkey export verificationkey` on the pinned zkey
+reproduces every field of the JSON, including that cache
+(`formal/evidence/2026-09-27-claude/vkey-export.log`). Until a ceremony
 replaces the zkey, the claims that allow a bad event give no guarantee for the
 pinned artifacts.
 

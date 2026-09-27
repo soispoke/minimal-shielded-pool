@@ -1,8 +1,8 @@
 # Proof status
 
 The model proofs were developed with abstract hashes and now build against
-the concrete reference Poseidon definitions in `Spec/Hash.lean`. Keccak remains
-opaque. The claims retain their bad-event alternatives and C1 hypotheses.
+the concrete reference Poseidon definitions in `Spec/Hash.lean` and the concrete
+Keccak-256 in `Keccak/`. The claims retain their bad-event alternatives and C1 hypotheses.
 `lake build` checks the proofs; `AxiomAudit.lean` rejects dependencies outside
 Lean's standard logical axioms for the principal results listed below.
 
@@ -39,7 +39,7 @@ relation and both compression outputs from the complete pinned R1CS.
 `CircuitSoundness` proves the unchanged C1 statement. All 54 small-hash
 instances, the beta gadget, all range/control/path gates and the private
 projection are connected. Universal optimized/reference Poseidon equivalence
-is proved for all three widths. Keccak and Groth16 verification remain opaque.
+is proved for all three widths. `Groth16Accepts` remains opaque.
 
 `CircuitCompleteness` assembles actual complete hash, range, path, control and
 compression witnesses using checked wire ownership and shared-value agreement.
@@ -47,7 +47,7 @@ Its exact ordered coverage accounts for every pinned constraint. The result
 preserves all private witness fields and works for every alpha.
 
 Remaining completion gates include C2/C2c/C8/C9/C10 and refinement,
-the required concrete key/verifier/library/bytecode bindings, W1/W2, and the
+the required concrete key/verifier/library/bytecode bindings, W2, and the
 semantic mutation failures in `SPEC.md`. The decoder's negative tests do not
 discharge those mutation gates. End-to-end formal verification is incomplete.
 
