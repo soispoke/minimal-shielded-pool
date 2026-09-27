@@ -510,7 +510,9 @@ fee below the value, and recipient and authorizer that are nonzero and below
 the canonical spend is valid and its keys are nonzero and unconsumed. Quantifying over the dummy, rather than asking for
 one, keeps a proof from choosing a dummy whose hashes collide. With C1c and P3c
 the holder can then prove it, and C2c approves it once §5's other conditions
-hold (a published root within its window and `max_cost ≤ fee`). -/
+hold, among them a published root within its window, `max_cost ≤ fee`, frame 1
+limits of at least 216,141 execution and 195,840 state gas, and no other party
+consuming the note or its keys first. -/
 def Spendable (P : Pool) : Prop :=
   ∀ evs s, Run P evs s →
     ∀ (o : Occ) (sk ρ v : F), o.i < (s.leaves o.e).length → o ∉ s.spent →

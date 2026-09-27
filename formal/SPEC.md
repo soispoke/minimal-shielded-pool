@@ -243,8 +243,9 @@ All this, or the run has a bad event.
 **C4 No burn.** An approved spend's settlement passes every revert condition
 of `settle`, including the ABI decoder's and checked arithmetic on the epoch
 counter and the credit, unless the run has a bad event or P13's bound fails;
-with refinement it succeeds on chain. *Prevents* burning notes whose keys
-approval has consumed.
+with refinement it succeeds on chain, except for a settlement that inserts no
+leaf and credits nothing, whose failure refinement cannot tell from success
+(C7). *Prevents* burning notes whose keys approval has consumed.
 
 **C5 System safety.** In every run of the model, unless it has a bad event:
 
@@ -538,9 +539,11 @@ W2 and the rest of the chain half of `MainTheorem` (C6 is proved) remain open: C
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 `MainTheorem` and `ChainCorollary` from exactly those obligations. No row of
 §6's mutation table has been checked formally; for R3, R5, R7 and R8 only
-the tests §6 names exist, besides fragment-level tests (`tools/test_sink_gates.py`,
-for R7's six controls, run in `formal-artifacts`) that build no mutated complete
-circuit.
+the tests §6 names exist, besides fragment-level tests of single pinned
+constraints that build no mutated complete circuit, such as
+`tools/test_sink_gates.py` for R7's six controls and `tools/test_path_gates.py`
+for R3's path selectors and value-gated root check, both run in
+`formal-artifacts`.
 
 CI checks this project on every push in two jobs. The `formal` job runs no
 unowned repository code before the proofs are checked. It trusts elan's

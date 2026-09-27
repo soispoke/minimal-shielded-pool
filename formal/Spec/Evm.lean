@@ -78,10 +78,14 @@ is either empty or opens a block with any header the consensus rules allow
 start-of-block system calls. -/
 opaque ChainStep : Deployment → ChainState → ChainState → Prop
 
-/-- The model state `s` is what the chain state shows, up to the ghost fields
-`vals`, `spent` and `credited`. Every
-clause about a hash-indexed storage slot names only keys the model holds, so no
-collision with a key nobody hashed can falsify it. -/
+/-- The part of the model state `s` that the chain state shows, as refinement
+(§4) lists it. The ghost fields `vals`, `spent` and `credited` are not shown;
+credits, consumed keys and final roots are shown only for the recipients with
+a credit, the keys and the closed epochs the model holds; and of the root writes
+only each pool source's latest entry in the usable window, and that each of the
+pool's own writes is one the model makes. Every clause about a hash-indexed
+storage slot names only keys the model holds, so no collision with a key nobody
+hashed can falsify it. -/
 def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
   let A := addrOf d
   st.balance A = s.balance ∧
@@ -283,8 +287,8 @@ environment, can publish an existing epoch's nonzero root while the epoch
 counter is below `2 ^ 64`, and pay out a nonzero covered credit to any recipient below
 `2 ^ 160`, which fails only if the
 recipient rejects a plain payment or returns at least 64 KiB. `Obs` reads the
-counter as a whole storage word; the contract's `uint64` counter exceeds it only
-through a degenerate storage key, a bad event refinement accounts for. -/
+counter as a whole storage word, which exceeds the contract's `uint64` counter
+only through a degenerate storage key, a bad event refinement accounts for. -/
 def C10 : Prop :=
   ∀ d st s caller env, Honest d → ReachableChain d st → Obs d st s → caller ≠ addrOf d →
     EnvValid st caller env →
