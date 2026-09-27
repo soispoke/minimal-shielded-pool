@@ -173,7 +173,7 @@ efficient party outputs.
 - **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas.
 - **P7 EIP-8272.** A call from address `a` with data `salt ‖ root` during slot `S` stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, with the target, mode, flags, value, state limit and data length A1 gives it, A3's data and enough execution gas, succeeds exactly when, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. Entries change otherwise only through a reorg; the model follows the canonical chain.
 - **P8 Gas schedule and fork.** A pinned gas schedule `G`: the schedule ethrex 247e2dd2 applies at the pinned fork, with EIP-8037 state gas, EIP-2929's warm and cold access sets priced as EIP-8038 sets them (EIP-8037 requires EIP-8038; how EIP-8038 applies at EIP-8141's frame entry is not settled in the EIPs, and the measured constants follow ethrex), and EIP-150's 63/64 rule. The claims hold while the chain keeps `G` and the pinned EIP revisions; a fork that changes them ends them.
-- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No proof checks this. The deployment script checks the deployment and the artifact hashes; the link between zkey, `spend.r1cs` and key is not yet gated by tooling, and no tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment (§8).
+- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No proof checks this. The deployment script checks the deployment and the artifact hashes the activation manifest pins, which do not include `spend_vkey.json`; the link between zkey, `spend.r1cs` and key is not yet gated by tooling, and no tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment (§8).
 - **P10 EVM model.** The Lean EVM and Yul semantics, extended with EIP-8141 frames, EIP-8250 and EIP-8272, match the client, and every chain-level declaration in `Spec/Evm.lean` is defined from it.
 - **P11 Chain identity.** The chain ID never changes on a chain that carries the pool's state.
 - **P12 Signatures.** secp256k1 low-s ECDSA applied to EIP-8141's canonical signature hash is unforgeable as a scheme on transactions: no efficient party without the key outputs a valid transaction whose scheme-1 signature resolves to that key's address, other than one the holder signed or one that differs from it only in that signature's bytes. ECDSA on bare digests is forgeable, so collision resistance of the hash alone does not give this; Brown (2005) argues it in the generic group model from collision resistance and uniformity of the hash, pseudorandom signing nonces, and a condition on the conversion from `R` to `r`. Used only to read C3's signature conclusion as "only the holder of `auth`'s key authorized this transaction".
@@ -259,8 +259,10 @@ yields `TR` of the inserted leaves.
 
 **C9 Verifier.** The linked verifier, when its call frame starts with 500,000
 gas (the dispatcher's gas operand; frame 1's limit may leave less, which C2c
-covers), returns 1 for 256 proof bytes and public signals exactly when Groth16's verification for the committed key accepts
-them: coordinates below `q` of points on the curves, in the prime-order
+covers), returns 1 for 256 proof bytes and public signals exactly when
+Groth16's verification for the committed key accepts them: the eight words are
+the coordinates of `A`, `B` and `C` in EIP-197's encoding (each G2 coordinate
+imaginary part first), below `q`, of points on the curves, in the prime-order
 subgroups and none at infinity, satisfying the pairing equation.
 
 **C10 Publication and claims.** In every reachable state anyone other than the
@@ -369,7 +371,7 @@ C5i and to the dummy's key directly.
 | A deployment check accepting wrong logic bytecode | P9, checked by tooling |
 | A chain ID change making spent notes spendable | P11 |
 
-A recipient that rejects a plain payment, such as most precompiles, or returns
+A recipient that rejects a plain payment, such as some precompiles, or returns
 so much data that copying it exhausts the pool's gas, strands its own credit
 (C5d keeps it; C10 excuses a rejection or at least 64 KiB of returned data); so
 may a recipient that calls back into the pool while being paid, if the pool
@@ -385,10 +387,9 @@ exactly the public signals of satisfying assignments and an extractor that maps
 every accepted proof to such an assignment (`IdealVerifier`); `W2` states that some
 reachable state of an honest deployment shows a leaf and a payout, the pool
 approves there a transaction valid up to frame 1 and then valid, and some
-caller other than the pool has a valid environment there. The live testnet
-transactions of the `position-notes-v2` deployment are informal evidence:
-deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
-`0x93d07a20…978e` and swap withdrawal `0x8a551c3f…2f01`.
+caller other than the pool has a valid environment there. The 2026-09-25 run
+of the `position-notes-v2` deployment recorded in `SECURITY.md` (pool and block
+in `devnet/deploy_config.json`) is informal evidence.
 
 **Mutations.** Each change must make some claim false:
 

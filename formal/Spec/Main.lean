@@ -47,7 +47,8 @@ def Composes : Prop := MainTheorem → ChainCorollary
 the public signals of satisfying assignments, some run has an approved spend
 whose settlement passes every check, with no bad event. With concrete hashes
 this needs a symbolic lemma for membership in `treeQueries`, whose repeated
-empty subtrees make about `2 ^ 40` entries. -/
+empty subtrees make about `2 ^ 20` entries per prefix, so about `2 ^ 40` pairs to
+check for collisions. -/
 def W1 : Prop :=
   ∃ (P : Pool) (evs : List Event) (s : PoolState) (tx : FrameTx) (g : ℕ) (s' : PoolState),
     IdealVerifier P ∧ (∀ π pub, P.verifies π pub ↔ ∃ a, Satisfied a ∧ publicOf a = pub) ∧
