@@ -6,7 +6,7 @@ typecheck against Lean 4.35.0-rc3 and Mathlib and depend only on Lean's standard
 axioms. C1, C1c, the model claims, C6 (over the transcribed tree code) and W1
 are proved; the rest of the
 chain half (C2, C2c, C8, C9, C10 and refinement), W2 and the remaining §6
-mutation checks are open (§7). The four circuit mutation gates are proved. Changing a claim or
+mutation checks are open (§7). The four circuit rows of §6 have kernel-checked counterexamples over archived compiled mutants (the range row only for removing `rc[0]`; the binding to source and binary is external to Lean, §7). Changing a claim or
 premise, here or in Lean, needs the same review as changing the pool.
 
 ## 1. Scope
@@ -111,7 +111,8 @@ zero except slot 22, which holds `EMPTY_ROOT`. It is deployed once the pinned
 EIPs are active, and `A` is created by a contract-creation transaction (empty
 `to`) sent by an externally owned account, so the committed initcode is the
 only code that runs in that transaction. Before deployment no code ran at `A`
-and no frame transaction had sender `A` (§8). Neither follows from the
+and no frame transaction had sender `A` (§8), and the recent-root contract's
+storage was empty when EIP-8272 activated (P7). Neither follows from the
 creation: code created at `A` through an address collision can destroy itself
 in its creation transaction (EIP-6780), and EIP-8250's keyed nonces let a frame
 transaction from `A` leave `A`'s nonce, code and storage unchanged. Either
@@ -191,7 +192,7 @@ extractor.
 - **P3c Prover completeness.** snarkjs's Groth16 prover, given the committed zkey and any satisfying assignment of `spend.r1cs`, outputs in polynomial time, except with negligible probability over its randomness, eight proof words that Groth16's verification for the committed key accepts for the assignment's public signals; with C9 the linked verifier accepts them. That accepting words merely exist is true for every key and says nothing; this premise rests on P9, and fails if the zkey's points are inconsistent with the key, which is unchecked (§8). Used only for liveness (§5).
 - **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. No one is assumed to exhibit such a pair. For these fixed, unkeyed functions that is an assumption about what anyone exhibits, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
 - **P5 EIP-8141.** A transaction is valid only if its `chain_id` is the chain's. Frames run in order. A VERIFY frame changes nothing but through `APPROVE`; if it fails, the transaction is invalid. `APPROVE` reverts the current frame unless `ADDRESS` is the frame's resolved target and the scope is among the frame's flags; `APPROVE` with payment reverts if the payer's balance is below `max_cost`. Approval flags are excluded from atomic batches. `APPROVE(3)` from frame 1 makes `A` sender and payer. A SENDER frame's caller is `sender`, a DEFAULT frame's the entry point. A failed non-VERIFY frame reverts its own effects, or its whole atomic batch's. `TXPARAM`, `FRAMEPARAM` and `SIGPARAM` return the EIP's table values, with EIP-8250's `TXPARAM(0x01) = nonce_seq`, `0x0E` = key count, `0x0F = K(u256(n) ‖ u256(k_1) ‖ … ‖ u256(k_n))`. Frame data read with `FRAMEDATALOAD` or, in the running frame, `CALLDATALOAD` is the frame's data. A `msg` is empty, signing the canonical hash, or a nonzero 32-byte digest, so `SIGPARAM(i, 0x02) = 0` exactly when signature `i` signs the canonical hash, which covers every field except the raw bytes of such signatures. The payer pays at most `max_cost`.
-- **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas. `NONCE_MANAGER`'s storage is empty when EIP-8250 activates: its Activation section requires this at the fork transition, and for a chain that activates EIP-8250 at genesis, about which the EIP says nothing, P6 assumes the genesis allocation gives it no storage. Only liveness uses this; a nonzero sequence can block a key but, since A2 requires `nonce_seq = 0`, never admit a replay.
+- **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas. `NONCE_MANAGER`'s storage is empty when EIP-8250 activates. EIP-8250 requires the fork configuration to choose an address with no code or storage on every intended activation network, and at a fork transition its Activation section installs the code with empty storage; it defines no transition that clears existing storage. P6 assumes this holds, including on a chain that activates EIP-8250 at genesis. Only liveness uses this; a nonzero sequence can block a key but, since A2 requires `nonce_seq = 0`, never admit a replay.
 - **P7 EIP-8272.** A call from address `a`, with no value, outside a static context and with the 64 data bytes `salt ‖ root`, during slot `S` succeeds given enough gas and stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, with the target, mode, flags, value, state limit and data length A1 gives it, A3's data and enough execution gas, succeeds exactly when, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. The contract's storage is empty when EIP-8272 activates: its Activation section requires this at a fork transition, where the first active block is otherwise invalid, and for a chain that activates EIP-8272 at genesis, about which the EIP says nothing, P7 assumes the genesis allocation gives the contract no storage. Entries change otherwise only through a reorg, and the model follows the canonical chain.
 - **P8 Gas schedule and fork.** A pinned gas schedule `G`: the schedule ethrex 247e2dd2 applies at the pinned fork, with EIP-8037 state gas, EIP-2929's warm and cold access sets priced as EIP-8038 sets them (EIP-8037 requires EIP-8038; how EIP-8038 applies at EIP-8141's frame entry is not settled in the EIPs, and the measured constants follow ethrex), and EIP-150's 63/64 rule. The claims hold while the chain keeps `G` and the pinned EIP revisions; a fork that changes them ends them.
 - **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No Lean proof checks the setup. The deployment script checks the deployment and the artifact hashes the activation manifest pins, which do not include `spend_vkey.json`. The activation gate on this branch (added in `6735e3e` and `870dd58`; at `8835be7` it compares only the manifest's hashes, profile and contribution count) additionally checks the zkey's sizes and A/B coefficient metadata against `spend.r1cs`, and binds both the Solidity constants and every verifier-used field of `spend_vkey.json` to that key. C/IC/L and key-point consistency with the complete constraint system remain unchecked without the original phase-1 powers of tau (§8). No tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment, or P6's and P7's conditions that `NONCE_MANAGER`'s and the recent-root contract's storage were empty at activation.
@@ -542,7 +543,8 @@ encoded accepted spend and the complete finite bad-event query support.
 W2 and the rest of the chain half of `MainTheorem` (C6 is proved) remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 `MainTheorem` and `ChainCorollary` from exactly those obligations.
-The four circuit rows of §6 now have formal counterexamples in
+The four circuit rows of §6 now have formal counterexamples, the range row
+only for removing `rc[0]`, in
 `Mutations/{Membership,Range,Sink,Duplicate}Counterexample.lean`. For each
 complete compiled mutant, a kernel-checked assignment satisfies every
 constraint while its canonical projections violate R3, R5, R7 or R8,
@@ -553,7 +555,8 @@ Unlike the original R1CS, which CI recompiles and compares, the mutants were
 compiled once by `tools/circuit_mutations.py`, which CI does not run; CI reruns
 only the exporter, against the archived artifacts and their recorded decoding
 digest in `evidence/2026-09-27-0350/circuit-mutations/`. See `Mutations/README.md` for the reproduction commands
-and precise boundary. All other §6 mutation rows remain open.
+and precise boundary. All other §6 mutation rows, and the range row for the
+other five checks, remain open.
 
 CI checks this project on every push in two jobs. The `formal` job runs no
 unowned repository code before the proofs are checked. It trusts elan's
@@ -695,7 +698,8 @@ refinement read the wrong nonce storage; and a wrong `RawTx.view` makes C2 and
 C2c check other fields than the transaction carries. A `Groth16Accepts` other than textbook
 verification for the committed key makes C9 and P3 refer to the wrong
 predicate. A looser `Honest` or `ChainStep`, or a wrong `chainInit` or
-`addrOf`, also weakens W2.
+`addrOf`, also weakens W2, and an `Honest` that admits a chain breaking P7's
+activation condition makes refinement false.
 
 Refinement pins the pool's state, value flows, calls and root writes, not
 what it returns to calls that produce no event or how it splits a payout into

@@ -1,7 +1,8 @@
 # Circuit mutation certificates
 
-All four circuit mutations required by SPEC.md §6 now have complete Lean
-counterexamples. Each assignment satisfies every constraint of the compiled
+The four circuit mutation rows of SPEC.md §6 have complete Lean
+counterexamples; the range row is covered only for the first input value's
+check (`rc[0]`). Each assignment satisfies every constraint of the compiled
 mutant, while its exact canonical projections violate the named relation clause.
 
 | Namespace under `MSP.Mutations` | Constraints | Relation failure |

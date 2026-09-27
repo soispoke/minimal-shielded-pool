@@ -275,7 +275,8 @@ lake build Artifacts.CircuitSoundness Artifacts.CircuitCompleteness Proofs.Axiom
 `Groth16Accepts` is now the concrete pinned-key predicate in `Groth16/`; the
 linked verifier's execution (C9), the deployed libraries and chain semantics
 (including the EVM's Keccak) remain separate bindings. The four circuit
-mutation gates are proved in `Mutations/`; the other semantic mutation gates,
+mutation rows have kernel-checked counterexamples in `Mutations/` (the range
+row only for removing `rc[0]`); the other semantic mutation gates,
 W2 and both gas dimensions remain open; W1 is
 proved in `Proofs/NonVacuityFixtureVerified.lean`. Setup honesty (P3)
 and zkey/R1CS consistency (P9) remain the explicit premises in `SPEC.md`;

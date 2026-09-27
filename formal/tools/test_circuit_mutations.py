@@ -64,7 +64,7 @@ class MutationChecks(unittest.TestCase):
             header = u(32, 4) + u(m.P, 32) + u(2, 4)
             data = u(1, 32) + u(value, 32)
             return b'wtns' + u(2, 4) + u(2, 4) + u(1, 4) + u(len(header), 8) + header + u(2, 4) + u(len(data), 8) + data
-        with tempfile.TemporaryDirectory(dir='/private/tmp') as tmp:
+        with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'test.wtns'
             path.write_bytes(binary(2))
             self.assertEqual(m.read_wtns(path), [1, 2])

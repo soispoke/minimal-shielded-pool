@@ -52,7 +52,8 @@ opaque DeploymentImpl : NonemptyType.{0}
 def Deployment : Type := DeploymentImpl.type
 instance : Nonempty Deployment := DeploymentImpl.property
 
-/-- P9. The deployment matches D12 and the committed artifacts. -/
+/-- P9. The deployment matches D12, including P7's empty recent-root storage
+at activation, and the committed artifacts. -/
 opaque Honest : Deployment → Prop
 /-- D12. The pool's address `A`. -/
 opaque addrOf : Deployment → ℕ
