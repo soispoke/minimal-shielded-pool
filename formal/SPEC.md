@@ -281,8 +281,10 @@ subgroups and none at infinity, satisfying the pairing equation.
 **C10 Publication and claims.** In every reachable state anyone other than the
 pool, sending a valid transaction in any block environment the consensus rules
 allow, can call
-`publishEpochRoot(e)` for every `e ≤ E` whose root is nonzero, and the call
-succeeds; and they can call `claimWithdrawal(r)` for every credit the balance
+`publishEpochRoot(e)` for every `e ≤ E` whose root is nonzero, while `E` is
+below `2^64`, and the call succeeds (`Obs` reads `E` as a whole storage word,
+which exceeds the contract's `uint64` counter only through a degenerate storage
+key, a bad event refinement accounts for); and they can call `claimWithdrawal(r)` for every credit the balance
 covers, and the call succeeds unless the first `CALL`, `CALLCODE` or
 `STATICCALL` made by code running at `A` (the dispatcher's `DELEGATECALL` into
 `L` does not count) is a plain `CALL` paying the credit to `r` with at least
@@ -342,7 +344,8 @@ involved.
 Liveness composes from the same claims and is argued, not stated in Lean. The
 holder of an unspent note worth more than the spend's maximum cost builds the
 canonical spend, which spendability makes valid with fresh, nonzero keys. C1c
-and P3c give an accepted proof. C5k, C5m, C10 and refinement put a root
+and P3c give an accepted proof. C5k, C5m, C10 and refinement (whose model
+states keep `E` below `2^64` by `Step`'s rollover guard) put a root
 containing the note on chain, which no event replaces once its slot has passed,
 unless the run has a bad event, so P7 makes frame 0 succeed for a spend 1 to
 8,191 slots after the root's slot; and P6 makes its keys' sequences 0 unless an EIP-8250 slot

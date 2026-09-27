@@ -266,13 +266,15 @@ def RecipientRejected (d : Deployment) (st : ChainState) (env : Env) (caller r v
     (po.success = false ∨ 2 ^ 16 ≤ po.returnSize)
 
 /-- C10. Anyone other than the pool, in any valid transaction and block
-environment, can publish an existing epoch's nonzero root and pay out a covered
-credit, which fails only if the recipient rejects a plain payment or returns at
-least 64 KiB. -/
+environment, can publish an existing epoch's nonzero root while the epoch
+counter is below `2 ^ 64`, and pay out a covered credit, which fails only if the
+recipient rejects a plain payment or returns at least 64 KiB. `Obs` reads the
+counter as a whole storage word; the contract's `uint64` counter exceeds it only
+through a degenerate storage key, a bad event refinement accounts for. -/
 def C10 : Prop :=
   ∀ d st s caller env, Honest d → ReachableChain d st → Obs d st s → caller ≠ addrOf d →
     EnvValid st caller env →
-    (∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
+    (s.E < 2 ^ 64 → ∀ e ≤ s.E, (if e = s.E then TR (s.leaves s.E) else s.finalRoot e) ≠ 0 →
       callPool d st env caller (publishCalldata e) = .ok) ∧
     (∀ r < 2 ^ 160, 0 < s.credit r → s.credit r ≤ s.balance →
       callPool d st env caller (claimCalldata r) = .ok ∨
