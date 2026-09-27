@@ -17,7 +17,7 @@
   "formal/Primality/PrattCertificate.lean": "6fd6656f9b1e29ffd49a313dcfb8525127fcbc65872458747c9f5af84a95ef37",
   "formal/Proofs/AxiomAudit.lean": "0c4dcb3e911927b8a259061faac6b7fae49f9b25a8db46709cae38f1270ec9aa",
   "formal/Proofs/CircuitGadgets.lean": "9a27851516ddca61da6f35c846e7eaf64b0df72a50d3d9f4c321857367051a66",
-  "formal/SPEC.md": "d8802a7f54b1cae13e614709230032223711dfca0167536e6cfb98902e04f2bd",
+  "formal/SPEC.md": "0afd31afe54c109ff91164c5e6713e552726757dd1d97b6a1e08de7db1e71598",
   "formal/Spec.lean": "17eb68c9778dc67e4238112341bb6a6a79c14e781df391761a75a2a5ddf4a58a",
   "formal/Spec/Basic.lean": "3fba49840fd2a60d241cbbb4e4a0381f22ab58d84508b35095b27fb073572b7e",
   "formal/Spec/Circuit.lean": "cd6334769ed55dcc7c4e2f74f882c0dcf2e8eff395ff38df156134f9162227b1",

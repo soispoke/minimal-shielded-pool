@@ -212,6 +212,8 @@ jobs:
         run: python formal/tools/check_formal.py all
       - name: Install Lean
         run: |
+          # Build every project module from source, never from a checked-in output.
+          rm -rf formal/.lake
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
             | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"

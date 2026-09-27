@@ -10,7 +10,9 @@
               implemented_by; no Lean file outside the lock runs or defines
               metaprograms (#eval, run_cmd, macros, syntax, elaborators, the
               `Lean` namespace), which could rewrite files or the audit during
-              the build; and no lakefile.lean overrides lakefile.toml. These
+              the build; no lakefile.lean overrides lakefile.toml; and no
+              build output under formal/.lake is committed, since Lake would
+              replay it instead of checking the source. These
               are textual checks outside comments and string literals;
               Proofs/AxiomAudit.lean is the binding one
 
@@ -20,6 +22,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -141,6 +144,11 @@ def sources():
     ok, count = True, 0
     if (FORMAL / 'lakefile.lean').exists():
         print('formal/lakefile.lean exists; Lake would use it instead of the owned lakefile.toml')
+        ok = False
+    tracked = subprocess.run(['git', 'ls-files', '--', '.lake'], cwd=FORMAL, check=True,
+                             capture_output=True, text=True).stdout.split()
+    for name in tracked:
+        print(f'formal/{name} is committed; Lake would replay it instead of building the source')
         ok = False
     locked = {p.resolve() for p in statement_files()}
     for path in sorted(FORMAL.rglob('*.lean')):

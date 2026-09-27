@@ -10,7 +10,7 @@
 
 # What enforces the lock, the audit and the build.
 /.github/ @soispoke
-/formal/tools/check_formal.py @soispoke
+/formal/tools/ @soispoke
 /formal/Proofs/AxiomAudit.lean @soispoke
 /formal/lakefile.toml @soispoke
 /formal/lakefile.lean @soispoke

@@ -516,7 +516,8 @@ hashes of §1, and textually rejects, outside comments and string literals,
 `sorry`, `admit`, native evaluation, `debug.skipKernelTC`, `axiom`, `unsafe`
 and `implemented_by` in every Lean file, metaprograms (`#eval`, `run_cmd`,
 macros, syntax, elaborators, the `Lean` namespace) in every Lean file outside
-the lock, and a `lakefile.lean`; then `lake build`, failing on any `sorry`
+the lock, a `lakefile.lean` and any committed build output under `.lake`; then,
+with `.lake` removed, `lake build`, failing on any `sorry`
 warning, with `Proofs/AxiomAudit.lean` rejecting any axiom beyond Lean's
 standard three for the principal results and pinning each one's type to its
 claim; then the audit, `check_formal.py` and `git diff` again, so a build
@@ -532,7 +533,8 @@ transitively: besides `Spec.lean` and `Spec/`, the modules of `Artifacts/`,
 `Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` that define the concrete
 hashes, the circuit and its projections. `.github/CODEOWNERS` assigns this
 file, `Spec.lean`, `Spec/`, the lock and the files that enforce it (CI,
-`check_formal.py`, the audit and the Lake configuration) to the owner, so
+the tools under `tools/`, including the differential test, the audit and the
+Lake configuration) to the owner, so
 changing any statement file needs the owner's review of the lock. That binds
 only if branch protection requires both code owner review and a passing
 `formal` job; `main` had no branch protection on 2026-09-27. The metaprogram
