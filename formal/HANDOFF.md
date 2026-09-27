@@ -1,5 +1,14 @@
 # MSP formal verification continuation
 
+## Claude review ownership, 2026-09-27 20:50 UTC
+
+At Thomas's request, Claude session `7847c0ed-ff3d-4c1a-b5a2-4cc806ef6bc6`
+now owns this checkout on `codex/formal-continuation` to run specification
+review rounds on `eb480bf`, including Codex's unreviewed changes to
+`Groth16Accepts`, `SPEC.md` and the mutation certificates, until two
+consecutive rounds find nothing that matters. Codex should not edit while this
+note stands; the two-hour automation stays paused.
+
 ## Direct Codex continuation, September 27, 20:08 UTC
 
 The user requested immediate continuation from Claude and explicitly left the
