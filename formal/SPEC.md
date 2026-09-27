@@ -3,7 +3,8 @@
 This file states what the formal verification must prove about the pool. It is
 the reviewed source of truth for the Lean statements in `formal/Spec/`, which
 typecheck against Lean 4.35.0-rc3 and Mathlib and depend only on Lean's standard
-axioms. C1, C1c, the model claims, C6 and W1 are proved; the rest of the
+axioms. C1, C1c, the model claims, C6 (over the transcribed tree code) and W1
+are proved; the rest of the
 chain half (C2, C2c, C8, C9, C10 and refinement), W2 and the §6 mutation
 checks are open (§7). Changing a claim or
 premise, here or in Lean, needs the same review as changing the pool.
@@ -266,8 +267,10 @@ hashes and the spend's.
 **C6 Tree.** The contract's zero constants and `EMPTY_ROOT`, as transcribed
 in `ZEROS` and `EMPTY_ROOT_CONST`, are `Z_l` and `Z_20`, and its insertion and
 root algorithm, as transcribed in `LogicTree`, run from empty on up to `2^20`
-leaves, yields `TR` of the inserted leaves. Step 5 proves the bytecode matches
-the transcription (§7).
+leaves, yields `TR` of the inserted leaves. The transcription is checked
+against `ShieldedPoolLogic.sol` by review only; step 5, the EVM semantics
+(not yet done, §7), is to prove the bytecode's `_zeros`, `EMPTY_ROOT`,
+`_insert` and `_computeRoot` equal it.
 
 **C7 Gas** is part of refinement: whenever the model's settlement passes
 `SettlePre`, the chain's succeeds, so it never runs out of gas. The exception is
@@ -621,7 +624,8 @@ Step 5's definitions of the opaque types `RawTx`, `Env`, `Deployment` and
 `ValidTx`, `PreValid`, `approvalsIn`, `EnvValid`, `callPool`, `firstPayout`,
 `verifierOf`, `libHash2`, `libHash3`, `addrOf`, `chainOf`, `NONCE_MANAGER`,
 `RawTx.view`, `Groth16Accepts` and `Honest`, are checked against their
-docstrings and D12 by review only.
+docstrings and D12 by review only, and so are `ZEROS`, `EMPTY_ROOT_CONST` and
+`LogicTree` as transcriptions of the logic's tree code.
 A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep` or
 a wrong `chainInit` leaves states uncovered by refinement, C2, C2c and C10, a
 narrower `Honest` leaves deployments uncovered by those claims and by C8 and
