@@ -401,34 +401,61 @@ def C5i (P : Pool) : Prop :=
       BadEventWith P (evs ++ [.spend tx g]) s' (openingQueries P o.e o.i sk ρ v) ∨
       ((witOf (extOf P tx)).sk k = sk ∧ (witOf (extOf P tx)).ρ k = ρ)
 
-/-- C5j. Deposits and settlements do what they should, not only nothing worse:
-a shield adds its value to the balance and inserts its commitment as an unspent
-occurrence holding that value; a settlement that passes its checks credits
-exactly `pub` to `rcp`, lowers what the pool owes by exactly `fee`, and inserts
-each nonzero-value output as an unspent occurrence holding its commitment and
-value. -/
+/-- `Step` is a function: a state and an event allow at most one next state. With
+it, a claim that some step does something is a claim about every step. -/
+def StepFunctional (P : Pool) : Prop :=
+  ∀ s e s₁ s₂, Step P s e s₁ → Step P s e s₂ → s₁ = s₂
+
+/-- C5j. Deposits and settlements insert what they should: a shield inserts its
+commitment, and a settlement that passes its checks inserts each nonzero-value
+output, as a new unspent occurrence holding that commitment and value. -/
 def C5j (P : Pool) : Prop :=
   (∀ evs s inr v s', Run P evs s → Step P s (.shield inr v) s' →
     BadEvent P (evs ++ [.shield inr v]) s' ∨
-    (s'.balance = s.balance + v ∧ ∃ i < (s'.leaves s'.E).length,
+    ∃ i, (s'.E ≠ s.E ∨ (s.leaves s.E).length ≤ i) ∧ i < (s'.leaves s'.E).length ∧
       (s'.leaves s'.E).getD i 0 = cm inr (v : F) ∧ (s'.vals s'.E).getD i 0 = v ∧
-      (⟨s'.E, i⟩ : Occ) ∉ s'.spent)) ∧
+      (⟨s'.E, i⟩ : Occ) ∉ s'.spent) ∧
   (∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' → SettlePre s P (settleData tx) →
     BadEvent P (evs ++ [.spend tx g]) s' ∨
-    let sd := settleData tx
     let w := witOf (extOf P tx)
-    (s'.credit = s.credit + Finsupp.single sd.rcp sd.pub ∧ owed s' + sd.fee = owed s ∧
-     ∀ k : Fin 2, w.ov k ≠ 0 → ∃ i < (s'.leaves s'.E).length,
-       (s'.leaves s'.E).getD i 0 = cm (w.oi k) (w.ov k) ∧
-       (s'.vals s'.E).getD i 0 = (w.ov k).val ∧ (⟨s'.E, i⟩ : Occ) ∉ s'.spent))
+    ∀ k : Fin 2, w.ov k ≠ 0 → ∃ i, (s'.E ≠ s.E ∨ (s.leaves s.E).length ≤ i) ∧
+      i < (s'.leaves s'.E).length ∧
+      (s'.leaves s'.E).getD i 0 = cm (w.oi k) (w.ov k) ∧
+      (s'.vals s'.E).getD i 0 = (w.ov k).val ∧ (⟨s'.E, i⟩ : Occ) ∉ s'.spent)
 
-/-- C5k. Anyone can publish an existing epoch's full tree root: the current
-epoch's root over all its leaves, or a closed epoch's final root over all of
-its leaves. -/
+/-- C5k. Anyone can publish an existing epoch `e < 2 ^ 64`, and publishing writes
+exactly `TR` of all of that epoch's leaves, changing nothing else. With
+`StepFunctional`, no publish step writes anything else. -/
 def C5k (P : Pool) : Prop :=
   ∀ evs s, Run P evs s → ∀ e ≤ s.E, e < 2 ^ 64 → BadEvent P evs s ∨
-    ∃ s', Step P s (.publish e) s' ∧
-      s'.roots = s.roots ++ [(sourceId P.A e, s.slot, (TR (s.leaves e)).val)]
+    Step P s (.publish e)
+      { s with roots := s.roots ++ [(sourceId P.A e, s.slot, (TR (s.leaves e)).val)] }
+
+/-- C5l. Value accounting for every event: how the balance, the credits, the
+payouts and what the pool owes change. Nothing but a shield or a receive adds
+value, nothing but a claim pays it out, only a spend's gas leaves the balance
+and only a settled spend's fee leaves what the pool owes, and a settlement's
+credit goes to its recipient. A failing settlement, which C4 excludes in
+bounded runs without a bad event, burns its inputs. -/
+def C5l (P : Pool) : Prop :=
+  ∀ evs s e s', Run P evs s → Step P s e s' → BadEvent P (evs ++ [e]) s' ∨
+    match e with
+    | .shield _ v =>
+        s'.balance = s.balance + v ∧ s'.credit = s.credit ∧ s'.paid = s.paid ∧
+        owed s' = owed s + v
+    | .receive v =>
+        s'.balance = s.balance + v ∧ s'.credit = s.credit ∧ s'.paid = s.paid ∧ owed s' = owed s
+    | .claim r =>
+        s'.balance + s.credit r = s.balance ∧ s'.credit = s.credit.erase r ∧
+        s'.paid = s.paid + Finsupp.single r (s.credit r) ∧ owed s' + s.credit r = owed s
+    | .spend tx g =>
+        s'.balance + g = s.balance ∧ s'.paid = s.paid ∧
+        (SettlePre s P (settleData tx) →
+          s'.credit = s.credit + Finsupp.single (settleData tx).rcp (settleData tx).pub ∧
+          owed s' + (settleData tx).fee = owed s) ∧
+        (¬ SettlePre s P (settleData tx) → s'.credit = s.credit ∧ owed s' ≤ owed s)
+    | _ =>
+        s'.balance = s.balance ∧ s'.credit = s.credit ∧ s'.paid = s.paid ∧ owed s' = owed s
 
 /-- The siblings of leaf `i` in the complete tree over `L`: at level `l`, the
 root of the neighboring subtree of height `l`. -/

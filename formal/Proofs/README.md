@@ -14,10 +14,10 @@ on Lean's standard axioms, and `lake build` checks them.
 | `Path.lean` | the path walk: a Merkle path whose root is `TR L`, without a collision against `L`'s tree queries, starts at `L`'s leaf |
 | `C5i.lean` | `C5b P → C5i P` |
 | `C5b.lean` | `C1 → C5b P` |
-| `Model.lean` | `C1 → C5g P`, `C1 → C5h P`, `C1 → Spendable P`, and `model_theorem_of`: `ModelTheorem` given C5j and C5k |
+| `Model.lean` | `C1 → C5g P`, `C1 → C5h P`, `C1 → Spendable P`, and `model_theorem_of` |
+| `Effects.lean` | `C5k P`, `C1 → C5j P`, `C1 → C5l P`, `StepFunctional P`, and `model_theorem : ModelTheorem` |
 
-Every model claim is proven from C1 except C5j and C5k, added after the others
-to state what deposits, settlements and publication must do; their proofs are
-pending. What else remains: C1 and C1c against the constraint system (step 3),
-the chain half (step 5), `Composes`, and the non-vacuity witnesses `W1` (needs
-concrete hashes) and `W2` (needs the EVM semantics).
+`ModelTheorem` is proven: every model claim holds for every pool from C1. What
+remains: C1 and C1c against the constraint system (step 3), the chain half
+(step 5), `Composes`, and the non-vacuity witnesses `W1` (needs concrete
+hashes) and `W2` (needs the EVM semantics).

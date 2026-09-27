@@ -28,8 +28,9 @@ these artifacts (SHA-256, first 16 hex digits):
 In scope: the circuit, the dispatcher, the settlement logic, the verifier and
 the Poseidon libraries, deployed together, and the safety of the funds they
 hold, including that honest holders of notes worth more than a spend's maximum
-cost can spend and be paid, given inclusion and a recipient that accepts a plain
-payment (§5). Solvency, single consumption, real roots and
+cost can spend and be paid, given inclusion, a recipient that accepts a plain
+payment and returns less than 64 KiB, and §8's premises that no other party
+consumes the note or its keys first (§5). Solvency, single consumption, real roots and
 that a spend's extracted witness carries its note's key are claimed under §3
 (proofs in progress, §7); that only a note's holder can spend it is argued on
 paper under §8. Not in scope: privacy,
@@ -227,8 +228,10 @@ approval has consumed.
 - **C5g No griefing.** A key an approved spend consumes that is some occurrence's nullifier, under any opening of its leaf, consumes that occurrence as one of the spend's inputs; the bad event may use that opening's hash inputs.
 - **C5h Freshness.** An unspent occurrence's nullifier, under any opening, is not a consumed key; the bad event may use that opening's hash inputs.
 - **C5i Key binding.** A spend that consumes an occurrence as a nonzero-value input, under any opening `(sk, ρ, v)` of its leaf, extracts that `sk` and `ρ`; the bad event may use that opening's hash inputs. With §8's premises, taking a note therefore needs its holder's key; C5i alone does not give that, since P3's extractor may read the key from an honest prover.
-- **C5j Effects.** A shield adds its value to the balance and inserts its commitment as an unspent occurrence holding that value. A settlement that passes its checks credits exactly `pub` to `rcp`, lowers what the pool owes by exactly `fee`, and inserts each nonzero-value output as an unspent occurrence holding its commitment and value. So value is not burned or misdirected, not only not minted.
-- **C5k Publication.** Anyone can publish an existing epoch `e < 2^64`: the write is `TR` of all of `Leaves[e]`, the current tree for the current epoch and the full final tree for a closed one.
+- **C5j Insertions.** A shield inserts its commitment, and a settlement that passes its checks inserts each nonzero-value output, as a new unspent occurrence holding that commitment and value.
+- **C5k Publication.** Anyone can publish an existing epoch `e < 2^64`, and publishing writes exactly `TR` of all of `Leaves[e]`, the current tree for the current epoch and the full final tree for a closed one, changing nothing else.
+- **C5l Value accounting.** For every event, the balance, credits, payouts and what the pool owes change exactly as intended: only a shield or a receive adds value, only a claim pays it out (its credit, to its recipient), only a spend's gas leaves the balance and only a settled spend's fee leaves what the pool owes, and a settlement credits `pub` to its recipient. A failing settlement, which C4 excludes in bounded runs without a bad event, burns its inputs. So value is not burned, misdirected or swept, not only not minted.
+- **Determinism.** `Step` is a function (`StepFunctional`), so what a claim says some step does, every step does.
 
 **Spendability.** For every unspent occurrence with opening `(sk, ρ, v)`, every
 root of a prefix of its epoch that contains it, every fee below its value,
@@ -313,7 +316,7 @@ canonical spend, which spendability makes valid with fresh, nonzero keys. C1c
 and P3c give an accepted proof. C5k, C10 and refinement put a root containing
 the note on chain, and P6 makes its keys' sequences 0 unless an EIP-8250 slot
 collides with a consumed one. C5c gives `max_cost ≤ fee < v ≤ balance`, so C2c
-approves the spend; C4 and refinement settle it, C5j credits `pub` to the
+approves the spend; C4 and refinement settle it, C5l credits `pub` to the
 chosen recipient, and C10 pays the credit, which C5c covers, to any recipient that accepts a plain payment and returns less
 than 64 KiB. This assumes the
 publication and the spend are included, with the spend 1 to 8,191 slots after
@@ -386,14 +389,32 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 | Dispatcher: allow flags on frame 2, or a SENDER fourth frame | C2 (A1) |
 | Dispatcher: reject every withdrawal | C2c |
 | Logic: skip rollover before insertion | refinement |
-| Logic: pay a claim to `msg.sender`, or less than the credit | refinement |
-| Logic: shield without inserting the leaf, or hashing a different `inner` | refinement |
-| Logic: `publishEpochRoot` returns without writing the root | refinement |
-| Dispatcher: rewrite `shield`'s `inner` or `publishEpochRoot`'s epoch before delegating | refinement |
+| Logic: pay a claim to `msg.sender`, or less than the credit | refinement (C5l) |
+| Logic: shield without inserting the leaf, or hashing a different `inner` | refinement (C5j, C5l) |
+| Logic: `publishEpochRoot` returns without writing the root | refinement (C5k) |
+| Dispatcher: rewrite `shield`'s `inner` or `publishEpochRoot`'s epoch before delegating | refinement (C5j, C5k) |
 | Logic: make `claimWithdrawal` or `publishEpochRoot` always revert | C10 |
 | Verifier: generated from another zkey | C9 |
 | Verifier: skip the canonical-coordinate or infinity checks | C9 |
 | Set up the zkey from `spend.r1cs` minus one constraint | none: violates P9, which tooling does not yet check (§8) |
+
+**Model mutants.** Refinement certifies any code that matches `Step`, so the
+model claims must also reject a wrong `Step`. Each variant below makes the named
+claim force a bad event at every step of the stated shape, which ordinary
+hashes do not produce (checked in Lean during review):
+
+| `Step` variant | Claim that fails |
+|---|---|
+| Credit `auth` instead of `rcp`, or credit nothing | C5l |
+| Drop a settlement's outputs | C5j |
+| Shield inserts nothing, another commitment, or skips a duplicate | C5j (and C5l for the duplicate) |
+| Claim pays half and records the full credit as paid | C5l |
+| Publish or roll over with a partial, stale or zero root | C5k |
+| Publish under another epoch's source or the raw epoch | C5k |
+| Credit twice | C5d or C5c |
+| Skip consuming inputs, or accept used keys | C5c, C5b |
+| Accept a foreign root | C3, C5b |
+| No rollover | spendability (R1) |
 
 ## 7. Lean statements
 
@@ -406,7 +427,7 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 | P3, P4, P13, C4's checks, bad events | `Pool.ext`, `extOf`, `proofOf`, `verifiedPublics`, `Query.collide`, `Query.degenerate`, `BadEvent`, `pathQueries`, `newCount`, `ExtractionFailure`, `CompressionBreak`, `Bounded`, `SettlePre` | `System` |
 | C1, C1c, C9's key | `C1`, `C1c`, `Assignment`, `Satisfied`, `stmtOf`, `witOf`, `publicOf`, `Groth16Accepts` | `Circuit` |
 | C2, C2c, C8, C9, C10 | same names, `Outcome`, `ValidTx`, `PreValid`, `approvalsIn`, `libHash2`, `libHash3`, `Env`, `EnvValid`, `callPool`, `publishCalldata`, `claimCalldata`, `firstPayout`, `Payout`, `RecipientRejected` | `Evm` |
-| C3, C4, C5a to C5e, C5g to C5k, spendability | same names, `stmtOfTx`, `Spendable`, `owed`, `inputsOf`, `newLeaves`, `lastWrite`, `openingQueries`, `mkSpend`, `siblingsOf` | `System` |
+| C3, C4, C5a to C5e, C5g to C5l, determinism, spendability | same names, `StepFunctional`, `stmtOfTx`, `Spendable`, `owed`, `inputsOf`, `newLeaves`, `lastWrite`, `openingQueries`, `mkSpend`, `siblingsOf` | `System` |
 | C6 | `C6`, `LogicTree`, `LogicTree.empty`, `ZEROS`, `EMPTY_ROOT_CONST`, `zeroConst`, `insertLoop`, `LogicTree.insert`, `LogicTree.root` | `Tree` |
 | Refinement, C5f, C7 | `Refines`, `Obs`, `ChainState`, `ChainStep`, `eventsOf`, `passiveInflow`, `receivedIn`, `eventsAlong`, `chainInit`, `historyEvents`, `initEvents`, `modelEvents`, `ChainRun`, `ReachableChain` | `Evm` |
 | Main theorem | `MainTheorem`, `ModelTheorem`, `ChainTheorem`, `ChainCorollary`, `Composes` | `Main` |
@@ -431,8 +452,8 @@ come from one semantics applied to the pinned bytecode, and where step 5 proves
 the bytecode's `_zeros`, `EMPTY_ROOT`, `_insert` and `_computeRoot` equal
 `ZEROS`, `EMPTY_ROOT_CONST`, `LogicTree.insert` and `LogicTree.root`. `formal/Sanity/` holds
 proofs, written during review, that parts of the specification mean what they
-should. `formal/Proofs/` proves every model claim from C1 with the hashes kept opaque,
-except C5j and C5k, whose proofs are pending (`model_theorem_of`).
+should. `formal/Proofs/` proves `ModelTheorem`, every model claim from C1, with the
+hashes kept opaque.
 
 ## 8. Limits
 

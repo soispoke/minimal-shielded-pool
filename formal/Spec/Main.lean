@@ -15,7 +15,7 @@ of the model, every verifier and every extractor. -/
 def ModelTheorem : Prop :=
   C1 → ∀ P : Pool,
     C3 P ∧ C4 P ∧ C5a P ∧ C5b P ∧ C5c P ∧ C5d P ∧ C5e P ∧ C5g P ∧ C5h P ∧ C5i P ∧
-    C5j P ∧ C5k P ∧ Spendable P
+    C5j P ∧ C5k P ∧ C5l P ∧ StepFunctional P ∧ Spendable P
 
 /-- The chain half: the deployed code behaves as the model, including fitting
 its gas, and lets anyone publish roots and pay out credits. -/
