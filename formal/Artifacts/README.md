@@ -78,7 +78,7 @@ python3 formal/tools/r1cs_artifact.py --export-lean formal/Artifacts/Spend.lean
 
 The exporter uses eight-constraint definitions and grouped concatenation to
 keep Lean elaboration depth bounded. The complete generated file typechecked
-on 2026-09-27 with `lake env lean`, as did `lake build Artifacts`. All twelve
+on 2026-09-27 with `lake env lean`, as did `lake build Artifacts`. All ten
 extractor Python tests, exact circuit recompilation and the independent decoder check
 also passed. `#print axioms` for the four semantic lemmas lists only `propext`
 and `Quot.sound`, with no admissions.

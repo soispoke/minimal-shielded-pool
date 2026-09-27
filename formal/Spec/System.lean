@@ -258,7 +258,8 @@ def eventQueries (P : Pool) : Event → List Query
   | _ => []
 
 /-- What a run hashed: the sinks the code hardcodes, each event's queries,
-every tree root of every prefix of every epoch, each epoch's domain and root
+every node pair of the tree of every prefix of every epoch up to `E`, each
+epoch's domain and root
 source, each closed epoch's storage slot, and the entry and storage key of every
 EIP-8272 write. -/
 def traceQueries (P : Pool) (evs : List Event) (s : PoolState) : List Query :=

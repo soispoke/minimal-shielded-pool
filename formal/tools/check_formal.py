@@ -124,11 +124,12 @@ def strip_comments(text):
     Plain strings honour escapes; raw strings (`r"..."`, `r#"..."#`) have
     none and become the token `__raw_string__`, which `META` rejects outside
     the lock; interpolated strings (`s!"...{code}..."`, and `m!` and `f!`)
-    keep their code, which is lexed again, nested literals included; after any
-    other `ident!`, such as `panic!"{"`, Lean reads a plain string. A plain string containing `{`
-    also becomes `__raw_string__`, since `println!`, `dbg_trace` and
-    `throwError` take interpolated strings without a prefix, and a `«...»`
-    identifier is skipped whole."""
+    keep their code, which is lexed again, nested literals included. Every
+    other string is lexed as plain; Lean agrees except after `println!`,
+    `dbg_trace`, `throwError` and similar, which interpolate a string without
+    a prefix. So a plain string containing `{` also becomes `__raw_string__`,
+    rejected outside the lock; inside the lock, such a string's code is not
+    scanned. A `«...»` identifier is skipped whole."""
     out, i, n = [], 0, len(text)
     stack = []  # for each open interpolated string, the enclosing brace depth
     mode, depth = 'code', 0
