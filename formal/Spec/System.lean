@@ -508,8 +508,9 @@ against any root of its epoch that contains it, for every choice of dummy input,
 fee below the value, and recipient and authorizer that are nonzero and below
 `2 ^ 160`, as long as the dummy is fresh:
 the canonical spend is valid and its keys are nonzero and unconsumed. Quantifying over the dummy, rather than asking for
-one, keeps a proof from choosing a dummy whose hashes collide. With C1c and C2c
-the spend is then approved. -/
+one, keeps a proof from choosing a dummy whose hashes collide. With C1c and P3c
+the holder can then prove it, and C2c approves it once §5's other conditions
+hold (a published root within its window and `max_cost ≤ fee`). -/
 def Spendable (P : Pool) : Prop :=
   ∀ evs s, Run P evs s →
     ∀ (o : Occ) (sk ρ v : F), o.i < (s.leaves o.e).length → o ∉ s.spent →

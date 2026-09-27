@@ -27,6 +27,6 @@
   "formal/Spec/Hash.lean": "a3e66bc20a289d75094655f75c5ee248bdb3e6db0623a6e6a73393b4bd2bce04",
   "formal/Spec/Main.lean": "84b09adc8b0ee14bec2678d2c058fa4a6c8d15a22f0a9285f38836ee4d779e3b",
   "formal/Spec/Relation.lean": "ef8e29d80b313a39dc0d650591555c0b98e00f647206021dae35879b72ca7c60",
-  "formal/Spec/System.lean": "4b9a17ecb2b929c9338e2d466e02adff25f15323270557661c166399cf6faec0",
+  "formal/Spec/System.lean": "0d7ab407d5d3367b3fad52db38e9b740ef6f6b91c75f1c25387cbc4c083bc614",
   "formal/Spec/Tree.lean": "d269fbc7d37aceb14538e59c3f6f980f2d6e55c53017fb32cd0b679ab8f24254"
 }
