@@ -3,8 +3,9 @@
 This file states what the formal verification must prove about the pool. It is
 the reviewed source of truth for the Lean statements in `formal/Spec/`, which
 typecheck against Lean 4.35.0-rc3 and Mathlib and depend only on Lean's standard
-axioms. Proofs of the claims are in progress (§7). Changing a claim or premise, here or in
-Lean, needs the same review as changing the pool.
+axioms. C1, C1c, the model claims, C6 and W1 are proved; the chain half (C2,
+C2c, C8, C9, C10 and refinement) and W2 are open (§7). Changing a claim or
+premise, here or in Lean, needs the same review as changing the pool.
 
 ## 1. Scope
 
@@ -32,7 +33,7 @@ cost can spend and be paid, given inclusion, a recipient that accepts a plain
 payment and returns less than 64 KiB, and that no other party consumes the
 note or its keys first, which §8 argues on paper (§5). Solvency, single consumption, real roots and
 that a spend's extracted witness carries its note's key are claimed under §3
-(proofs in progress, §7); that only a note's holder can spend it is argued on
+(proved for the model; their chain form awaits the chain half, §7); that only a note's holder can spend it is argued on
 paper under §8. Not in scope: privacy,
 inclusion and mempool policy, the wallet, CLI and disclosure tooling, client
 correctness, fee economics, and the trusted setup: its honesty (P3) and that
@@ -356,7 +357,7 @@ C5i and to the dummy's key directly.
 
 ## 6. Validating this specification
 
-**Past bugs.** Every safety bug found earlier must violate some claim:
+**Past bugs.** Every safety bug found earlier must violate some claim, or the row names the premise it violates or why it is out of scope:
 
 | Past bug or fix | Claim that catches it |
 |---|---|
@@ -404,7 +405,7 @@ caller other than the pool has a valid environment there. The 2026-09-25 run
 of the `position-notes-v2` deployment recorded in `SECURITY.md` (pool and block
 in `devnet/deploy_config.json`) is informal evidence.
 
-**Mutations.** Each change must make some claim false:
+**Mutations.** Each change must make some claim false, or the row names the premise it violates:
 
 | Mutation | Claim that must fail |
 |---|---|
