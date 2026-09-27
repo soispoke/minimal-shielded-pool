@@ -363,9 +363,9 @@ theorem model_rest (hC1 : C1) (P : Pool) : C5g P ∧ C5h P ∧ Spendable P :=
 end
 end MSP
 open MSP in
-/-- The model half, given C5j, C5k, C5l and `StepFunctional`, whose proofs are pending. -/
+/-- The model half, given C5j, C5k, C5l, C5m and `StepFunctional` (proven in `Effects`). -/
 theorem model_theorem_of (h5j : ∀ P, C1 → C5j P) (h5k : ∀ P, C1 → C5k P)
-    (h5l : ∀ P, C1 → C5l P) (hfun : ∀ P, StepFunctional P) : ModelTheorem :=
+    (h5l : ∀ P, C1 → C5l P) (h5m : ∀ P, C5m P) (hfun : ∀ P, StepFunctional P) : ModelTheorem :=
   fun hC1 P =>
     ⟨c3 P hC1, c4 P hC1, c5a P hC1, c5b P hC1, c5c P hC1, c5d P, c5e P, c5g P hC1, c5h P hC1,
-     c5i P hC1, h5j P hC1, h5k P hC1, h5l P hC1, hfun P, spendable P hC1⟩
+     c5i P hC1, h5j P hC1, h5k P hC1, h5l P hC1, h5m P, hfun P, spendable P hC1⟩

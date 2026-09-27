@@ -303,20 +303,13 @@ theorem c5j_settle (P : Pool) (hC1 : C1) : C5jT P := by
 
 theorem c5j (P : Pool) (hC1 : C1) : C5j P := by
   refine ⟨fun evs s inr v s' hr hs => ?_, fun evs s tx g s' hr hs hp => ?_⟩
-  · rcases c5j_shield P hC1 evs s inr v s' hr hs with hb | ⟨-, -, i, h1, h2⟩
+  · rcases c5j_shield P hC1 evs s inr v s' hr hs with hb | ⟨-, -, h⟩
     · exact Or.inl hb
-    · right; refine ⟨i, ?_, h2⟩
-      by_cases hE : s'.E = s.E
-      · right; rw [hE] at h1; exact h1
-      · left; exact hE
+    · exact Or.inr h
   · rcases c5j_settle P hC1 evs s tx g s' hr hs hp with hb | ⟨-, -, h3⟩
     · exact Or.inl hb
     · right; intro _ k hk
-      obtain ⟨i, h1, h2⟩ := h3 k hk
-      refine ⟨i, ?_, h2⟩
-      by_cases hE : s'.E = s.E
-      · right; rw [hE] at h1; exact h1
-      · left; exact hE
+      exact h3 k hk
 
 theorem step_functional (P : Pool) : StepFunctional P := by
   intro s e s₁ s₂ h1 h2
@@ -384,7 +377,24 @@ theorem c5l (P : Pool) (hC1 : C1) : C5l P := by
 end
 end MSP
 
-open MSP in
-theorem model_theorem : ModelTheorem :=
-  model_theorem_of (fun P h => c5j P h) (fun P _ => c5k P) (fun P h => c5l P h) step_functional
+namespace MSP
 
+theorem c5m (P : Pool) : C5m P := by
+  intro s e s' hs
+  cases e with
+  | shield inr v => obtain ⟨-, -, -, -, -, rfl⟩ := hs; show (s.append _).roots = _; unfold PoolState.append; split_ifs <;> rfl
+  | publish e => trivial
+  | rootWrite a salt r => trivial
+  | claim r => obtain ⟨-, -, rfl⟩ := hs; rfl
+  | receive v => subst hs; rfl
+  | tick => subst hs; rfl
+  | spend tx g =>
+    obtain ⟨-, -, -, -, -, -, -, rfl⟩ := hs
+    dsimp only
+    split_ifs <;> first | rfl | (unfold PoolState.append; split_ifs <;> rfl)
+
+theorem model_theorem : ModelTheorem :=
+  model_theorem_of (fun P h => c5j P h) (fun P _ => c5k P) (fun P h => c5l P h) c5m
+    step_functional
+
+end MSP

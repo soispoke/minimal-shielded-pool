@@ -15,7 +15,7 @@ of the model, every verifier and every extractor. -/
 def ModelTheorem : Prop :=
   C1 → ∀ P : Pool,
     C3 P ∧ C4 P ∧ C5a P ∧ C5b P ∧ C5c P ∧ C5d P ∧ C5e P ∧ C5g P ∧ C5h P ∧ C5i P ∧
-    C5j P ∧ C5k P ∧ C5l P ∧ StepFunctional P ∧ Spendable P
+    C5j P ∧ C5k P ∧ C5l P ∧ C5m P ∧ StepFunctional P ∧ Spendable P
 
 /-- The chain half: the deployed code behaves as the model, including fitting
 its gas, and lets anyone publish roots and pay out credits. -/
@@ -27,7 +27,8 @@ def MainTheorem : Prop := C1 ∧ C1c ∧ ModelTheorem ∧ ChainTheorem
 /-- What §5 means for the chain: along every chain run of an honest deployment,
 for every extractor, the pool is solvent, no occurrence is consumed twice, and
 every root under one of its sources is a real root of its tree, or some prefix
-of the run has a bad event. -/
+of the run has a bad event. A bad event, even among queries only the adversary
+chose, voids the conclusion for every user from then on. -/
 def ChainCorollary : Prop :=
   ∀ d ext, Honest d → ∀ h, ChainRun d h →
     (∃ pre e s, pre ++ [e] <+: modelEvents d h ∧ Run (poolOf d ext) pre s ∧

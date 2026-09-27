@@ -142,8 +142,9 @@ def ReachableChain (d : Deployment) (st : ChainState) : Prop := ∃ h, ChainRun 
 /-- Refinement, which also gives C5f and C7. For every extractor, along every chain run
 the events its steps denote form a run of the model whose state the chain
 shows, or the run has a bad event; if the model cannot follow some event, the
-run up to and including that event has a bad event. `receive` accounts for
-exactly the ETH that arrives other than by a call. -/
+run up to and including that event has a bad event, which voids the
+conclusion for every user from then on. `receive` accounts for exactly the ETH
+that arrives other than by a call. -/
 def Refines : Prop :=
   ∀ d ext, Honest d → ∀ h, ChainRun d h →
     ((∃ s, Run (poolOf d ext) (modelEvents d h) s ∧

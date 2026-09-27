@@ -402,7 +402,8 @@ def C5i (P : Pool) : Prop :=
       ((witOf (extOf P tx)).sk k = sk ∧ (witOf (extOf P tx)).ρ k = ρ)
 
 /-- `Step` is a function: a state and an event allow at most one next state. With
-it, a claim that some step does something is a claim about every step. -/
+it, a claim that exhibits a step from `s` on `e` describes every step from `s`
+on `e`. -/
 def StepFunctional (P : Pool) : Prop :=
   ∀ s e s₁ s₂, Step P s e s₁ → Step P s e s₂ → s₁ = s₂
 
@@ -412,13 +413,13 @@ output, as a new unspent occurrence holding that commitment and value. -/
 def C5j (P : Pool) : Prop :=
   (∀ evs s inr v s', Run P evs s → Step P s (.shield inr v) s' →
     BadEvent P (evs ++ [.shield inr v]) s' ∨
-    ∃ i, (s'.E ≠ s.E ∨ (s.leaves s.E).length ≤ i) ∧ i < (s'.leaves s'.E).length ∧
+    ∃ i, (s.leaves s'.E).length ≤ i ∧ i < (s'.leaves s'.E).length ∧
       (s'.leaves s'.E).getD i 0 = cm inr (v : F) ∧ (s'.vals s'.E).getD i 0 = v ∧
       (⟨s'.E, i⟩ : Occ) ∉ s'.spent) ∧
   (∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' → SettlePre s P (settleData tx) →
     BadEvent P (evs ++ [.spend tx g]) s' ∨
     let w := witOf (extOf P tx)
-    ∀ k : Fin 2, w.ov k ≠ 0 → ∃ i, (s'.E ≠ s.E ∨ (s.leaves s.E).length ≤ i) ∧
+    ∀ k : Fin 2, w.ov k ≠ 0 → ∃ i, (s.leaves s'.E).length ≤ i ∧
       i < (s'.leaves s'.E).length ∧
       (s'.leaves s'.E).getD i 0 = cm (w.oi k) (w.ov k) ∧
       (s'.vals s'.E).getD i 0 = (w.ov k).val ∧ (⟨s'.E, i⟩ : Occ) ∉ s'.spent)
@@ -430,6 +431,15 @@ def C5k (P : Pool) : Prop :=
   ∀ evs s, Run P evs s → ∀ e ≤ s.E, e < 2 ^ 64 → BadEvent P evs s ∨
     Step P s (.publish e)
       { s with roots := s.roots ++ [(sourceId P.A e, s.slot, (TR (s.leaves e)).val)] }
+
+/-- C5m. Only a publish or another address's write adds an EIP-8272 write: a
+shield, claim, spend, receive or tick leaves the root writes unchanged, so no
+event but publication can replace a published root. -/
+def C5m (P : Pool) : Prop :=
+  ∀ s e s', Step P s e s' →
+    match e with
+    | .publish _ | .rootWrite _ _ _ => True
+    | _ => s'.roots = s.roots
 
 /-- C5l. Value accounting for every event: how the balance, the credits, the
 payouts and what the pool owes change. Nothing but a shield or a receive adds

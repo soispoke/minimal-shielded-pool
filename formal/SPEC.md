@@ -29,8 +29,8 @@ In scope: the circuit, the dispatcher, the settlement logic, the verifier and
 the Poseidon libraries, deployed together, and the safety of the funds they
 hold, including that honest holders of notes worth more than a spend's maximum
 cost can spend and be paid, given inclusion, a recipient that accepts a plain
-payment and returns less than 64 KiB, and §8's premises that no other party
-consumes the note or its keys first (§5). Solvency, single consumption, real roots and
+payment and returns less than 64 KiB, and that no other party consumes the
+note or its keys first, which §8 argues on paper (§5). Solvency, single consumption, real roots and
 that a spend's extracted witness carries its note's key are claimed under §3
 (proofs in progress, §7); that only a note's holder can spend it is argued on
 paper under §8. Not in scope: privacy,
@@ -140,7 +140,10 @@ credited to and paid out to each recipient.
 Every premise can be satisfied, and no premise assumes a hash function is
 injective: a hash from `F^3` to `F` cannot be, and assuming it would make every
 claim trivially true. Claims that rely on binding end in "or the run has a bad
-event". A *bad event* counts only among what the run itself hashed: the sink
+event". A bad event anywhere in the run, even one among queries only the
+adversary chose, voids the claims for every user from then on, since it
+persists as the run grows; the guarantee is the premises' bound on the chance
+that the whole run contains one. A *bad event* counts only among what the run itself hashed: the sink
 commitments the code hardcodes, the inputs of every approved spend's extracted
 witness, every shield's commitment, every tree node of every root of every
 prefix, every domain, root source and key-set hash, the entry and storage key
@@ -230,8 +233,9 @@ approval has consumed.
 - **C5i Key binding.** A spend that consumes an occurrence as a nonzero-value input, under any opening `(sk, ρ, v)` of its leaf, extracts that `sk` and `ρ`; the bad event may use that opening's hash inputs. With §8's premises, taking a note therefore needs its holder's key; C5i alone does not give that, since P3's extractor may read the key from an honest prover.
 - **C5j Insertions.** A shield inserts its commitment, and a settlement that passes its checks inserts each nonzero-value output, as a new unspent occurrence holding that commitment and value.
 - **C5k Publication.** Anyone can publish an existing epoch `e < 2^64`, and publishing writes exactly `TR` of all of `Leaves[e]`, the current tree for the current epoch and the full final tree for a closed one, changing nothing else.
-- **C5l Value accounting.** For every event, the balance, credits, payouts and what the pool owes change exactly as intended: only a shield or a receive adds value, only a claim pays it out (its credit, to its recipient), only a spend's gas leaves the balance and only a settled spend's fee leaves what the pool owes, and a settlement credits `pub` to its recipient. A failing settlement, which C4 excludes in bounded runs without a bad event, burns its inputs. So value is not burned, misdirected or swept, not only not minted.
-- **Determinism.** `Step` is a function (`StepFunctional`), so what a claim says some step does, every step does.
+- **C5l Value accounting.** For every event, the balance, credits, payouts and what the pool owes change as follows: only a shield or a receive adds value, only a claim pays it out (its credit, to its recipient), only a spend's gas leaves the balance and only a settled spend's fee leaves what the pool owes, and a settlement credits `pub` to its recipient. A failing settlement, which C4 excludes in bounded runs without a bad event, burns its inputs. With C4, in bounded runs value is therefore not burned, misdirected or swept, not only not minted.
+- **C5m Root writes.** Only a publish or another address's write adds an EIP-8272 write; a shield, claim, spend, receive or slot leaves the root writes unchanged, so nothing but publication can replace a published root.
+- **Determinism.** A state and an event allow at most one next state (`StepFunctional`), so the publish step C5k exhibits is the only publish step from that state.
 
 **Spendability.** For every unspent occurrence with opening `(sk, ρ, v)`, every
 root of a prefix of its epoch that contains it, every fee below its value,
@@ -308,13 +312,17 @@ for every extractor, along every run of an honest deployment, the chain shows a
 model state in which the pool is solvent, no occurrence is consumed twice, and
 every root under one of its sources is a real root of its tree, or some prefix
 of the run has a bad event (for a root, one that may use that source's Keccak
-input, as in C5e).
+input, as in C5e). Such a bad event, including one among queries only the
+adversary chose or a failed extraction of its own spend, voids these
+conclusions for every user from then on; the guarantee is the premises' bound
+on the probability that an efficient adversary makes the run contain any bad
+event, and it does not shrink to the notes involved.
 
 Liveness composes from the same claims and is argued, not stated in Lean. The
 holder of an unspent note worth more than the spend's maximum cost builds the
 canonical spend, which spendability makes valid with fresh, nonzero keys. C1c
-and P3c give an accepted proof. C5k, C10 and refinement put a root containing
-the note on chain, and P6 makes its keys' sequences 0 unless an EIP-8250 slot
+and P3c give an accepted proof. C5k, C5m, C10 and refinement put a root
+containing the note on chain, which no other event can replace, and P6 makes its keys' sequences 0 unless an EIP-8250 slot
 collides with a consumed one. C5c gives `max_cost ≤ fee < v ≤ balance`, so C2c
 approves the spend; C4 and refinement settle it, C5l credits `pub` to the
 chosen recipient, and C10 pays the credit, which C5c covers, to any recipient that accepts a plain payment and returns less
@@ -401,7 +409,8 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 **Model mutants.** Refinement certifies any code that matches `Step`, so the
 model claims must also reject a wrong `Step`. Each variant below makes the named
 claim force a bad event at every step of the stated shape, which ordinary
-hashes do not produce (checked in Lean during review):
+hashes do not produce (argued during review; the first six rows were also
+checked in Lean against a copy of `Step`):
 
 | `Step` variant | Claim that fails |
 |---|---|
@@ -411,8 +420,10 @@ hashes do not produce (checked in Lean during review):
 | Claim pays half and records the full credit as paid | C5l |
 | Publish or roll over with a partial, stale or zero root | C5k |
 | Publish under another epoch's source or the raw epoch | C5k |
-| Credit twice | C5d or C5c |
-| Skip consuming inputs, or accept used keys | C5c, C5b |
+| Shield, claim or spend also writes a root | C5m |
+| Credit twice | C5l (and C5d unless `credited` also doubles) |
+| Skip consuming inputs | C5h, and C5l when the settlement passes |
+| Accept a used key as a nonzero-value input's nullifier | C5b |
 | Accept a foreign root | C3, C5b |
 | No rollover | spendability (R1) |
 
@@ -427,7 +438,7 @@ hashes do not produce (checked in Lean during review):
 | P3, P4, P13, C4's checks, bad events | `Pool.ext`, `extOf`, `proofOf`, `verifiedPublics`, `Query.collide`, `Query.degenerate`, `BadEvent`, `pathQueries`, `newCount`, `ExtractionFailure`, `CompressionBreak`, `Bounded`, `SettlePre` | `System` |
 | C1, C1c, C9's key | `C1`, `C1c`, `Assignment`, `Satisfied`, `stmtOf`, `witOf`, `publicOf`, `Groth16Accepts` | `Circuit` |
 | C2, C2c, C8, C9, C10 | same names, `Outcome`, `ValidTx`, `PreValid`, `approvalsIn`, `libHash2`, `libHash3`, `Env`, `EnvValid`, `callPool`, `publishCalldata`, `claimCalldata`, `firstPayout`, `Payout`, `RecipientRejected` | `Evm` |
-| C3, C4, C5a to C5e, C5g to C5l, determinism, spendability | same names, `StepFunctional`, `stmtOfTx`, `Spendable`, `owed`, `inputsOf`, `newLeaves`, `lastWrite`, `openingQueries`, `mkSpend`, `siblingsOf` | `System` |
+| C3, C4, C5a to C5e, C5g to C5m, determinism, spendability | same names, `StepFunctional`, `stmtOfTx`, `Spendable`, `owed`, `inputsOf`, `newLeaves`, `lastWrite`, `openingQueries`, `mkSpend`, `siblingsOf` | `System` |
 | C6 | `C6`, `LogicTree`, `LogicTree.empty`, `ZEROS`, `EMPTY_ROOT_CONST`, `zeroConst`, `insertLoop`, `LogicTree.insert`, `LogicTree.root` | `Tree` |
 | Refinement, C5f, C7 | `Refines`, `Obs`, `ChainState`, `ChainStep`, `eventsOf`, `passiveInflow`, `receivedIn`, `eventsAlong`, `chainInit`, `historyEvents`, `initEvents`, `modelEvents`, `ChainRun`, `ReachableChain` | `Evm` |
 | Main theorem | `MainTheorem`, `ModelTheorem`, `ChainTheorem`, `ChainCorollary`, `Composes` | `Main` |
