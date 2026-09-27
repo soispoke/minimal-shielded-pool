@@ -1,5 +1,56 @@
 # MSP formal verification continuation
 
+## Ownership transfer, 2026-09-27 05:52 UTC
+
+Thomas asked the Claude session `e9529fa7-10f6-4fd3-a0b1-195641fd261d` to
+continue this work from Codex's committed state. Claude now owns the
+specification and proofs, working in the worktree
+`/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-claude`
+on branch `claude/formal-spec-continued`, started from `411f952`. Codex's
+uncommitted files in this checkout (the `Groth16/Subgroup*` and `Cardinality`
+files, `Chain/`, `Mutations/`, the circuit-mutation tooling) were left untouched
+and are not part of that branch. Codex should not start new edits here; commit
+or park what is in flight and stop, and Claude will pick up committed work.
+
+## Codex handoff checkpoint
+
+Codex's remaining work is now saved at **`7f670d6`**, directly after `411f952`.
+Claude can cherry-pick that commit into its active worktree when ready; Codex
+has not modified the Claude worktree. All Codex subagents and owned build
+processes have stopped, and ownership has been yielded. The automation was
+found already **PAUSED** during this transfer and remains paused.
+
+The checkpoint contains checked Fq²/twist groups, exact order-`p` proofs for
+all eight pinned key points and the G1 base point, and a concrete dispatcher
+sender-mismatch proof. The latter follows 24 actual instructions, returns
+`e6d22e28`, consumes exactly 80 execution gas and preserves carried persistent
+state, approvals and state gas. It is only the documented rejection path,
+not the complete canonical chain binding. `Proofs/AxiomAudit.lean` audits all
+these results using only standard Lean axioms.
+
+**Final check:** from this checkout's `formal/`, `/opt/homebrew/bin/lake build`
+passes **3,661 jobs**. `python3 tools/groth16_subgroups.py` reproduces all nine
+traces; `python3 tools/dispatcher_pilot.py --check` reproduces the pinned byte
+data. Exact output and focused review are in
+`evidence/2026-09-27-0350/handoff-full-build.log` and `handoff-review.md`.
+
+Four complete executable circuit counterexamples and their raw artifacts are
+preserved in `evidence/2026-09-27-0350/circuit-mutations/`. They are not Lean
+mutation certificates. `Mutations/Check.lean` is checked generic reflection;
+`MembershipValues.lean.pending` and `MembershipPilot.lean.pending` preserve
+the unfinished concrete proof, with the recursion-limit failure and next steps
+in `Mutations/README.md`. `Groth16/Cardinality.lean.pending` preserves the
+unfinished ambient G1 cardinality proof; its last check was stopped while
+slow. These pending files are intentionally outside build targets, without
+admissions or claims of success.
+
+No new obligation is closed beyond the stated bounds. Pairing/verifier/library
+binding, canonical chain execution/refinement, W2 and Lean semantic mutation
+gates remain open. P3/P9 retain their explicit canonical status. Next owner
+should incorporate the checked checkpoint, inspect fresh round-21 review
+results, and resume one documented pending obligation without repeating C1,
+C1c or W1.
+
 ## Active checkout
 
 The durable independent repository is
@@ -20,7 +71,7 @@ The separate key/R1CS task finished on September 26. Its unmerged PR 24 commit
 still owns that work. The activation gate has since been strengthened to bind
 the verifier-used JSON key fields to the zkey. It still reports `setup: partial`.
 
-**Current ownership, September 27 heartbeat:** this Codex heartbeat owns the durable checkout.
+**Historical Codex ownership, before the 05:52 UTC transfer above:** this heartbeat owned the durable checkout.
 C1 and C1c are proved for all 14,802 pinned constraints with only standard Lean
 axioms, at `7c96e43` and `6618d0d`. The full build passed 3,563 jobs there.
 Concrete Ethereum Keccak is now bound as `K`; the circuit, model, composition,
