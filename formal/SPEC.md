@@ -289,7 +289,7 @@ allow, can call
 `publishEpochRoot(e)` for every `e ≤ E` whose root is nonzero, while `E` is
 below `2^64`, and the call succeeds (`Obs` reads `E` as a whole storage word,
 which exceeds the contract's `uint64` counter only through a degenerate storage
-key, a bad event refinement accounts for); and they can call `claimWithdrawal(r)` for every recipient `r < 2^160` whose credit the balance
+key, a bad event refinement accounts for); and they can call `claimWithdrawal(r)` for every recipient `r < 2^160` with a nonzero credit that the balance
 covers, and the call succeeds unless the first `CALL`, `CALLCODE` or
 `STATICCALL` made by code running at `A` (the dispatcher's `DELEGATECALL` into
 `L` does not count) is a plain `CALL` paying the credit to `r` with at least
@@ -413,7 +413,7 @@ caller other than the pool has a valid environment there. The 2026-09-25 run
 of the `position-notes-v2` deployment recorded in `SECURITY.md` (pool and block
 in `devnet/deploy_config.json`) is informal evidence.
 
-**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements, not results: none has been checked formally. As tests, not proofs, `wallet/test_occurrence.py` (run in CI's `test` job) builds circuits without one range check, and without the membership, sink and other listed constraints together, and shows each admits a complete witness violating R5, R3 or R7 that the pinned R1CS rejects.
+**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements, not results: none has been checked formally. As tests, not proofs, `wallet/test_occurrence.py` (run in CI's `test` job) builds three circuits, each without the range check on one output value or the fee (not those on the input values or the public amount), and one without the membership, sink, distinctness and other listed constraints together, and shows each admits a complete witness violating R5, R3, R7 or R8 that the pinned R1CS rejects.
 
 | Mutation | Claim that must fail |
 |---|---|
@@ -516,8 +516,8 @@ encoded accepted spend and the complete finite bad-event query support.
 W2 and the rest of the chain half of `MainTheorem` (C6 is proved) remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 `MainTheorem` and `ChainCorollary` from exactly those obligations. No row of
-§6's mutation table has been checked formally; for R3, R5 and R7 only the
-tests §6 names exist.
+§6's mutation table has been checked formally; for R3, R5, R7 and R8 only
+the tests §6 names exist.
 
 CI checks this project on every push in two jobs. The `formal` job runs no
 unowned repository code before the proofs are checked. It trusts elan's
