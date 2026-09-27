@@ -4,7 +4,8 @@ This file states what the formal verification must prove about the pool. It is
 the reviewed source of truth for the Lean statements in `formal/Spec/`, which
 typecheck against Lean 4.35.0-rc3 and Mathlib and depend only on Lean's standard
 axioms. C1, C1c, the model claims, C6 and W1 are proved; the rest of the
-chain half (C2, C2c, C8, C9, C10 and refinement) and W2 are open (§7). Changing a claim or
+chain half (C2, C2c, C8, C9, C10 and refinement), W2 and the §6 mutation
+checks are open (§7). Changing a claim or
 premise, here or in Lean, needs the same review as changing the pool.
 
 ## 1. Scope
@@ -410,7 +411,7 @@ caller other than the pool has a valid environment there. The 2026-09-25 run
 of the `position-notes-v2` deployment recorded in `SECURITY.md` (pool and block
 in `devnet/deploy_config.json`) is informal evidence.
 
-**Mutations.** Each change must make some claim false, or the row names the premise it violates:
+**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements, not results: none has yet been checked against the mutated artifact.
 
 | Mutation | Claim that must fail |
 |---|---|
@@ -512,12 +513,16 @@ an actual satisfying circuit assignment, the specified ideal verifier, an
 encoded accepted spend and the complete finite bad-event query support.
 W2 and the rest of the chain half of `MainTheorem` (C6 is proved) remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
-`MainTheorem` and `ChainCorollary` from exactly those obligations.
+`MainTheorem` and `ChainCorollary` from exactly those obligations. No row of
+§6's mutation table has yet been checked against its mutated artifact.
 
-CI checks this project on every push in two jobs. The `formal` job runs only
-owner-reviewed code before the proofs are checked: `tools/check_formal.py`,
-run under `python -I` so no file beside it can shadow a standard module,
-which checks the statement files against `STATEMENTS.lock` and the artifact
+CI checks this project on every push in two jobs. The `formal` job runs no
+unowned repository code before the proofs are checked. It trusts elan's
+installer, fetched from `leanprover/elan`'s `master` branch, and Mathlib's
+prebuilt cache from `lake exe cache get`: Mathlib's declarations are loaded
+from that cache, not rechecked by the kernel. It first runs
+`tools/check_formal.py` (under `python -I`, so no file beside it can shadow a
+standard module), which checks the statement files against `STATEMENTS.lock` and the artifact
 hashes of §1, and textually rejects, outside comments and string literals,
 `sorry`, `admit`, native evaluation, `debug.skipKernelTC`, `axiom`, `unsafe`
 and `implemented_by` in every Lean file, metaprograms (`#eval`, `run_cmd`,
@@ -526,7 +531,7 @@ every Lean file outside
 the lock except the code-owned differential-test driver
 `tools/DifferentialModel.lean`, which `lake build` does not compile and which
 runs only after the rechecks, a `lakefile.lean` and any committed build output under `.lake`; then,
-with `.lake` removed, `lake build`, failing on any `sorry`
+with `.lake` removed (so every project module, but not Mathlib, is built from source), `lake build`, failing on any `sorry`
 warning, with `Proofs/AxiomAudit.lean` rejecting any axiom beyond Lean's
 standard three for the principal results and pinning each one's type to its
 claim; then the audit, `check_formal.py` and `git diff` again, so a build
