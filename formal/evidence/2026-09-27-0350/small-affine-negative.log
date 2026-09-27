@@ -1,0 +1,4 @@
+/tmp/MspSmallAffineNegative.lean:9:2: error: Tactic `decide` proved that the proposition
+  BetaGates.normalize (instance0.outputForm ++ constant 1) =
+    BetaGates.normalize (SmallHashGates.mixForms scheme3.mds (fullOutputForm instance0 scheme3.initialConstants 7) 0)
+is false

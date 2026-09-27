@@ -1,0 +1,36 @@
+ℹ [3122/3143] Replayed Proofs.CircuitGadgets
+info: Proofs/CircuitGadgets.lean:83:0: 'MSP.scalar_prime' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:84:0: 'MSP.boolean_constraint' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:85:0: 'MSP.isZero_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:86:0: 'MSP.isZero_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:87:0: 'MSP.bitsValue_cast' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:88:0: 'MSP.bitsValue_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:89:0: 'MSP.num2Bits_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3123/3143] Replayed Artifacts.RangeLemmas
+info: Artifacts/RangeLemmas.lean:66:0: 'MSP.Artifacts.RangeLemmas.bitsField_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:67:0: 'MSP.Artifacts.RangeLemmas.bitsField_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:68:0: 'MSP.Artifacts.RangeLemmas.weightedWires_eval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:69:0: 'MSP.Artifacts.RangeLemmas.bitsField_wires_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:70:0: 'MSP.Artifacts.RangeLemmas.num2Bits_wires_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3126/3143] Replayed Artifacts.RangeCompleteness
+info: Artifacts/RangeCompleteness.lean:66:0: 'MSP.Artifacts.RangeCompleteness.gate_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3137/3143] Replayed Proofs.CircuitArithmetic
+info: Proofs/CircuitArithmetic.lean:47:0: 'MSP.nat_eq_of_field_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:48:0: 'MSP.value_conservation_iff' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:49:0: 'MSP.input_sum_pos' depends on axioms: [propext, Quot.sound]
+ℹ [3142/3143] Replayed Artifacts.PinnedRangeCompleteness
+info: Artifacts/PinnedRangeCompleteness.lean:129:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:130:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:131:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_output_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:132:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_output_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:133:0: 'MSP.Artifacts.PinnedRangeCompleteness.public_amount_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:134:0: 'MSP.Artifacts.PinnedRangeCompleteness.fee_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:135:0: 'MSP.Artifacts.PinnedRangeCompleteness.recipient_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:136:0: 'MSP.Artifacts.PinnedRangeCompleteness.authorizer_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3143/3143] Built Artifacts.RangeAssignmentCompleteness (2.0s)
+info: Artifacts/RangeAssignmentCompleteness.lean:134:0: 'MSP.Artifacts.RangeAssignmentCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+Build completed successfully (3143 jobs).

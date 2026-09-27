@@ -1,0 +1,30 @@
+ℹ [3127/3147] Replayed Artifacts.SmallHashGatesCertificates
+info: Artifacts/SmallHashGatesCertificates.lean:285:0: 'MSP.Artifacts.SmallHashGatesCertificates.signs' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3128/3147] Replayed Artifacts.SmallHashGates
+info: Artifacts/SmallHashGates.lean:57:0: 'MSP.Artifacts.SmallHashGates.sigma_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:58:0: 'MSP.Artifacts.SmallHashGates.full_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:59:0: 'MSP.Artifacts.SmallHashGates.partial_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3136/3147] Replayed Poseidon.Optimized3Equivalence
+warning: Poseidon/Optimized3Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [3141/3147] Replayed Poseidon.Optimized4Equivalence
+warning: Poseidon/Optimized4Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [3147/3147] Built Artifacts.HashAssignmentCompletenessAffine (2.4s)
+warning: Artifacts/HashAssignmentCompletenessAffine.lean:91:28: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Artifacts/HashAssignmentCompletenessAffine.lean:170:0: 'MSP.Artifacts.HashAssignmentCompleteness.input_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/HashAssignmentCompletenessAffine.lean:171:0: 'MSP.Artifacts.HashAssignmentCompleteness.output_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+Build completed successfully (3147 jobs).

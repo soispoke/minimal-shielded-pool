@@ -23,25 +23,28 @@ Lean's standard logical axioms for the principal results listed below.
 | `CircuitGadgets.lean` | BN254 scalar primality, Boolean and IsZero gadget lemmas, and Num2Bits range soundness |
 | `PoseidonConstants.lean` | kernel-checked equality of all 21 zero-tree constants with concrete Poseidon |
 | `C6.lean` | `MSP.c6 : C6`, for the specified incremental-tree algorithm and concrete Poseidon |
+| `../Artifacts/CircuitSoundness.lean` | `MSP.c1 : C1`, for the complete pinned R1CS and concrete projections |
+| `CircuitCompleteness.lean` | canonical Boolean witness construction; whole C1c remains open |
 | `AxiomAudit.lean` | build-time admission checks for the principal proofs, including full-R1CS compression |
 
 `ModelTheorem` is proven: every model claim holds for every pool from C1.
-`Composes` and C6 are also proven. C6 establishes the Lean tree algorithm;
+C1 is now discharged for the pinned circuit. `Composes` and C6 are also proven. C6 establishes the Lean tree algorithm;
 refinement of the actual bytecode to that algorithm remains open.
 
-[The artifact proofs](../Artifacts/README.md) establish gamma, all six amount
-bounds, integer conservation, both address bounds, positive input value,
-sink and distinctness rules, and both path index bounds from the complete
-pinned R1CS. The conditional `relation_of_gadget_hashes` assembles those results
-with actual path selectors and root gates, retaining individual note and Merkle
-hash equations as explicit premises. `PublicSignals` proves both beta and gamma
-against the canonical reference, using universal optimized/reference Poseidon10
-equivalence. The complete private relation and C1/C1c remain open. The arithmetic and gadget
-lemmas above are reusable proof components, not a substitute for that binding.
-[The concrete Poseidon definitions](../Poseidon/README.md) still require a
-width-3/4 circuit equivalence and deployed-library bindings.
+[The artifact proofs](../Artifacts/README.md) derive the entire canonical
+relation and both compression outputs from the complete pinned R1CS.
+`Spec.Circuit`'s six circuit declarations are now concrete definitions;
+`CircuitSoundness` proves the unchanged C1 statement. All 54 small-hash
+instances, the beta gadget, all range/control/path gates and the private
+projection are connected. Universal optimized/reference Poseidon equivalence
+is proved for all three widths. Keccak and Groth16 verification remain opaque.
 
-Remaining completion gates include C1/C1c, C2/C2c/C8/C9/C10 and refinement,
+`PinnedRangeCompleteness` proves the eight actual range fragments hold when
+their retained bits are assigned canonically, including each eliminated top
+bit. `InputCompleteness` handles the nonzero-input inverse. Whole-circuit
+assignment construction and exact projection recovery are still C1c obligations.
+
+Remaining completion gates include C1c, C2/C2c/C8/C9/C10 and refinement,
 the required concrete key/verifier/library/bytecode bindings, W1/W2, and the
 semantic mutation failures in `SPEC.md`. The decoder's negative tests do not
 discharge those mutation gates. End-to-end formal verification is incomplete.

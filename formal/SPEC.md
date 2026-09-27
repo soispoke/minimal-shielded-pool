@@ -466,7 +466,7 @@ storage layout: slot 21 is the leaf count, 22 the current root, 23 the credits,
 `creditMsg` and `finalRootMsg`. Bad events are `BadEventWith`, over `traceQueries`,
 with `Query.degenerate`, `ExtractionFailure` and `CompressionBreak`.
 Declarations marked `opaque` are bound to the artifacts in later steps:
-Keccak, the constraint system and `Groth16Accepts` (textbook Groth16
+Keccak and `Groth16Accepts` (textbook Groth16
 verification with the key in `spend_vkey.json`, not the verifier's code) in
 step 3, and the EVM semantics in step 5, where
 `ChainStep`, `eventsOf`, `approvalsIn`, `firstPayout` and the
@@ -476,7 +476,10 @@ the bytecode's `_zeros`, `EMPTY_ROOT`, `_insert` and `_computeRoot` equal
 `ZEROS`, `EMPTY_ROOT_CONST`, `LogicTree.insert` and `LogicTree.root`. `formal/Sanity/` holds
 proofs, written during review, that parts of the specification mean what they
 should. `Spec.Hash` uses concrete reference Poseidon functions generated from
-the pinned D2 constants; equivalence with the optimized circuit remains open.
+the pinned D2 constants. Universal optimized/reference equivalence is now
+proved for all three widths. `Spec.Circuit` uses the complete pinned R1CS and
+concrete projections; `Artifacts.CircuitSoundness` proves C1, including every
+note/path hash and both compression outputs. C1c remains open.
 `formal/Proofs/` proves `ModelTheorem`, every model claim from C1, and `Composes`.
 It also proves C6 for the specified tree algorithm, including kernel-checked
 zero constants. The bytecode refinement remains open.

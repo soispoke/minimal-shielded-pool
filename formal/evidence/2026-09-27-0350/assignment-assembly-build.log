@@ -1,0 +1,3 @@
+ℹ [1209/1209] Built Artifacts.AssignmentAssembly (849ms)
+info: Artifacts/AssignmentAssembly.lean:95:0: 'MSP.Artifacts.AssignmentAssembly.satisfied' depends on axioms: [propext, Classical.choice, Quot.sound]
+Build completed successfully (1209 jobs).

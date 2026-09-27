@@ -68,8 +68,10 @@ lake build Poseidon.OptimizedEquivalence Artifacts.PublicSignals Proofs.AxiomAud
 
 `Artifacts.PublicSignals.compression_of_pinned_r1cs` connects this universal
 result to the actual beta constraints and combines it with gamma for the same
-concrete statement. Width-3/4 equivalence and the remaining circuit hash
-bindings are still being developed. These results do not prove
+concrete statement. `Optimized3.hash2_eq_reference` and
+`Optimized4.hash3_eq_reference` prove the two smaller widths universally by
+the same checked method. All 54 note/path/output hash instances are bound
+in `Artifacts.SmallHashGatesComplete`; `Artifacts.CircuitSoundness` proves C1. These results do not prove
 Poseidon security, R1CS soundness/completeness, or the EVM libraries' behavior
 and gas bounds. Those remain separate bindings. `Spec.Hash` marks the concrete
 hash wrappers irreducible to prevent accidental expansion during symbolic

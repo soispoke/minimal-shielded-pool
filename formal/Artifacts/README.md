@@ -1,10 +1,17 @@
 # Pinned R1CS extraction
 
-The extractor checks every
-constraint and wire label in the pinned `build/spend.r1cs`, reproduces the exact
-binary and symbol file with the pinned compiler, and exports the constraints as
-Lean data interpreted by `R1CS.lean`. It does **not** prove C1 or C1c or replace
-`Spec.Circuit`'s opaque declarations.
+`MSP.c1` in `CircuitSoundness.lean` proves circuit soundness for the complete
+pinned R1CS: every satisfying raw assignment yields the canonical spend
+relation and correct beta/gamma signals. All note, Merkle and compression
+hashes are tied to the concrete reference Poseidon functions. Its dependency
+closure contains only Lean's standard logical axioms.
+
+The extractor checks every constraint and wire label, reproduces the exact
+binary and symbol file with the pinned compiler, and exports the constraints
+as Lean data interpreted by `R1CS.lean`. `Spec.Circuit` now uses that system and
+the concrete statement, private witness and public projections. The external
+parser/source binding is described below. C1c and verifier/chain bindings
+remain open.
 
 The full artifact SHA-256 is
 `e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf`.
@@ -110,8 +117,8 @@ it has no unproved containment premise. The byte-for-byte regeneration check
 connects the full Lean data to the pinned binary outside Lean. No kernel-checked
 binary parser is claimed.
 Beta is now proved separately below. The gamma theorem alone does not
-establish the remaining hash gadgets, C1, or C1c. The code leaves
-`Spec.Circuit`'s opaque definitions unchanged.
+establish the remaining hash gadgets or completeness. `CircuitSoundness`
+composes all the artifact proofs to discharge C1.
 
 `lake build Artifacts` checks the fragment and full-system compression theorems. Their
 `#print axioms` output is `[propext, Classical.choice, Quot.sound]`; there are
@@ -193,8 +200,11 @@ assignments for mutated complete circuits.
 `RelationFragments.relation_of_hash_bindings` assembles R1 and R5–R9 for those
 same statement and witness projections. The nullifier, output commitment and
 gated Merkle membership equations remain explicit premises. It is therefore a
-conditional relation theorem, not C1. `relation_of_gadget_hashes` further
-reduces the Merkle premise to those individual hash equations.
+conditional relation theorem. `relation_of_gadget_hashes` further reduces
+the Merkle premise to individual hash equations. `SmallHashGatesComplete`
+discharges all 54 such interfaces from the full system, and `NoteBindings`
+assembles the note semantics. `CircuitSoundness` then proves C1 without
+hash or high-level relation premises.
 `Proofs/AxiomAudit.lean` checks its full
 dependency closure for admissions and nonstandard axioms.
 
@@ -237,20 +247,15 @@ These are decoder tests, **not** SPEC.md's required semantic circuit mutations.
 
 ## Remaining proof frontier
 
-1. Prove the remaining optimized Poseidon gadgets agree with the reference hash.
-   The fee projection is now tied to its actual range gate, integer accounting
-   and gamma. Its beta use is also proved. The remaining note and path hashes need binding.
-   A symbol hash or source-level alias alone does not establish a semantic
-   connection to the optimized constraints.
-2. Establish the complete constraints-to-semantics connection, including
-   optimized Poseidon note and path gadgets. The actual path selectors and
-   membership gates are bound, conditional on those individual hash equations.
-   The exported constraints are data; compiling them alone does
-   not prove their equivalence to the intended circuit.
-3. Instantiate `Assignment`, `Satisfied`, `stmtOf`, `witOf` and `publicOf` from
-   that concrete system and prove C1 and C1c, including witness construction for
-   arbitrary valid `R` and every alpha. Run SPEC.md's semantic mutation gates.
-   Concrete Groth16 key/verifier and chain bindings remain separate obligations.
+C1c must construct all retained wires for every valid canonical witness and
+alpha, then prove satisfaction and exact projection recovery. The range
+completeness lemmas now cover all eight actual range fragments, and
+`InputCompleteness` supplies the nonzero-input inverse gate. These do not yet
+construct the complete assignment. `assignment-plan.json` records complete
+wire/constraint coverage and finite affine recovery data; its numerical checks
+still need the corresponding Lean reconstruction proofs.
 
-Keep the cryptographic and deployment premises in `SPEC.md`; these scripts
-make no new claim about setup honesty, zkey consistency or spend authority.
+Groth16's concrete key/pairing relation, hardened verifier, Keccak, deployed
+libraries and chain semantics remain separate bindings. The complete semantic
+mutation gates, W1/W2 and both gas dimensions remain open. Keep the explicit
+cryptographic, deployment, fork and lifetime premises in `SPEC.md`.
