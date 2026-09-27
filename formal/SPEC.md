@@ -143,8 +143,9 @@ injective: a hash from `F^3` to `F` cannot be, and assuming it would make every
 claim trivially true. Claims that rely on binding end in "or the run has a bad
 event". A bad event anywhere in the run, even one among queries only the
 adversary chose, voids the claims for every user from then on, since it
-persists as the run grows; the guarantee is that, under the premises, no
-efficient party can make the run contain one. A *bad event* counts only among what the run itself hashed: the sink
+persists as the run grows; the guarantee is that an efficient algebraic machine
+makes the run contain one only by exhibiting an object P1, P2 or P4 assumes no
+one exhibits, or with the probability P3 bounds. A *bad event* counts only among what the run itself hashed: the sink
 commitments the code hardcodes, the inputs of every approved spend's extracted
 witness, every shield's commitment, every tree node of every root of every
 prefix, every domain, root source and key-set hash, the entry and storage key
@@ -161,20 +162,23 @@ and P4 are not probability bounds: collisions exist, and a machine could
 hardcode one. Each such bad event instead exhibits, computably from the run and
 its extracted witnesses, an explicit Poseidon or Keccak collision, a Poseidon
 output of 0, a Keccak output below `2^64`, a run query other than
-`addr20(A) ‖ u256(e)` that hashes to `K(addr20(A) ‖ u256(e))`, or `x ≠ x′`
-with `γ(x − x′, α(x) + H10(x′)) = 0`, and the premises assume no efficient
-party (and efficient extractor) can produce such an object. Only P3 bounds a
-probability, over the setup's randomness, for algebraic machines with `ext`
-taken to be P3's extractor. The same holds for openings and dummies a
-claim names: for one that merely exists, the claim holds through a collision
-with the query that created the leaf, and the bound applies only to openings an
-efficient party outputs.
+`addr20(A) ‖ u256(e)` that hashes to `K(addr20(A) ‖ u256(e))`, distinct
+`(c, a, e)` with equal `D`, or `x ≠ x′` with `γ(x − x′, α(x) + H10(x′)) = 0`.
+Openings and dummies a claim names are treated alike: for one that merely
+exists, the claim holds through a collision with the query that created the
+leaf, and the object is exhibited only for openings some party outputs.
+P1, P2 and P4 assume that no one exhibits such an object. The guarantee is
+constructive: from any algebraic machine that makes the run contain one of
+these bad events, running it with P3's extractor and scanning the run's queries
+yields the object at about the same cost. Only P3 bounds a probability, over
+the setup's randomness, for algebraic machines with `ext` taken to be P3's
+extractor.
 
-- **P1 Poseidon.** `H2`, `H3`, `H10` are the concrete functions of D2. Finding a Poseidon collision, or an input with output 0, among a run's queries is assumed infeasible.
-- **P2 Keccak.** The same for Keccak collisions and outputs below `2^64`, for distinct `(c, a, e)` with equal `D`, and for a run query other than `addr20(A) ‖ u256(e)` whose output is `K(addr20(A) ‖ u256(e))` for some `e < 2^64`, or an output `K(addr20(A) ‖ u256(e))` below `2^64`; and, used only for liveness, for a Keccak collision between the `NONCE_MANAGER` storage key of a key a spend selects and that of any key consumed on the chain, by any sender.
-- **P3 Groth16.** For the committed verification key, from snarkjs's two-phase setup (`γ = [1]₂`, `δ` from phase 2) run honestly, knowledge soundness: for every efficient algebraic machine that produces the run's transactions, honest provers included, whose group inputs include the whole setup transcript (the phase-1 powers of tau and the phase-2 contributions) and every other group element it sees, including other setups built on the same phase 1, an efficient extractor that does not rewind, and reads the machine's representations of its group outputs over those inputs, maps, except with negligible probability, each proof that Groth16's verification for the committed key accepts (`Groth16Accepts`) to a satisfying assignment of the pinned `spend.r1cs` with the verified public signals. Bowe, Gabizon and Miers (2017) argue this in the generic group model, and Kohlweiss, Maller, Siim and Volkhov (2021) prove knowledge soundness for that ceremony, including the beacon version used in practice, against algebraic adversaries in the random oracle model with one honest party per phase, though their update proofs put the random-oracle element in G1 rather than snarkjs's G2 and their model excludes honest setups of other relations on the same phase 1 (their §3), so P3's extension to snarkjs's transcript and to such setups is an assumption; Fuchsbauer, Kiltz and Loss (2018) cover Groth's original reference string, not this one. Every claim holds for every extractor, and an approved spend whose extraction fails is a bad event. An approved spend's proof is 256 bytes the linked verifier accepts, so with C9 it is one that `Groth16Accepts`, and P3 bounds its extraction failure. No claim assumes extraction for every accepted proof: a Groth16 verifier accepts some proof for every public input. Knowledge soundness over a machine that includes honest provers says nothing about who knew a witness, so it gives no spend authority against any party that sees honest proofs, on chain or before inclusion. Beyond C5i, spend authority needs weak simulation extractability, so that a spend of new public signals yields a witness from its sender's view alone, and zero knowledge with Poseidon one-wayness, so that no other party learns a holder's key (§8). The pinned zkey comes from a local test setup with one phase-2 contribution and an unrecorded phase 1, so it is not known to meet P3.
+- **P1 Poseidon.** `H2`, `H3`, `H10` are the concrete functions of D2. No one is assumed to exhibit a Poseidon collision, or an input with output 0, among a run's queries or the openings and dummies a claim names.
+- **P2 Keccak.** No one is assumed to exhibit Keccak collisions and outputs below `2^64`, for distinct `(c, a, e)` with equal `D`, and for a run query other than `addr20(A) ‖ u256(e)` whose output is `K(addr20(A) ‖ u256(e))` for some `e < 2^64`, or an output `K(addr20(A) ‖ u256(e))` below `2^64`; and, used only for liveness, for a Keccak collision between the `NONCE_MANAGER` storage key of a key a spend selects and that of any key consumed on the chain, by any sender.
+- **P3 Groth16.** For the committed verification key, from snarkjs's two-phase setup (`γ = [1]₂`, `δ` from phase 2) run honestly, knowledge soundness: for every efficient algebraic machine that produces the run's transactions, honest provers included, whose group inputs include the whole setup transcript (the phase-1 powers of tau and the phase-2 contributions) and every other group element it sees, including other setups built on the same phase 1, an efficient, explicit extractor (the algebraic group model argument's, which computes the witness from the machine's representations of its group outputs over those inputs, without rewinding) maps, except with negligible probability, each proof that Groth16's verification for the committed key accepts (`Groth16Accepts`) to a satisfying assignment of the pinned `spend.r1cs` with the verified public signals. Bowe, Gabizon and Miers (2017) argue this in the generic group model, and Kohlweiss, Maller, Siim and Volkhov (2021) prove knowledge soundness for that ceremony, including the beacon version used in practice, against algebraic adversaries in the random oracle model with one honest party per phase, though their update proofs put the random-oracle element in G1 rather than snarkjs's G2 and their model excludes honest setups of other relations on the same phase 1 (their §3), so P3's extension to snarkjs's transcript and to such setups is an assumption; Fuchsbauer, Kiltz and Loss (2018) cover Groth's original reference string, not this one. Every claim holds for every extractor, and an approved spend whose extraction fails is a bad event. An approved spend's proof is 256 bytes the linked verifier accepts, so with C9 it is one that `Groth16Accepts`, and P3 bounds its extraction failure. No claim assumes extraction for every accepted proof: a Groth16 verifier accepts some proof for every public input. Knowledge soundness over a machine that includes honest provers says nothing about who knew a witness, so it gives no spend authority against any party that sees honest proofs, on chain or before inclusion. Beyond C5i, spend authority needs weak simulation extractability, so that a spend of new public signals yields a witness from its sender's view alone, and zero knowledge with Poseidon one-wayness, so that no other party learns a holder's key (§8). The pinned zkey comes from a local test setup with one phase-2 contribution and an unrecorded phase 1, so it is not known to meet P3.
 - **P3c Groth16 completeness.** For every satisfying assignment there are eight proof words that Groth16's verification for the committed key accepts for its public signals; with C9 the linked verifier accepts them. Used only for liveness (§5).
-- **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. No efficient machine producing the run, with an efficient extractor, outputs one. For these fixed, unkeyed functions that is an assumption about what efficient parties can output, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
+- **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. No one is assumed to exhibit one. For these fixed, unkeyed functions that is an assumption about what anyone exhibits, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
 - **P5 EIP-8141.** A transaction is valid only if its `chain_id` is the chain's. Frames run in order. A VERIFY frame changes nothing but through `APPROVE`; if it fails, the transaction is invalid. `APPROVE` reverts the current frame unless `ADDRESS` is the frame's resolved target and the scope is among the frame's flags; `APPROVE` with payment reverts if the payer's balance is below `max_cost`. Approval flags are excluded from atomic batches. `APPROVE(3)` from frame 1 makes `A` sender and payer. A SENDER frame's caller is `sender`, a DEFAULT frame's the entry point. A failed non-VERIFY frame reverts its own effects, or its whole atomic batch's. `TXPARAM`, `FRAMEPARAM` and `SIGPARAM` return the EIP's table values, with EIP-8250's `TXPARAM(0x01) = nonce_seq`, `0x0E` = key count, `0x0F = K(u256(n) ‖ u256(k_1) ‖ … ‖ u256(k_n))`. Frame data read with `FRAMEDATALOAD` or, in the running frame, `CALLDATALOAD` is the frame's data. A `msg` is empty, signing the canonical hash, or a nonzero 32-byte digest, so `SIGPARAM(i, 0x02) = 0` exactly when signature `i` signs the canonical hash, which covers every field except the raw bytes of such signatures. The payer pays at most `max_cost`.
 - **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas.
 - **P7 EIP-8272.** A call from address `a` with data `salt ‖ root` during slot `S` stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, with the target, mode, flags, value, state limit and data length A1 gives it, A3's data and enough execution gas, succeeds exactly when, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. Entries change otherwise only through a reorg; the model follows the canonical chain.
@@ -330,8 +334,8 @@ input, as in C5e). Such a bad event, including one among queries only the
 adversary chose or a failed extraction of its own spend, voids these
 conclusions for every user from then on. The guarantee is that an efficient
 algebraic adversary, with `ext` taken to be P3's extractor, makes the run
-contain a bad event only by exhibiting an object P1, P2 or P4 assumes no one can
-produce, or with the probability P3 bounds; it does not shrink to the notes
+contain a bad event only by exhibiting an object P1, P2 or P4 assumes no one
+exhibits, or with the probability P3 bounds; it does not shrink to the notes
 involved.
 
 Liveness composes from the same claims and is argued, not stated in Lean. The
@@ -561,13 +565,15 @@ rejects.
 Step 5's definitions of `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
 `ValidTx`, `PreValid`, `approvalsIn`, `EnvValid`, `callPool`, `firstPayout`,
 `verifierOf`, `libHash2`, `libHash3`, `addrOf`, `chainOf`, `NONCE_MANAGER`,
-`RawTx.view` and `Honest` are checked against their docstrings by review only.
+`RawTx.view`, `Groth16Accepts` and `Honest` are checked against their docstrings by review only.
 A narrower `ChainStep`, `EnvValid` or `Honest`, or a wrong `chainInit`, leaves
 states uncovered by refinement, C2, C2c and C10. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
 weakens C2 and a looser one weakens C2c and W2, a stronger `PreValid` weakens
 C2c, a looser `callPool` or `firstPayout` weakens C10, and a `verifierOf`,
 `libHash2` or `libHash3` not defined by running the linked bytecode makes C9 or
-C8 vacuous and weakens C2 and C2c.
+C8 vacuous and weakens C2 and C2c. A `Groth16Accepts` other than textbook
+verification for the committed key makes C9 and P3 refer to the wrong
+predicate.
 
 Privacy and inclusion are outside this specification.

@@ -1,8 +1,8 @@
 {
-  "formal/SPEC.md": "e05f48e80c54c9b45e7b7db0ee538630b4a0474248bc9af9b396c919d4428a4e",
+  "formal/SPEC.md": "db3365535c5e334eb95e5ac048e0449860e55356ac34cd1fb9ad8ac0c548cbce",
   "formal/Spec.lean": "17eb68c9778dc67e4238112341bb6a6a79c14e781df391761a75a2a5ddf4a58a",
   "formal/Spec/Basic.lean": "30abafbf4c76ebc78444e41bf89af4f60f557e5b6f643931207e1c6286652572",
-  "formal/Spec/Circuit.lean": "e524cb8e4e1576d287f06eff2484e61ee28d9078afe1d53f6880f47514f512bf",
+  "formal/Spec/Circuit.lean": "cd6334769ed55dcc7c4e2f74f882c0dcf2e8eff395ff38df156134f9162227b1",
   "formal/Spec/Evm.lean": "d88b1d8fc8c9ed48af76784eda92cc897580c6c2d3273b93f21738dfacfd4950",
   "formal/Spec/FrameTx.lean": "34ac13363452469bf438a4cf55aeb60cf0bd1edb6520aed34aac454c80710e2e",
   "formal/Spec/Hash.lean": "a3e66bc20a289d75094655f75c5ee248bdb3e6db0623a6e6a73393b4bd2bce04",
