@@ -12,6 +12,7 @@
 /.github/ @soispoke
 /formal/tools/ @soispoke
 /formal/Proofs/AxiomAudit.lean @soispoke
+/formal/Proofs/AuditCommand.lean @soispoke
 /formal/lakefile.toml @soispoke
 /formal/lakefile.lean @soispoke
 /formal/lean-toolchain @soispoke

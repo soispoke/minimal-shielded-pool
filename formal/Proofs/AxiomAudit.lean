@@ -36,23 +36,14 @@ import Groth16.Encoding
 import Proofs.NonVacuityEncoding
 import Proofs.NonVacuityFixtureVerified
 import Groth16.Group
-import Lean.Util.CollectAxioms
-import Lean.Elab.Command
+import Proofs.AuditCommand
 
 /-! Fail the build if a checked theorem starts depending on an admission or
 an axiom beyond Lean's standard logical axioms. This audits the named proofs;
 it does not discharge their hypotheses. -/
 
--- Every name is qualified from the root and nothing is opened, so no
--- declaration in an imported module can take part in resolving them.
-elab "assert_standard_axioms " n:ident : command => do
-  let name ← _root_.Lean.Elab.Command.liftCoreM <|
-    _root_.Lean.Elab.realizeGlobalConstNoOverloadWithInfo n
-  let axioms ← _root_.Lean.collectAxioms name
-  let allowed : _root_.List _root_.Lean.Name := [`propext, `Classical.choice, `Quot.sound]
-  let extra := axioms.filter fun ax => !allowed.contains ax
-  unless extra.isEmpty do
-    _root_.Lean.throwError m!"{n} depends on nonstandard axioms: {extra}"
+-- `assert_standard_axioms` is defined in `Proofs.AuditCommand`, which imports
+-- only core Lean, so no module imported here can change what it checks.
 
 assert_standard_axioms MSP.model_theorem
 assert_standard_axioms MSP.c5j

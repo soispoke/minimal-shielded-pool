@@ -556,7 +556,8 @@ of checked-in Lean data under `tools/`, `Poseidon/` and `Keccak/`, rerun
 against the pinned R1CS, symbol file, key and hash constants; the W1 Keccak
 traces in `Proofs/NonVacuityKeccak*Data.lean` have no generator check, and
 Lean re-checks them round by round. The statement files are this file,
-`Proofs/AxiomAudit.lean` and every project module that `Spec` imports,
+`Proofs/AxiomAudit.lean`, the audit command it uses (`Proofs/AuditCommand.lean`,
+which imports only core Lean) and every project module that `Spec` imports,
 transitively: besides `Spec.lean` and `Spec/`, the modules of `Artifacts/`,
 `Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` that define the concrete
 hashes, the circuit and its projections. `.github/CODEOWNERS` assigns this

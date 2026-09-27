@@ -20,6 +20,7 @@ class CheckFormal(unittest.TestCase):
             self.assertIn(name, names)
         self.assertIn('Primality/PrattCertificate.lean', names)  # a `public import`
         self.assertIn('Proofs/AxiomAudit.lean', names)
+        self.assertIn('Proofs/AuditCommand.lean', names)
         self.assertNotIn('Proofs/Model.lean', names)
 
     def test_import_forms(self):
@@ -77,7 +78,8 @@ class CheckFormal(unittest.TestCase):
         for code in ('#eval IO.FS.writeFile "a" "b"', 'macro_rules | `(x) => `(y)', 'run_cmd pure ()',
                      'open Lean in', '#guard_msgs in example : False := sorry', 'syntax "x" : term',
                      'elab "x" : term => pure default', 'initialize foo : IO.Ref Nat ← IO.mkRef 0',
-                     'def x := eval% 1 + 1', 'local notation "q" => 1'):
+                     'def x := eval% 1 + 1', 'local notation "q" => 1', '@[init f] opaque x : Unit',
+                     'attribute [builtin_init f] x'):
             self.assertTrue(c.META.search(c.strip_comments(code)), code)
         for code in ('theorem elaborate_ok : True := trivial', 'def prefix_len := 0', '-- #eval 1'):
             self.assertFalse(c.META.search(c.strip_comments(code)), code)

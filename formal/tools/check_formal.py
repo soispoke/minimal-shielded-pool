@@ -36,7 +36,8 @@ BANNED = re.compile(r'\b(sorry|sorryAx|admit|native_decide|implemented_by|axiom|
 # Metaprogramming entry points, allowed only in locked (owner-reviewed) files.
 META = re.compile(r'#eval\b|#guard_msgs\b|\beval%|\b(by_elab|run_cmd|run_elab|run_meta|run_tac|initialize|'
                   r'builtin_initialize|macro|macro_rules|syntax|elab|elab_rules|notation|infix|infixl|infixr|'
-                  r'prefix|postfix|declare_syntax_cat|simproc|dsimproc|Lean|__raw_string__)\b')
+                  r'prefix|postfix|declare_syntax_cat|simproc|dsimproc|Lean|__raw_string__)\b'
+                  r'|(?:@\[|\battribute\s*\[)[^\]]*\b(?:builtin_)?init\b')
 # The step-4 driver evaluates the model with #eval; `lake build` never runs it.
 META_EXEMPT = {'tools/DifferentialModel.lean'}
 IMPORT = re.compile(r'^(?:(?:public|private|meta)\s+)*import\s+(?:all\s+)?(\S+)', re.M)
@@ -61,7 +62,7 @@ def statement_files():
             continue
         seen.add(name)
         stack += IMPORT.findall(module_path(name).read_text())
-    return [FORMAL / 'SPEC.md'] + sorted(module_path(n) for n in seen | {'Proofs.AxiomAudit'})
+    return [FORMAL / 'SPEC.md'] + sorted(module_path(n) for n in seen | {'Proofs.AxiomAudit', 'Proofs.AuditCommand'})
 
 
 def statements(update):
