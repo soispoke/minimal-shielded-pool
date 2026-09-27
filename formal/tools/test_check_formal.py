@@ -43,6 +43,20 @@ class CheckFormal(unittest.TestCase):
         self.assertFalse(c.BANNED.search(c.strip_comments('def s := "sorry, axiom"')))
         self.assertEqual(c.strip_comments("theorem h' : x' = x'"), "theorem h' : x' = x'")
 
+    def test_raw_and_interpolated_strings_cannot_hide_code(self):
+        hidden = ('def s : String := r"\\"\nopen Lean in\nrun_cmd pure ()\ndef t : String := "x"',
+                  'def s : String := r#"a"b"#\n#eval 1',
+                  'def s : String := s!"{"\\""}"\nopen Lean in\ndef t := "x"',
+                  'def s := r"/-\\"\n#eval 1\ndef t := "-/"',
+                  'def s := s!"{ "/-" }"\n#eval 1\ndef t := "-/"')
+        for code in hidden:
+            self.assertTrue(c.META.search(c.strip_comments(code)), code)
+        self.assertTrue(c.BANNED.search(c.strip_comments('def s := r"\\"\naxiom bad : False\ndef t := "x"')))
+        self.assertTrue(c.BANNED.search(c.strip_comments('def s := s!"{"\\""}"\naxiom bad : False')))
+        # interpolation keeps its code: a banned word inside the braces is still seen
+        self.assertTrue(c.BANNED.search(c.strip_comments('def s := s!"x {sorry} y"')))
+        self.assertFalse(c.BANNED.search(c.strip_comments('def s := s!"sorry {1 + 1} axiom"')))
+
     def test_metaprograms(self):
         for code in ('#eval IO.FS.writeFile "a" "b"', 'macro_rules | `(x) => `(y)', 'run_cmd pure ()',
                      'open Lean in', '#guard_msgs in example : False := sorry', 'syntax "x" : term',

@@ -519,7 +519,8 @@ which checks the statement files against `STATEMENTS.lock` and the artifact
 hashes of §1, and textually rejects, outside comments and string literals,
 `sorry`, `admit`, native evaluation, `debug.skipKernelTC`, `axiom`, `unsafe`
 and `implemented_by` in every Lean file, metaprograms (`#eval`, `run_cmd`,
-macros, syntax, elaborators, the `Lean` namespace) in every Lean file outside
+macros, syntax, elaborators, the `Lean` namespace) and raw string literals in
+every Lean file outside
 the lock except the code-owned differential-test driver
 `tools/DifferentialModel.lean`, which `lake build` does not compile and which
 runs only after the rechecks, a `lakefile.lean` and any committed build output under `.lake`; then,

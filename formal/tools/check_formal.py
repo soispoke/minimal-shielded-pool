@@ -35,7 +35,7 @@ BANNED = re.compile(r'\b(sorry|admit|native_decide|implemented_by|axiom|unsafe|s
 # Metaprogramming entry points, allowed only in locked (owner-reviewed) files.
 META = re.compile(r'#eval\b|#guard_msgs\b|\beval%|\b(by_elab|run_cmd|run_elab|run_meta|run_tac|initialize|'
                   r'builtin_initialize|macro|macro_rules|syntax|elab|elab_rules|notation|infix|infixl|infixr|'
-                  r'prefix|postfix|declare_syntax_cat|simproc|dsimproc|Lean)\b')
+                  r'prefix|postfix|declare_syntax_cat|simproc|dsimproc|Lean|__raw_string__)\b')
 # The step-4 driver evaluates the model with #eval; `lake build` never runs it.
 META_EXEMPT = {'tools/DifferentialModel.lean'}
 IMPORT = re.compile(r'^(?:(?:public|private|meta)\s+)*import\s+(?:all\s+)?(\S+)', re.M)
@@ -108,35 +108,85 @@ def pins():
     return ok
 
 
+IDENT_TAIL = set("_'.!?")
+
+
+def _ident_before(text, i):
+    return i > 0 and (text[i - 1].isalnum() or text[i - 1] in IDENT_TAIL)
+
+
+CHAR_LIT = re.compile(r"'(\\.[^']*|[^\\'])'")
+
+
 def strip_comments(text):
     """The code outside comments, with every string and character literal
-    emptied, so a literal can neither hide code nor open a fake comment."""
-    out, i, depth = [], 0, 0
-    while i < len(text):
+    emptied, so a literal can neither hide code nor open a fake comment.
+    Plain strings honour escapes; raw strings (`r"..."`, `r#"..."#`) have
+    none and become the token `__raw_string__`, which `META` rejects outside
+    the lock; interpolated strings (`s!"...{code}..."`) keep their code, which
+    is lexed again, nested literals included."""
+    out, i, n = [], 0, len(text)
+    stack = []  # for each open interpolated string, the enclosing brace depth
+    mode, depth = 'code', 0
+    while i < n:
+        c = text[i]
+        if mode == 'istr':
+            if c == '\\':
+                i += 2
+            elif c == '"':
+                out.append('"')
+                mode, depth = 'code', stack.pop()
+                i += 1
+            elif c == '{':
+                out.append('{')
+                stack.append('istr')
+                mode, depth = 'code', 0
+                i += 1
+            else:
+                i += 1
+            continue
         if text.startswith('/-', i):
-            depth += 1
-            i += 2
-        elif depth and text.startswith('-/', i):
-            depth -= 1
-            i += 2
-        elif depth:
-            i += 1
-        elif text.startswith('--', i):
+            level, i = 1, i + 2
+            while i < n and level:
+                if text.startswith('/-', i):
+                    level, i = level + 1, i + 2
+                elif text.startswith('-/', i):
+                    level, i = level - 1, i + 2
+                else:
+                    i += 1
+            continue
+        if text.startswith('--', i):
             j = text.find('\n', i)
-            i = len(text) if j < 0 else j
-        elif text[i] == '"':
+            i = n if j < 0 else j
+            continue
+        raw = re.match(r'r(#*)"', text[i:]) if c == 'r' and not _ident_before(text, i) else None
+        char = CHAR_LIT.match(text, i) if c == "'" and not _ident_before(text, i) else None
+        if raw:
+            close = '"' + raw.group(1)
+            j = text.find(close, i + raw.end())
+            out.append(' __raw_string__ ')
+            i = n if j < 0 else j + len(close)
+        elif c == '"' and i > 0 and text[i - 1] == '!' and _ident_before(text, i - 1):
+            out.append('"')
+            stack.append(depth)
+            mode = 'istr'
             i += 1
-            while i < len(text) and text[i] != '"':
+        elif c == '"':
+            i += 1
+            while i < n and text[i] != '"':
                 i += 2 if text[i] == '\\' else 1
             out.append('""')
             i += 1
-        elif text[i] == "'" and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] in "_'.!?")) \
-                and re.match(r"'(\\.[^']*|[^\\'])'", text[i:]):
-            m = re.match(r"'(\\.[^']*|[^\\'])'", text[i:])
+        elif char:
             out.append("' '")
-            i += m.end()
+            i = char.end()
+        elif c == '}' and depth == 0 and stack and stack[-1] == 'istr':
+            stack.pop()
+            mode = 'istr'
+            i += 1
         else:
-            out.append(text[i])
+            depth += (c == '{') - (c == '}')
+            out.append(c)
             i += 1
     return ''.join(out)
 
