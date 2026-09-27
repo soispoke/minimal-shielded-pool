@@ -32,8 +32,17 @@ proved nonsingular Weierstrass group for `y²=x³+3`, with canonical coordinate
 round trips and the conventional base point `(1,2)`. It checks the discriminant
 is nonzero; it does not assert the group's order.
 
-Remaining mathematical bindings are the quadratic field and twist group,
-prime-order subgroup membership and group order, and the pairing relation. `Spec.Circuit.Groth16Accepts` remains opaque. Its faithful definition
+`Quadratic.lean` constructs the quadratic field using the proved nonsquareness
+of `-1` in Fq. `Twist.lean` supplies the actual nonsingular Mathlib curve group
+for `y²=x³+3/(9+i)` and proves the coordinate round trips. The `Subgroup*.lean`
+certificates check explicit tangent/secant steps in those groups and prove that
+all eight pinned key points and the G1 base point have exact order `p`.
+`tools/groth16_subgroups.py` regenerates the nine binary multiplication traces;
+Lean checks the numerical certificates with ordinary `decide`. The automated
+axiom audit covers the resulting subgroup and point-order theorems.
+
+Remaining mathematical bindings include ambient group cardinality, the full
+G2 subgroup characterization, and the pairing relation. `Spec.Circuit.Groth16Accepts` remains opaque. Its faithful definition
 must combine these obligations with the strict encoding and the equation
 `e(-A,B)·e(alpha,beta)·e(IC0+β·IC1+γ·IC2+α·IC3,gamma)·e(C,delta)=1`.
 The three public scalars are ordered `(β,γ,α)`.
@@ -50,3 +59,12 @@ canonical spec explicitly retains setup consistency and ceremony honesty as
 P9 and P3 premises. Existing A/B metadata and key-coordinate comparisons do not
 derive C/IC/L setup consistency, and neither these certificates nor a successful
 full transcript check would establish ceremony honesty.
+
+`Cardinality.lean.pending` preserves the unfinished ambient G1 cardinality
+argument outside the build. It injects points into `Option (Fq × Bool)`, seeks
+`#G1 ≤ 2q+1 < 3p`, and combines the proved base-point order with the absence of
+2-torsion to establish cardinality `p`. The first check found elaboration and
+kernel-reduction problems; the repaired check was stopped while still slow
+when ownership transferred. None of its cardinality or generator theorems is
+claimed checked. Continue by profiling the cardinality bound with the finite
+instance kept opaque. The initial failure is preserved in the evidence folder.

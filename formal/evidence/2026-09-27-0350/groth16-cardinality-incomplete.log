@@ -1,0 +1,18 @@
+✖ [3158/3158] Building Groth16.Cardinality (127s)
+trace: .> LEAN_PATH=/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/Cli/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/batteries/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/Qq/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/aesop/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/proofwidgets/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/importGraph/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/plausible/.lake/build/lib/lean:/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal/formal/.lake/packages/mathlib/.lake/build/lib/lean:/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/.lake/build/lib/lean /Users/alexis/.elan/toolchains/leanprover--lean4---v4.35.0-rc3/bin/lean /Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/Groth16/Cardinality.lean -o /Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/.lake/build/lib/lean/Groth16/Cardinality.olean -i /Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/.lake/build/lib/lean/Groth16/Cardinality.ilean -c /Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/.lake/build/ir/Groth16/Cardinality.c --setup /Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/.lake/build/ir/Groth16/Cardinality.setup.json --json
+error: Groth16/Cardinality.lean:47:30: Unknown identifier `xx`
+error: Groth16/Cardinality.lean:47:71: Unknown identifier `xx`
+error: Groth16/Cardinality.lean:60:8: (kernel) deterministic timeout
+error: Groth16/Cardinality.lean:68:2: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Groth16/Cardinality.lean:88:6: Type mismatch: After simplification, term
+  hn
+ has type
+  WeierstrassCurve.Affine.Point.some x y hp = -WeierstrassCurve.Affine.Point.some x y hp
+but is expected to have type
+  y = -y
+error: Groth16/Cardinality.lean:109:8: (kernel) unknown constant 'MSP.Groth16.g1Point_card_le'
+Some required targets logged failures:
+- Groth16.Cardinality
+error: build failed

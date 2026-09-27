@@ -1,0 +1,13 @@
+[32mtemplate instances[0m: 226
+non-linear constraints: 14796
+linear constraints: 0
+public inputs: 1
+public outputs: 2
+private inputs: 96
+private outputs: 0
+wires: 14842
+labels: 46772
+[32mWritten successfully:[0m ../../../../../private/tmp/msp-circuit-mutations-ilgt9dwh/sink/spend.r1cs
+[32mWritten successfully:[0m ../../../../../private/tmp/msp-circuit-mutations-ilgt9dwh/sink/spend.sym
+[32mWritten successfully:[0m ../../../../../private/tmp/msp-circuit-mutations-ilgt9dwh/sink/spend_js/spend.wasm
+[32mEverything went okay, circom safe[0m

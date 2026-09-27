@@ -1,0 +1,11 @@
+test_exact_relation_failure_for_each_input (test_circuit_mutations.MutationChecks.test_exact_relation_failure_for_each_input) ... ok
+test_independent_equation_checker_rejects_bad_metadata (test_circuit_mutations.MutationChecks.test_independent_equation_checker_rejects_bad_metadata) ... ok
+test_independent_equation_checker_rejects_bad_witness (test_circuit_mutations.MutationChecks.test_independent_equation_checker_rejects_bad_witness) ... ok
+test_source_mutations_are_guarded_and_preserve_output_distinctness (test_circuit_mutations.MutationChecks.test_source_mutations_are_guarded_and_preserve_output_distinctness) ... ok
+test_statement_coordinate_mutation_is_rejected (test_circuit_mutations.MutationChecks.test_statement_coordinate_mutation_is_rejected) ... ok
+test_wtns_decoder_rejects_trailing_bytes_and_noncanonical_values (test_circuit_mutations.MutationChecks.test_wtns_decoder_rejects_trailing_bytes_and_noncanonical_values) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.100s
+
+OK

@@ -36,6 +36,9 @@ import Groth16.Encoding
 import Proofs.NonVacuityEncoding
 import Proofs.NonVacuityFixtureVerified
 import Groth16.Group
+import Groth16.SubgroupKey
+import Chain.Dispatcher
+import Mutations.Check
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 
@@ -142,3 +145,13 @@ assert_standard_axioms MSP.Groth16.g1Curve_discriminant_ne_zero
 assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_coordinates
 assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_injective
 assert_standard_axioms MSP.Groth16.G1Point.coordinates_toPoint
+assert_standard_axioms MSP.Groth16.fq_neg_one_not_square
+assert_standard_axioms MSP.Groth16.fq2ToField_twistB
+assert_standard_axioms MSP.Groth16.twistCurve_discriminant_ne_zero
+assert_standard_axioms MSP.Groth16.G2Coordinates.toTwistPoint_injective
+assert_standard_axioms MSP.Groth16.TwistPoint.coordinates_toTwistPoint
+assert_standard_axioms MSP.Groth16.Subgroup.pinnedKey_subgroupChecks
+assert_standard_axioms MSP.Groth16.Subgroup.pinnedKey_pointOrders
+assert_standard_axioms MSP.Groth16.Subgroup.g1BasePoint_order
+assert_standard_axioms MSP.Chain.Dispatcher.sender_mismatch_pinned
+assert_standard_axioms MSP.Mutations.satisfied_of_blocks

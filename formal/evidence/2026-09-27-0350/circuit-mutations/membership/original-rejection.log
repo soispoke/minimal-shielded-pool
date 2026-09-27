@@ -1,0 +1,16 @@
+/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/witness_calculator.js:161
+                    throw new Error(err);
+                          ^
+
+Error: Error: Assert Failed.
+Error in template InputNote_140 line: 127
+Error in template Spend_145 line: 175
+Error in template CompressedSpend_225 line: 292
+
+    at /private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/witness_calculator.js:161:27
+    at Array.forEach (<anonymous>)
+    at WitnessCalculator._doCalculateWitness (/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/witness_calculator.js:136:14)
+    at WitnessCalculator.calculateWTNSBin (/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/witness_calculator.js:212:20)
+    at /private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/generate_witness.js:15:38
+
+Node.js v26.8.1

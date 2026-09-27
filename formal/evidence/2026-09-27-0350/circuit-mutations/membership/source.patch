@@ -1,0 +1,10 @@
+--- pinned/spend.circom
++++ membership/spend.circom
+@@ -124,7 +124,6 @@
+         cur[i + 1] <== node[i].out;
+     }
+     // membership, gated: a nonzero-value note must open at the anchored root
+-    (cur[DEPTH] - root) * value === 0;
+ 
+     // The authenticated epoch and Merkle position identify a funded occurrence.
+     // Keep cm: dummy inputs have arbitrary path bits but must not reproduce a

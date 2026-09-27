@@ -1,0 +1,717 @@
+{
+  "baseline": {
+    "archive_sha256": "ca0cb17e5141dbe52953b4d698d87fefebbc5047da01a7fe901dcc51891be382",
+    "artifact": {
+      "spend.r1cs": {
+        "bytes": 6980844,
+        "sha256": "e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf"
+      },
+      "spend.sym": {
+        "bytes": 2650556,
+        "sha256": "10342e79bcec6e19ff64cb1ae34b433ab1780f926686e08828af1af78b1115f7"
+      },
+      "spend.wasm": {
+        "bytes": 3836766,
+        "sha256": "9066dcaae1f8a215fc5adb0bfdf6c1e117fbcb09e22e5a80df33aa582346c1db"
+      },
+      "witness.wtns": {
+        "bytes": 475020,
+        "sha256": "8a0f2c8a84d380d8716a9210ebad78d28e75db20d53e17cfbc0a0049f257a6b2"
+      }
+    },
+    "commands": [
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules/circom2/cli.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend.circom",
+          "--r1cs",
+          "--sym",
+          "--wasm",
+          "-l",
+          "node_modules",
+          "-o",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline"
+        ],
+        "cwd": "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling",
+        "exit_code": 0,
+        "log": "compile.log",
+        "output_sha256": "6df251096bfa91fb038dad10a5a67f22b1ba3deedfa69cf517e5cc1f3008fb22"
+      },
+      {
+        "command": [
+          "node",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/generate_witness.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/spend.wasm",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/baseline/input.json",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/witness.wtns"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline",
+        "exit_code": 0,
+        "log": "witness.log",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/tools/circuit_mutations.cjs",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend.r1cs",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/witness.wtns",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/decoded.json"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline",
+        "exit_code": 0,
+        "log": "snarkjs-check.log",
+        "output_sha256": "c644348541ebdc3c3c0534b732957c3194c12e8d1e106748fdc2f9bd3843b0c4"
+      }
+    ],
+    "decoded_constraints_sha256": "146aafc4fb293138a305520bd08b72c09080a0ed8d4eb04d7e3e679269a96a74",
+    "input_sha256": "443cf2e99adbd097252debd3c2597e34b6058e7b7a936d9c2ffa3210c04fa0d6",
+    "python_check": {
+      "coefficients_checked": 185677,
+      "constraints_checked": 14802,
+      "failed_constraints": [],
+      "independently_decoded_witness_matches": true,
+      "wire_zero_is_one": true
+    },
+    "semantics": {
+      "amount_ranges": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "clauses": {
+        "R1": true,
+        "R2": true,
+        "R3": true,
+        "R4": true,
+        "R5": true,
+        "R6": true,
+        "R7": true,
+        "R8": true,
+        "R9": true
+      },
+      "computed_roots": [
+        "4672675675891064292615413573032888530994442186079076763921881607647678868115",
+        "10092596538150663249038343566973472295336322051682650319836951159131565931916"
+      ],
+      "failed_clauses": [],
+      "indices": [
+        0,
+        0
+      ],
+      "integer_conservation": true,
+      "leaves": [
+        "20795034779778091623118163646121075915786898654530388597813261001821138017121",
+        "7201024204249675916148368033337161003620435898048856910155111105967218025308"
+      ],
+      "public_signals": [
+        "21104454554133824629849520543505388066991963863228474790287898540235116653197",
+        "14843598377495439646639877887453761961088664580382525585213172561619057918864",
+        "0"
+      ],
+      "statement": [
+        "14940431988284107425457065122230399976191973807355296879614216112415613088175",
+        "12170639877257456230677079116688418441825416256921979269988053205081635199904",
+        "16258033826633421689872739078861374449106838767068609068562777353607448109423",
+        "21634092513966667169942431120259753258607452424692259564111922412343817482939",
+        "4672675675891064292615413573032888530994442186079076763921881607647678868115",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "snarkjs_check": true,
+    "source_sha256": "97c24b754549fd576c1e3d1e70345eba5570143895a0a9cceeb7e22176cdf8af"
+  },
+  "duplicate": {
+    "archive_sha256": "63a61b2705faea1468979cbfbbf857e1d572ef7b16c83987b2826ea7848db23c",
+    "artifact": {
+      "spend.r1cs": {
+        "bytes": 6981008,
+        "sha256": "ee86ff80bb161e71894de9fe3d576469bab5ad56aded622804dffbddf26318df"
+      },
+      "spend.sym": {
+        "bytes": 2650559,
+        "sha256": "a636690db77104d2dc6dd16bda7591742eff7faa87dc258a44fe5f673bbe99e9"
+      },
+      "spend.wasm": {
+        "bytes": 3836708,
+        "sha256": "f8625b22f482be32b57d59e8d4c8bb0fa2667c493f97a79d13f1c8288452db36"
+      },
+      "witness.wtns": {
+        "bytes": 475052,
+        "sha256": "456dce5c0d5c1be1ac943fd8bb291bc281f12fb1e050bea4144305da527db035"
+      }
+    },
+    "commands": [
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules/circom2/cli.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/spend.circom",
+          "--r1cs",
+          "--sym",
+          "--wasm",
+          "-l",
+          "node_modules",
+          "-o",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate"
+        ],
+        "cwd": "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling",
+        "exit_code": 0,
+        "log": "compile.log",
+        "output_sha256": "9a6e05a2f92385dd9dcb48fac2fc1bb1e03fe9a29bb941319b6e5d5eee3f38c9"
+      },
+      {
+        "command": [
+          "node",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/spend_js/generate_witness.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/spend_js/spend.wasm",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/duplicate/input.json",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/witness.wtns"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate",
+        "exit_code": 0,
+        "log": "witness.log",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/tools/circuit_mutations.cjs",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/spend.r1cs",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/witness.wtns",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/decoded.json"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate",
+        "exit_code": 0,
+        "log": "snarkjs-check.log",
+        "output_sha256": "6af11185b4f8df983d50c98bf919f7e34c26f5d847f3d0c64d6dd7e40e6cc591"
+      }
+    ],
+    "decoded_constraints_sha256": "15eae9b64ed0d396a7540e377da7361082f38a7d1b5f392d5fdc7802f164e868",
+    "input_sha256": "8f69f5ac1f1bb67313734e28505d9df2111db5dd3be54868ebe7a8a171a88587",
+    "original_rejection": {
+      "command": [
+        "node",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/generate_witness.js",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/spend.wasm",
+        "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/duplicate/input.json",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/duplicate/original-rejected.wtns"
+      ],
+      "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline",
+      "exit_code": 1,
+      "log": "original-rejection.log",
+      "output_sha256": "3f6b358cacf6a2ca98c5d4c04c55491d1a3d61bc25403c49db056c96ca48898c"
+    },
+    "python_check": {
+      "coefficients_checked": 185681,
+      "constraints_checked": 14803,
+      "failed_constraints": [],
+      "independently_decoded_witness_matches": true,
+      "wire_zero_is_one": true
+    },
+    "semantics": {
+      "amount_ranges": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "clauses": {
+        "R1": true,
+        "R2": true,
+        "R3": true,
+        "R4": true,
+        "R5": true,
+        "R6": true,
+        "R7": true,
+        "R8": false,
+        "R9": true
+      },
+      "computed_roots": [
+        "2411428415257525142772276425315155985528936381280451557616391217222159527578",
+        "2411428415257525142772276425315155985528936381280451557616391217222159527578"
+      ],
+      "failed_clauses": [
+        "R8"
+      ],
+      "indices": [
+        0,
+        0
+      ],
+      "integer_conservation": true,
+      "leaves": [
+        "10586354038164067661711244378644613189681704958432369173537217947365484195758",
+        "10586354038164067661711244378644613189681704958432369173537217947365484195758"
+      ],
+      "public_signals": [
+        "11042992610281733447840701702291327679852022920047505446881536832976983983790",
+        "10115413735708854536195844791188811798357812377206565186015840115851965133658",
+        "0"
+      ],
+      "statement": [
+        "15983125067627929610624353799935119648840736427119128485739387835431040443992",
+        "15983125067627929610624353799935119648840736427119128485739387835431040443992",
+        "16258033826633421689872739078861374449106838767068609068562777353607448109423",
+        "21634092513966667169942431120259753258607452424692259564111922412343817482939",
+        "2411428415257525142772276425315155985528936381280451557616391217222159527578",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "snarkjs_check": true,
+    "source_sha256": "c284d2d6c315a9e43a5e9fb73840a1b6c8d670d7bd5deb38de631c65de4353b4"
+  },
+  "membership": {
+    "archive_sha256": "fb5a38bf2800a55c0396363e717b8733a5b44af19d7e0a3ead52400b3fdf2333",
+    "artifact": {
+      "spend.r1cs": {
+        "bytes": 6980604,
+        "sha256": "0e9f060320e989a7bbc4dc34ea92f58a4b48c24cabf79a64caca9b928f2c9184"
+      },
+      "spend.sym": {
+        "bytes": 2650556,
+        "sha256": "10342e79bcec6e19ff64cb1ae34b433ab1780f926686e08828af1af78b1115f7"
+      },
+      "spend.wasm": {
+        "bytes": 3836679,
+        "sha256": "927a340a3695926c51fec5cb6d554cccd3be0ae61f253898b819292c9932ea13"
+      },
+      "witness.wtns": {
+        "bytes": 475020,
+        "sha256": "e26e3ddfba36774f5b9c19d080cc8b5a31580972da1045b7774392d6ed5d844b"
+      }
+    },
+    "commands": [
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules/circom2/cli.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/spend.circom",
+          "--r1cs",
+          "--sym",
+          "--wasm",
+          "-l",
+          "node_modules",
+          "-o",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership"
+        ],
+        "cwd": "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling",
+        "exit_code": 0,
+        "log": "compile.log",
+        "output_sha256": "d6d0f135f9d415d08a1feba235dbb58f300ea372e8bdfe1a6de47a84701e9e0b"
+      },
+      {
+        "command": [
+          "node",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/spend_js/generate_witness.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/spend_js/spend.wasm",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/membership/input.json",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/witness.wtns"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership",
+        "exit_code": 0,
+        "log": "witness.log",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/tools/circuit_mutations.cjs",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/spend.r1cs",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/witness.wtns",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/decoded.json"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership",
+        "exit_code": 0,
+        "log": "snarkjs-check.log",
+        "output_sha256": "2548559caa2f06d226f409c7847a08661d2ff038bebaffa1ccf092e79cc49dff"
+      }
+    ],
+    "decoded_constraints_sha256": "91ce72fa3fbc89d321338d6c7ffcc015a5483c62226bfd4d086bd4fbc8b413b9",
+    "input_sha256": "ee4eb15eb903ec460358c2f57e39c15c03180a69b4af468bbc98a8fc65ef77e1",
+    "original_rejection": {
+      "command": [
+        "node",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/generate_witness.js",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/spend.wasm",
+        "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/membership/input.json",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/membership/original-rejected.wtns"
+      ],
+      "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline",
+      "exit_code": 1,
+      "log": "original-rejection.log",
+      "output_sha256": "1ddd7137de7f640ff5dd800bad56a86c0fbe0a0860c5734ea3c7ce52e19116e3"
+    },
+    "python_check": {
+      "coefficients_checked": 185671,
+      "constraints_checked": 14800,
+      "failed_constraints": [],
+      "independently_decoded_witness_matches": true,
+      "wire_zero_is_one": true
+    },
+    "semantics": {
+      "amount_ranges": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "clauses": {
+        "R1": true,
+        "R2": true,
+        "R3": false,
+        "R4": true,
+        "R5": true,
+        "R6": true,
+        "R7": true,
+        "R8": true,
+        "R9": true
+      },
+      "computed_roots": [
+        "4672675675891064292615413573032888530994442186079076763921881607647678868115",
+        "10092596538150663249038343566973472295336322051682650319836951159131565931916"
+      ],
+      "failed_clauses": [
+        "R3"
+      ],
+      "indices": [
+        0,
+        0
+      ],
+      "integer_conservation": true,
+      "leaves": [
+        "20795034779778091623118163646121075915786898654530388597813261001821138017121",
+        "7201024204249675916148368033337161003620435898048856910155111105967218025308"
+      ],
+      "public_signals": [
+        "16412147404545355038232456682188339726412122369108854143269693369314141000198",
+        "5602916686424838172134641030871084028737598231741333270064885859095733501429",
+        "0"
+      ],
+      "statement": [
+        "14940431988284107425457065122230399976191973807355296879614216112415613088175",
+        "12170639877257456230677079116688418441825416256921979269988053205081635199904",
+        "16258033826633421689872739078861374449106838767068609068562777353607448109423",
+        "21634092513966667169942431120259753258607452424692259564111922412343817482939",
+        "0",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "snarkjs_check": true,
+    "source_sha256": "d3ed975c3f7c54775cc5e307ec246e022a2e59630f81a23b38de358528013607"
+  },
+  "range": {
+    "archive_sha256": "5bb68f8fea2b816c0606202c5d06a4c737c107c85e9a294b78a93bdd54e7c7c1",
+    "artifact": {
+      "spend.r1cs": {
+        "bytes": 6955324,
+        "sha256": "d1156919fe5237c7f28d54d538750fce0913dc386b48fcea94581917deef56a3"
+      },
+      "spend.sym": {
+        "bytes": 2645260,
+        "sha256": "b17c0904207dea20d994486f99d20f676164fd3627f9ac572c434ca484983c55"
+      },
+      "spend.wasm": {
+        "bytes": 3836326,
+        "sha256": "d0a92112b10e562f13b33ecbf01177f1f130a9cae6d24a935702f9f1b96e13d0"
+      },
+      "witness.wtns": {
+        "bytes": 470956,
+        "sha256": "bb77cffbdda58e311171f957809556a78614e1fe79e3347c00622ff282984cce"
+      }
+    },
+    "commands": [
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules/circom2/cli.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend.circom",
+          "--r1cs",
+          "--sym",
+          "--wasm",
+          "-l",
+          "node_modules",
+          "-o",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range"
+        ],
+        "cwd": "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling",
+        "exit_code": 0,
+        "log": "compile.log",
+        "output_sha256": "36a179ab2c702c66e1f1b01df01207feca2dd4c75fd8bf88a6845c958ba275a8"
+      },
+      {
+        "command": [
+          "node",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend_js/generate_witness.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend_js/spend.wasm",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/range/input.json",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/witness.wtns"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/range",
+        "exit_code": 0,
+        "log": "witness.log",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/tools/circuit_mutations.cjs",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend.r1cs",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/witness.wtns",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/decoded.json"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/range",
+        "exit_code": 0,
+        "log": "snarkjs-check.log",
+        "output_sha256": "4d8b38b8531166e58602e0ba4ac283222c790090a74346444392feb781b8419d"
+      }
+    ],
+    "decoded_constraints_sha256": "19410bf2b20ef4f4fc0ae1ceb5206a7eac48dd38a3ddbcba344a6a08f9665ecc",
+    "input_sha256": "a3d90a82b11db0a880e7c0e05830277507f6dec8c71e609d4798a7b42e72193d",
+    "original_rejection": {
+      "command": [
+        "node",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/generate_witness.js",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/spend.wasm",
+        "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/range/input.json",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/original-rejected.wtns"
+      ],
+      "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline",
+      "exit_code": 1,
+      "log": "original-rejection.log",
+      "output_sha256": "d590fc6c38e39b1cf3e4dd9afb0dc756ca41a4a2dd0b1b073f0fe0e12505f3d3"
+    },
+    "python_check": {
+      "coefficients_checked": 185039,
+      "constraints_checked": 14674,
+      "failed_constraints": [],
+      "independently_decoded_witness_matches": true,
+      "wire_zero_is_one": true
+    },
+    "semantics": {
+      "amount_ranges": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "clauses": {
+        "R1": true,
+        "R2": true,
+        "R3": true,
+        "R4": true,
+        "R5": false,
+        "R6": true,
+        "R7": true,
+        "R8": true,
+        "R9": true
+      },
+      "computed_roots": [
+        "21209623694833768795229633060597018797667025233083841352038712779779557243012",
+        "10092596538150663249038343566973472295336322051682650319836951159131565931916"
+      ],
+      "failed_clauses": [
+        "R5"
+      ],
+      "indices": [
+        0,
+        0
+      ],
+      "integer_conservation": true,
+      "leaves": [
+        "17071380480941841348916763358465645459135470659242758946187014233199996756550",
+        "7201024204249675916148368033337161003620435898048856910155111105967218025308"
+      ],
+      "public_signals": [
+        "11230953938296937641212203868215950167523388485758976127978623981498009352884",
+        "7973466116985841405298715051009865378324827522180417213293176011929281093649",
+        "0"
+      ],
+      "statement": [
+        "16778936670948796525806277538302789073135424474118198399161354464150248489683",
+        "12170639877257456230677079116688418441825416256921979269988053205081635199904",
+        "16876755819139825745117894317059884510025648917642563067930770333055150773181",
+        "21634092513966667169942431120259753258607452424692259564111922412343817482939",
+        "21209623694833768795229633060597018797667025233083841352038712779779557243012",
+        "1",
+        "0",
+        "1",
+        "0",
+        "1"
+      ]
+    },
+    "snarkjs_check": true,
+    "source_sha256": "f0bb8745354c7faf8def97f962086b075fe2896562f7651a3e760f2592b730b2"
+  },
+  "sink": {
+    "archive_sha256": "84da0a06a924c7a1ce8dcd1c51c0d553e362402f6848eddfaeb4224ded2cf1f8",
+    "artifact": {
+      "spend.r1cs": {
+        "bytes": 6980124,
+        "sha256": "1051e2912a70a5063df35b98069c3caee2877164aafab05c838ab22b8662147a"
+      },
+      "spend.sym": {
+        "bytes": 2650556,
+        "sha256": "10342e79bcec6e19ff64cb1ae34b433ab1780f926686e08828af1af78b1115f7"
+      },
+      "spend.wasm": {
+        "bytes": 3836237,
+        "sha256": "524c91fdcbfc713244cf1977c7d233fd120096efbe5fd2e126e33e1e20fcdcf7"
+      },
+      "witness.wtns": {
+        "bytes": 475020,
+        "sha256": "d870b1c73770add827567429099cf1c8a41e3808f5d6e03ee18f348d4650f596"
+      }
+    },
+    "commands": [
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules/circom2/cli.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/spend.circom",
+          "--r1cs",
+          "--sym",
+          "--wasm",
+          "-l",
+          "node_modules",
+          "-o",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink"
+        ],
+        "cwd": "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling",
+        "exit_code": 0,
+        "log": "compile.log",
+        "output_sha256": "64d244cb83623aafba192c67996eb8c0be7750b8d7bab1828ca2fd5b093589c1"
+      },
+      {
+        "command": [
+          "node",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/spend_js/generate_witness.js",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/spend_js/spend.wasm",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/sink/input.json",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/witness.wtns"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink",
+        "exit_code": 0,
+        "log": "witness.log",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "command": [
+          "node",
+          "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/tools/circuit_mutations.cjs",
+          "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/spend.r1cs",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/witness.wtns",
+          "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/decoded.json"
+        ],
+        "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink",
+        "exit_code": 0,
+        "log": "snarkjs-check.log",
+        "output_sha256": "f288216a3948c148367cd9e76567ded1a5341a1aff576169b640827c6c3536ad"
+      }
+    ],
+    "decoded_constraints_sha256": "e1cef9d22a21fb5114fa596dadd104625ff618cccaf03c787fb49034a793eb57",
+    "input_sha256": "de7425994cd3e0f2f7c3b012c62e4deb19a5216ee9515116ee6a4701d5332126",
+    "original_rejection": {
+      "command": [
+        "node",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/generate_witness.js",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/spend.wasm",
+        "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/sink/input.json",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/sink/original-rejected.wtns"
+      ],
+      "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline",
+      "exit_code": 1,
+      "log": "original-rejection.log",
+      "output_sha256": "17e6b99bd2001d64bc04791f110e1b3d406fa058307a0d789ad181f80d2ec8b1"
+    },
+    "python_check": {
+      "coefficients_checked": 185659,
+      "constraints_checked": 14796,
+      "failed_constraints": [],
+      "independently_decoded_witness_matches": true,
+      "wire_zero_is_one": true
+    },
+    "semantics": {
+      "amount_ranges": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "clauses": {
+        "R1": true,
+        "R2": true,
+        "R3": true,
+        "R4": true,
+        "R5": true,
+        "R6": true,
+        "R7": false,
+        "R8": true,
+        "R9": true
+      },
+      "computed_roots": [
+        "4672675675891064292615413573032888530994442186079076763921881607647678868115",
+        "10092596538150663249038343566973472295336322051682650319836951159131565931916"
+      ],
+      "failed_clauses": [
+        "R7"
+      ],
+      "indices": [
+        0,
+        0
+      ],
+      "integer_conservation": true,
+      "leaves": [
+        "20795034779778091623118163646121075915786898654530388597813261001821138017121",
+        "7201024204249675916148368033337161003620435898048856910155111105967218025308"
+      ],
+      "public_signals": [
+        "13048270869227870617114518371713780717168351103830442866186533713987736299166",
+        "6432169096871342434024402634529444170566642276779507270469637424379564778089",
+        "0"
+      ],
+      "statement": [
+        "14940431988284107425457065122230399976191973807355296879614216112415613088175",
+        "12170639877257456230677079116688418441825416256921979269988053205081635199904",
+        "18981600689150656309185248617312417265664005151037230371511355219859888135196",
+        "21634092513966667169942431120259753258607452424692259564111922412343817482939",
+        "4672675675891064292615413573032888530994442186079076763921881607647678868115",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "snarkjs_check": true,
+    "source_sha256": "a052fee95d120656e334bf4bc26e49af48140e02a31fb13633f16ade52a1d33e"
+  }
+}

@@ -1,0 +1,18 @@
+WITNESS CHECKING STARTED
+> Reading r1cs file
+> Reading witness file
+----------------------------
+  WITNESS CHECK
+  Curve:          bn128
+  Vars (wires):   14842
+  Outputs:        2
+  Public Inputs:  1
+  Private Inputs: 96
+  Labels:         46772
+  Constraints:    14796
+  Custom Gates:   false
+----------------------------
+> Checking witness correctness
+WITNESS IS CORRECT
+WITNESS CHECKING FINISHED SUCCESSFULLY
+{"snarkjs_check":true,"constraints":14796,"wires":14842}

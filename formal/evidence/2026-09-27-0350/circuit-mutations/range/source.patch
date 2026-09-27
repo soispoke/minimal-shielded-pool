@@ -1,0 +1,11 @@
+--- pinned/spend.circom
++++ range/spend.circom
+@@ -211,7 +211,7 @@
+     // 6. every value is a 128-bit integer, and value is conserved
+     component rc[6];
+     var vals[6] = [in_value[0], in_value[1], out_value[0], out_value[1], public_amount, fee];
+-    for (var k = 0; k < 6; k++) {
++    for (var k = 1; k < 6; k++) {
+         rc[k] = Num2Bits(128);
+         rc[k].in <== vals[k];
+     }

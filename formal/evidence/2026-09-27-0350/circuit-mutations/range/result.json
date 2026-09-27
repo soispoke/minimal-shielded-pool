@@ -1,0 +1,146 @@
+{
+  "archive_sha256": "5bb68f8fea2b816c0606202c5d06a4c737c107c85e9a294b78a93bdd54e7c7c1",
+  "artifact": {
+    "spend.r1cs": {
+      "bytes": 6955324,
+      "sha256": "d1156919fe5237c7f28d54d538750fce0913dc386b48fcea94581917deef56a3"
+    },
+    "spend.sym": {
+      "bytes": 2645260,
+      "sha256": "b17c0904207dea20d994486f99d20f676164fd3627f9ac572c434ca484983c55"
+    },
+    "spend.wasm": {
+      "bytes": 3836326,
+      "sha256": "d0a92112b10e562f13b33ecbf01177f1f130a9cae6d24a935702f9f1b96e13d0"
+    },
+    "witness.wtns": {
+      "bytes": 470956,
+      "sha256": "bb77cffbdda58e311171f957809556a78614e1fe79e3347c00622ff282984cce"
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "node",
+        "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules/circom2/cli.js",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend.circom",
+        "--r1cs",
+        "--sym",
+        "--wasm",
+        "-l",
+        "node_modules",
+        "-o",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range"
+      ],
+      "cwd": "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling",
+      "exit_code": 0,
+      "log": "compile.log",
+      "output_sha256": "36a179ab2c702c66e1f1b01df01207feca2dd4c75fd8bf88a6845c958ba275a8"
+    },
+    {
+      "command": [
+        "node",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend_js/generate_witness.js",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend_js/spend.wasm",
+        "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/range/input.json",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/witness.wtns"
+      ],
+      "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/range",
+      "exit_code": 0,
+      "log": "witness.log",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "node",
+        "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/tools/circuit_mutations.cjs",
+        "/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/spend.r1cs",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/witness.wtns",
+        "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/decoded.json"
+      ],
+      "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/range",
+      "exit_code": 0,
+      "log": "snarkjs-check.log",
+      "output_sha256": "4d8b38b8531166e58602e0ba4ac283222c790090a74346444392feb781b8419d"
+    }
+  ],
+  "decoded_constraints_sha256": "19410bf2b20ef4f4fc0ae1ceb5206a7eac48dd38a3ddbcba344a6a08f9665ecc",
+  "input_sha256": "a3d90a82b11db0a880e7c0e05830277507f6dec8c71e609d4798a7b42e72193d",
+  "original_rejection": {
+    "command": [
+      "node",
+      "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/generate_witness.js",
+      "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline/spend_js/spend.wasm",
+      "/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification/formal/evidence/2026-09-27-0350/circuit-mutations/range/input.json",
+      "/private/tmp/msp-circuit-mutations-ilgt9dwh/range/original-rejected.wtns"
+    ],
+    "cwd": "/private/tmp/msp-circuit-mutations-ilgt9dwh/baseline",
+    "exit_code": 1,
+    "log": "original-rejection.log",
+    "output_sha256": "d590fc6c38e39b1cf3e4dd9afb0dc756ca41a4a2dd0b1b073f0fe0e12505f3d3"
+  },
+  "python_check": {
+    "coefficients_checked": 185039,
+    "constraints_checked": 14674,
+    "failed_constraints": [],
+    "independently_decoded_witness_matches": true,
+    "wire_zero_is_one": true
+  },
+  "semantics": {
+    "amount_ranges": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "clauses": {
+      "R1": true,
+      "R2": true,
+      "R3": true,
+      "R4": true,
+      "R5": false,
+      "R6": true,
+      "R7": true,
+      "R8": true,
+      "R9": true
+    },
+    "computed_roots": [
+      "21209623694833768795229633060597018797667025233083841352038712779779557243012",
+      "10092596538150663249038343566973472295336322051682650319836951159131565931916"
+    ],
+    "failed_clauses": [
+      "R5"
+    ],
+    "indices": [
+      0,
+      0
+    ],
+    "integer_conservation": true,
+    "leaves": [
+      "17071380480941841348916763358465645459135470659242758946187014233199996756550",
+      "7201024204249675916148368033337161003620435898048856910155111105967218025308"
+    ],
+    "public_signals": [
+      "11230953938296937641212203868215950167523388485758976127978623981498009352884",
+      "7973466116985841405298715051009865378324827522180417213293176011929281093649",
+      "0"
+    ],
+    "statement": [
+      "16778936670948796525806277538302789073135424474118198399161354464150248489683",
+      "12170639877257456230677079116688418441825416256921979269988053205081635199904",
+      "16876755819139825745117894317059884510025648917642563067930770333055150773181",
+      "21634092513966667169942431120259753258607452424692259564111922412343817482939",
+      "21209623694833768795229633060597018797667025233083841352038712779779557243012",
+      "1",
+      "0",
+      "1",
+      "0",
+      "1"
+    ]
+  },
+  "snarkjs_check": true,
+  "source_sha256": "f0bb8745354c7faf8def97f962086b075fe2896562f7651a3e760f2592b730b2"
+}

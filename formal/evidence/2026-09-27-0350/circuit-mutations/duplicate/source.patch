@@ -1,0 +1,10 @@
+--- pinned/spend.circom
++++ duplicate/spend.circom
+@@ -244,7 +244,6 @@
+     component sameNullifier = IsEqual();
+     sameNullifier.in[0] <== nf1;
+     sameNullifier.in[1] <== nf2;
+-    sameNullifier.out === 0;
+     out_cm1 <== outCm[0].out;
+     out_cm2 <== outCm[1].out;
+     component sameOutput = IsEqual();

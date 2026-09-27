@@ -1,0 +1,22 @@
+--- pinned/spend.circom
++++ sink/spend.circom
+@@ -193,19 +193,12 @@
+ 
+         outIsZero[k] = IsZero();
+         outIsZero[k].in <== out_value[k];
+-        if (k == 0) {
+-            (out_inner[k] - SINK_INNER_0) * outIsZero[k].out === 0;
+-        } else {
+-            (out_inner[k] - SINK_INNER_1) * outIsZero[k].out === 0;
+-        }
+         outEqSink0[k] = IsEqual();
+         outEqSink0[k].in[0] <== out_inner[k];
+         outEqSink0[k].in[1] <== SINK_INNER_0;
+-        outEqSink0[k].out * (1 - outIsZero[k].out) === 0;
+         outEqSink1[k] = IsEqual();
+         outEqSink1[k].in[0] <== out_inner[k];
+         outEqSink1[k].in[1] <== SINK_INNER_1;
+-        outEqSink1[k].out * (1 - outIsZero[k].out) === 0;
+     }
+ 
+     // 6. every value is a 128-bit integer, and value is conserved
