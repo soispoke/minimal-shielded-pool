@@ -8,15 +8,16 @@ import Mathlib.Tactic.LinearCombination
 
 Constraints 0..8 of the pinned R1CS force the gamma public wire to equal the
 canonical polynomial evaluated at alpha + beta. This proof is about actual
-extracted coefficient data. It does not identify beta with Poseidon, prove the
-remaining constraints' relation to `R`, or replace `Spec.Circuit` declarations.
+extracted coefficient data. It does not identify beta with Poseidon or prove the
+remaining constraints' relation to `R`; `Spec.Circuit` uses its statement
+projection as `stmtOf`.
 -/
 
 namespace MSP.Artifacts.Compression
 
 open CompressionData
 
-/-- Candidate statement projection determined by the actual compression prefix.
+/-- The statement projection determined by the actual compression prefix.
 The optimized circuit eliminated `fee`, whose field expression occurs in c1.
 `Spec.Circuit` uses this projection as `stmtOf`. -/
 def statement (w : Assignment) : Statement :=

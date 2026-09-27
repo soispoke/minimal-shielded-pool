@@ -1,5 +1,5 @@
 {
-  "formal/Artifacts/Compression.lean": "620c3253880f79260f29dbe44af762b2cd0dbd7962536560325890b270580826",
+  "formal/Artifacts/Compression.lean": "580dffb987787b92b6a17848b5f4ce16f9788360becf40e5f9f12c727a43c406",
   "formal/Artifacts/CompressionData.lean": "578bc8d942276735f182916d5f6496363c4e5461c2f611916633ea95c0134c39",
   "formal/Artifacts/FullCompression.lean": "b8566cc5702be389e72e93892edcfec5345bd3f727df846cd5f244f1305be294",
   "formal/Artifacts/PathBits.lean": "9ef1ac221d6fbf70a8be928903fb7c4b0a67c2c4d1212c9f8e0453d95e6e28e7",
@@ -18,7 +18,7 @@
   "formal/Proofs/AuditCommand.lean": "0586c5f3c0aa2bf2e24ead3db7df17a0d1ad6d365a3cdb50899b9b4414dc459c",
   "formal/Proofs/AxiomAudit.lean": "21dc89ae1aa705f7cb3278ec85abed6ce88e6880bc8a2ce87f17dbef65fbf26a",
   "formal/Proofs/CircuitGadgets.lean": "9a27851516ddca61da6f35c846e7eaf64b0df72a50d3d9f4c321857367051a66",
-  "formal/SPEC.md": "b03138d96262d1803a64e83b36b5dfb30ef374981d903183c99b79fd03023749",
+  "formal/SPEC.md": "221dbe1c2538a07f42d0a20b1656ee634a5440c9907d0ba80183f24d4f1e0acf",
   "formal/Spec.lean": "17eb68c9778dc67e4238112341bb6a6a79c14e781df391761a75a2a5ddf4a58a",
   "formal/Spec/Basic.lean": "3fba49840fd2a60d241cbbb4e4a0381f22ab58d84508b35095b27fb073572b7e",
   "formal/Spec/Circuit.lean": "8c1222907d7709c0c4423896ed1c0aef41ba38843fcc899e4e481438e594e6cf",
@@ -27,6 +27,6 @@
   "formal/Spec/Hash.lean": "a3e66bc20a289d75094655f75c5ee248bdb3e6db0623a6e6a73393b4bd2bce04",
   "formal/Spec/Main.lean": "84b09adc8b0ee14bec2678d2c058fa4a6c8d15a22f0a9285f38836ee4d779e3b",
   "formal/Spec/Relation.lean": "ef8e29d80b313a39dc0d650591555c0b98e00f647206021dae35879b72ca7c60",
-  "formal/Spec/System.lean": "e22c223827e06fd26400be9622b2faec5d0ecebe9ecfd6a879f5cc9c3b107360",
+  "formal/Spec/System.lean": "cdfe399e6bc58b5032bd9f9ff3d0c125e063b1812b1975f8279f10de8f1dd3dc",
   "formal/Spec/Tree.lean": "d269fbc7d37aceb14538e59c3f6f980f2d6e55c53017fb32cd0b679ab8f24254"
 }

@@ -151,7 +151,9 @@ inductive Event
   | tick
 
 /-- One transition. A spend's settlement succeeds exactly when `SettlePre`
-holds; refinement requires the chain to agree, gas included (C7). -/
+holds; refinement requires the chain to agree, gas included (C7), except for a
+settlement that inserts no leaf and credits nothing, whose failure it cannot
+tell from success. -/
 def Step (P : Pool) (s : PoolState) : Event → PoolState → Prop
   | .shield inr v, s' =>
       0 < v ∧ v < 2 ^ 128 ∧ cm inr v ≠ SINK 0 ∧ cm inr v ≠ SINK 1 ∧

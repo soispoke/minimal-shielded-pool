@@ -574,13 +574,16 @@ executable model against `wallet/wallet.py`. The `formal-artifacts` job runs
 the R1CS import checks above, with the circuit recompiled, and every generator
 of checked-in Lean data under `tools/`, `Poseidon/` and `Keccak/`, rerun
 against the pinned R1CS, symbol file, key and hash constants; the W1 Keccak
-traces in `Proofs/NonVacuityKeccak*Data.lean` have no generator check, and
-Lean re-checks them round by round. The statement files are this file,
+traces in `Proofs/NonVacuityKeccak*Data.lean` and the W1 query tables in
+`Proofs/NonVacuityPoseidonTableData.lean` and `Proofs/NonVacuityKeccakTable.lean`
+have no generator check, and Lean re-checks the traces round by round and
+every table value. The statement files are this file,
 `Proofs/AxiomAudit.lean`, the audit command it uses (`Proofs/AuditCommand.lean`,
 which imports only core Lean) and every project module that `Spec` imports,
 transitively: besides `Spec.lean` and `Spec/`, the modules of `Artifacts/`,
-`Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` that define the concrete
-hashes, the circuit and its projections. `.github/CODEOWNERS` assigns this
+`Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` from which the concrete
+hashes, the circuit and its projections are built, including lemma modules such
+as `Proofs/CircuitGadgets.lean`. `.github/CODEOWNERS` assigns this
 file, `Spec.lean`, `Spec/`, the lock and the files that enforce it (CI,
 the tools under `tools/`, including the differential test, the audit and the
 Lake configuration) to the owner, so
