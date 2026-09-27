@@ -129,8 +129,9 @@ then the pool's balance at deployment. Ghost fields, not on chain:
 each leaf's value from its opening, the occurrences consumed, and the total
 credited to each recipient. The total paid out to each recipient is not in
 the pool's storage either, but refinement reads it from the ETH the pool sent
-by plain calls with empty calldata (`sentTo`); ETH it moves any other way
-breaks refinement.
+by plain calls with empty calldata (`sentTo`); ETH it sends any other way (a
+call with data, `CALLCODE` or `SELFDESTRUCT`) breaks refinement, while the gas
+it pays as a spend's payer is part of that spend's event.
 
 **D14. Occurrence.** A pair `(e, i)` with `i < |Leaves[e]|`.
 
@@ -640,13 +641,13 @@ and transfers after deployment and the model accepted the pool's own earlier
 root writes, which `historyEvents` replays as `rootWrite` events that `Step`
 rejects.
 
-Step 5's definitions of the opaque types `RawTx`, `Env`, `Deployment` and
-`ChainRest`, and of `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
+Step 5 must define the opaque types `RawTx`, `Env`, `Deployment` and
+`ChainRest`, and `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
 `ValidTx`, `PreValid`, `approvalsIn`, `EnvValid`, `callPool`, `firstPayout`,
 `verifierOf`, `libHash2`, `libHash3`, `addrOf`, `chainOf`, `NONCE_MANAGER`,
-`RawTx.view`, `Groth16Accepts` and `Honest`, are checked against their
-docstrings and D12 by review only, and so are `ZEROS`, `EMPTY_ROOT_CONST` and
-`LogicTree` as transcriptions of the logic's tree code.
+`RawTx.view`, `Groth16Accepts` and `Honest`; only review can check those
+definitions against their docstrings and D12, as it checks `ZEROS`,
+`EMPTY_ROOT_CONST` and `LogicTree` as transcriptions of the logic's tree code.
 A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep` or
 a wrong `chainInit` leaves states uncovered by refinement, C2, C2c and C10, a
 narrower `Honest` leaves deployments uncovered by those claims and by C8 and

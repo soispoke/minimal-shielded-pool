@@ -18,7 +18,7 @@
   "formal/Proofs/AuditCommand.lean": "0586c5f3c0aa2bf2e24ead3db7df17a0d1ad6d365a3cdb50899b9b4414dc459c",
   "formal/Proofs/AxiomAudit.lean": "21dc89ae1aa705f7cb3278ec85abed6ce88e6880bc8a2ce87f17dbef65fbf26a",
   "formal/Proofs/CircuitGadgets.lean": "9a27851516ddca61da6f35c846e7eaf64b0df72a50d3d9f4c321857367051a66",
-  "formal/SPEC.md": "00d1537b4e16329bac979ec545c73f5cccb19c6437e1c563b6a5e693fcd99d3e",
+  "formal/SPEC.md": "c457947647cddedfeb19358b2616225a61001ae50c7dc702a81d21830ef552ce",
   "formal/Spec.lean": "17eb68c9778dc67e4238112341bb6a6a79c14e781df391761a75a2a5ddf4a58a",
   "formal/Spec/Basic.lean": "3fba49840fd2a60d241cbbb4e4a0381f22ab58d84508b35095b27fb073572b7e",
   "formal/Spec/Circuit.lean": "8c1222907d7709c0c4423896ed1c0aef41ba38843fcc899e4e481438e594e6cf",
