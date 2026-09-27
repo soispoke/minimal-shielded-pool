@@ -1,5 +1,13 @@
 # MSP formal verification continuation
 
+## Ownership update, 2026-09-27 18:40 UTC
+
+Claude session `e9529fa7` stopped on a usage limit at 17:07 UTC during review
+round 35 at `5e8d27d` on `claude/formal-spec-continued`. At Thomas's request,
+Claude session `7847c0ed-ff3d-4c1a-b5a2-4cc806ef6bc6` now owns that worktree
+and is rerunning round 35. Ownership remains with Claude; Codex should not edit
+the specification or proofs.
+
 ## Ownership transfer, 2026-09-27 05:52 UTC
 
 Thomas asked the Claude session `e9529fa7-10f6-4fd3-a0b1-195641fd261d` to
