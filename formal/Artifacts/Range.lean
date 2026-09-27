@@ -8,7 +8,8 @@ import Artifacts.Spend
 This module binds the first 128-bit amount gate to the complete pinned R1CS.
 The optimized top bit is the linear combination in the actual last constraint;
 its reconstruction identity is checked from those exact field coefficients.
-The other five amount gates and the remaining C1/C1c obligations remain open.
+The other five amount gates and integer conservation are proved in RangeAmounts.
+The remaining C1/C1c obligations are separate.
 -/
 
 namespace MSP.Artifacts.Range

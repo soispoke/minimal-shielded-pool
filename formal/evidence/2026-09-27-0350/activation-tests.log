@@ -1,0 +1,1 @@
+PASS: testbed manifest gated; 8 malformed or self-certified manifests, 2 unpinned ptau files and 13 mismatched key setups rejected

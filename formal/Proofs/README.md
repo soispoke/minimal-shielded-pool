@@ -29,10 +29,13 @@ Lean's standard logical axioms for the principal results listed below.
 `Composes` and C6 are also proven. C6 establishes the Lean tree algorithm;
 refinement of the actual bytecode to that algorithm remains open.
 
-[The artifact proofs](../Artifacts/README.md) establish the compression
-polynomial and the first input's 128-bit bound from the complete pinned R1CS.
-They do not yet establish its beta
-digest, the complete spend relation, or C1/C1c. The arithmetic and gadget
+[The artifact proofs](../Artifacts/README.md) establish gamma, all six amount
+bounds, integer conservation, both address bounds, positive input value,
+sink and distinctness rules, and both path index bounds from the complete
+pinned R1CS. The conditional `relation_of_hash_bindings` assembles those results
+for one concrete witness and statement projection, retaining the hash and
+Merkle equations as explicit premises. The proofs do not yet establish beta,
+the complete spend relation, or C1/C1c. The arithmetic and gadget
 lemmas above are reusable proof components, not a substitute for that binding.
 [The concrete Poseidon definitions](../Poseidon/README.md) still require a
 proof of equivalence with the optimized circuit and deployed libraries.

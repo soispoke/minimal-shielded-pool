@@ -2,36 +2,36 @@
 
 ## Active checkout
 
-Codex took over on 2026-09-27 after Claude session
-`e9529fa7-10f6-4fd3-a0b1-195641fd261d` stopped at 2026-09-26 22:36 UTC
-with a session-limit error. Its round-12 reviewers also stopped.
+The durable independent repository is
+`/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification`,
+branch `codex/formal-continuation`. The scheduled Codex task is
+`01a0dfaf-821e-7a11-b764-8ceeeb320135`, automation
+`continue-msp-formal-verification`.
 
-The durable proof continuation is `/Volumes/PrivateAI/WorkRepos/HardnessVault/prototypes/msp-formal-verification`,
-branch `codex/formal-continuation`. The checked composition, concrete C6,
-full-R1CS compression and proof infrastructure are committed at
-`c6bed8848374f85a00b8fececb5aaf4f70875477`. The subsequent first-input range
-binding and final checks are at `ccf84b31361ea075f93879a99909ae5f1a1a3c20`.
-The preserved base is `cb7c5a2` from
-`claude/formal-spec`. This checkout has an independent Git object store; it
-does not depend on the temporary Claude repository for source recovery.
+At 03:50 UTC on September 27, Codex resumed after Claude's parent session and
+all six round-21 reviewers stopped with HTTP 429 at 03:27 UTC. The original
+checkout was clean at `57ad96b`. Its round-13 through round-20 specification
+and model changes are merged here at `634bb62`. The incomplete round-21 work
+has no final new findings. A duplicate C6 helper import noted there is already
+fixed in this continuation.
 
-The scheduled Codex task is `01a0dfaf-821e-7a11-b764-8ceeeb320135`, automation
-`continue-msp-formal-verification`. Check that task and the original Claude
-session for active work before editing. A quota reset does not itself transfer
-ownership back to Claude. Coordinate an explicit handoff before two agents
-write the same files.
+The separate key/R1CS task finished on September 26. Its unmerged PR 24 commit
+`5a36bfc` is preserved locally and cherry-picked here as `6735e3e`; no worker
+still owns that work. The activation gate has since been strengthened to bind
+the verifier-used JSON key fields to the zkey. It still reports `setup: partial`.
 
-**Concurrent work detected at 00:20 UTC on September 27:** Claude resumed at
-00:11 UTC after the user requested continuation. Its original checkout is at
-`e676226ed47e62aeacc694928d939a5247b362f4`, with the same round-12 event-decoding
-fix described below. Round-13 specification reviewers are active, and the user
-also started a separate "Gate zkey and verifier against spend.r1cs" task.
-Do not interrupt them or launch duplicate review/artifact-gating workers.
-Codex finished its already-owned range binding in this separate checkout and
-released file ownership after checking and committing it. Before the next
-proof edit, inspect fresh statuses and any new
-specification findings. Reconcile the two branches once ownership is clear;
-do not overwrite either branch or assume the original checkout is still idle.
+**Current ownership, 04:10 UTC:** this Codex heartbeat owns the durable checkout.
+Its bounded subagents own new optimized Poseidon/reference equivalence, beta
+constraint binding, and path-selector binding files. Completed non-hash proofs
+are being checkpointed. Before taking ownership, inspect fresh task status,
+relevant Claude log timestamps and actual proof processes. A quota reset or
+resident parent process alone does not transfer ownership. Do not edit files
+while another worker is making progress.
+
+Original Claude session: `e9529fa7-10f6-4fd3-a0b1-195641fd261d`.
+Original checkout:
+`/private/tmp/claude-501/-Volumes-PrivateAI-WorkRepos-HardnessVault/e9529fa7-10f6-4fd3-a0b1-195641fd261d/scratchpad/msp-formal`.
+The durable Git object store does not depend on that temporary checkout.
 
 ## Scope and checks
 
@@ -57,8 +57,7 @@ cache at `/Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_module
 was used only for its matching dependencies, never for that checkout's sources.
 The ignored `build/spend_final.zkey` is also copied here after checking its full
 activation-manifest hash (`587c048b06d68c61dcb0a9a57b51229def97b219b11827042f4a8faa49499376`).
-It was not regenerated. This preserves the pinned test setup while the separate
-artifact-gating worker checks it. The original repository's `e676226` commit is
+It was not regenerated. This preserves the pinned test setup without rerunning the ceremony. The original repository's `57ad96b` commit is
 preserved locally as `refs/remotes/claude-checkpoint/formal-spec` for reconciliation.
 
 ## Work in this continuation
@@ -70,7 +69,7 @@ execution. This prevents a dispatcher mutation from changing an input while
 the model follows the changed input. The new mutation remains an obligation
 for the concrete semantics, not a claimed executed test.
 
-`Proofs/Composition.lean` proves `MSP.composes : Composes` from the unchanged
+`Proofs/Composes.lean` proves `MSP.composes : Composes` from the unchanged
 main theorem statement, with only standard Lean axioms. This closes the
 conditional composition lemma, not its circuit or chain premises.
 
@@ -98,8 +97,15 @@ The subsequent `Artifacts/Range.lean` proof closes the first input's actual
 range gate: `Range.first_input_range` derives `(w 10).val < 2^128` solely from
 `Spend.system.Satisfied w`. It proves all 127 retained bits Boolean, reconstructs
 the eliminated top bit from the actual last constraint, checks the coefficient
-identity in Lean's kernel, and proves full-system containment. The other five
-amount range gates remain open. `RangeLemmas.lean` supplies the reusable bridge.
+identity in Lean's kernel, and proves full-system containment. `RangeAmounts.lean` now proves the other five bounds, including the eliminated
+fee, and integer conservation. `RangeAddress` proves both address bounds.
+`BasicGates`, `InputNonzero` and `SinkGates` bind R6, R7, R8 and the non-range
+R9 conditions to their actual gates. `Witness`, `PathBits` and `PathIndex`
+provide one concrete witness projection, both bounded indices and agreement of
+all 40 Boolean path wires with the canonical Merkle index digits.
+`RelationFragments.relation_of_hash_bindings` assembles R1 and R5–R9, with the
+remaining nullifier, output-commitment and gated Merkle equations explicit as
+premises. It does not assert C1. These results use only standard Lean axioms.
 
 The artifact parser records a reproducible compiler format defect: the exact
 R1CS header says five sections although it contains three complete sections.
@@ -140,14 +146,13 @@ These parser and differential tests are not the spec's semantic mutation gates.
 
 ## Remaining obligations and next action
 
-First inspect Claude's new round-13 findings and key/verifier task before
-assigning overlapping work. The concrete circuit frontier is to derive the
-remaining five 128-bit range bounds from the actual optimized constraints
-(reuse `Range.lean` and `RangeLemmas.lean`), prove beta and
-all Poseidon gadget bindings, reconstruct eliminated signals, then bind
-`Assignment`/`Satisfied`/projections and prove both C1 and C1c. Reference
-Poseidon is concrete, but optimized sparse-round circuit equivalence is not
-proved by the differential tests.
+The active proof frontier is optimized Poseidon/reference equivalence and
+binding beta and all note/path hash gadgets. The non-hash relation fragments
+are discharged for the concrete projections; path selection and membership
+are being connected with explicit per-node hash premises. Then instantiate
+`Assignment`/`Satisfied`/projections and prove C1 and C1c, including assignment
+construction for every valid relation and alpha. Differential tests do not
+replace the optimized/reference equivalence proof.
 
 C2/C2c/C8/C9/C10 and refinement still need one faithful chain semantics, real
 bytecode, custom instructions and both gas dimensions. W1/W2 and required

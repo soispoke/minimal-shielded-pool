@@ -174,7 +174,7 @@ efficient party outputs.
 - **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas.
 - **P7 EIP-8272.** A call from address `a` with data `salt ‖ root` during slot `S` stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, with the target, mode, flags, value, state limit and data length A1 gives it, A3's data and enough execution gas, succeeds exactly when, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. Entries change otherwise only through a reorg; the model follows the canonical chain.
 - **P8 Gas schedule and fork.** A pinned gas schedule `G`: the schedule ethrex 247e2dd2 applies at the pinned fork, with EIP-8037 state gas, EIP-2929's warm and cold access sets priced as EIP-8038 sets them (EIP-8037 requires EIP-8038; how EIP-8038 applies at EIP-8141's frame entry is not settled in the EIPs, and the measured constants follow ethrex), and EIP-150's 63/64 rule. The claims hold while the chain keeps `G` and the pinned EIP revisions; a fork that changes them ends them.
-- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No proof checks this. The deployment script checks the deployment and the artifact hashes the activation manifest pins, which do not include `spend_vkey.json`; the link between zkey, `spend.r1cs` and key is not yet gated by tooling, and no tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment (§8).
+- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No Lean proof checks the setup. The deployment script checks the deployment and pinned artifact hashes. The activation gate additionally checks the zkey's sizes and A/B coefficient metadata against `spend.r1cs`, and binds both the Solidity constants and every verifier-used field of `spend_vkey.json` to that key. C/IC/L and key-point consistency with the complete constraint system remain unchecked without the original phase-1 powers of tau (§8). No tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment.
 - **P10 EVM model.** The Lean EVM and Yul semantics, extended with EIP-8141 frames, EIP-8250 and EIP-8272, match the client, and every chain-level declaration in `Spec/Evm.lean` is defined from it.
 - **P11 Chain identity.** The chain ID never changes on a chain that carries the pool's state.
 - **P12 Signatures.** secp256k1 low-s ECDSA applied to EIP-8141's canonical signature hash is unforgeable as a scheme on transactions: no efficient party without the key outputs a valid transaction whose scheme-1 signature resolves to that key's address, other than one the holder signed or one that differs from it only in that signature's bytes. ECDSA on bare digests is forgeable, so collision resistance of the hash alone does not give this; Brown (2005) argues it in the generic group model from collision resistance and uniformity of the hash, pseudorandom signing nonces, and a condition on the conversion from `R` to `r`. Used only to read C3's signature conclusion as "only the holder of `auth`'s key authorized this transaction".
@@ -415,7 +415,7 @@ in `devnet/deploy_config.json`) is informal evidence.
 | Logic: make `claimWithdrawal` or `publishEpochRoot` always revert | C10 |
 | Verifier: generated from another zkey | C9 |
 | Verifier: skip the canonical-coordinate or infinity checks | C9 |
-| Set up the zkey from `spend.r1cs` minus one constraint | none: violates P9, which tooling does not yet check (§8) |
+| Set up the zkey from `spend.r1cs` minus one constraint | none: violates P9; tooling checks A/B metadata and count, while full setup remains assumed (§8) |
 
 **Model mutants.** Refinement certifies any code that matches `Step`, so the
 model claims must also reject a wrong `Step`. Each variant below makes the named
@@ -496,9 +496,14 @@ proofs, on P12, and on no efficient party computing `sk` from `inner`, `cm` and
 `nf` (Poseidon one-wayness), argued on paper. Liveness is argued from the
 claims (§5), not proven as one theorem.
 
-Tooling does not yet check that the zkey is a setup of `spend.r1cs` or that
-`spend_vkey.json` is its key, and the phase-1 powers of tau is not recorded.
-Until it does, that part of P9 rests on review of the build. Until a ceremony
+Tooling checks the zkey's A/B metadata and both verification-key representations,
+including the JSON's canonical coordinates and IC points. Those comparisons
+catch stale or mismatched artifacts; they do not prove that the zkey's C/IC/L
+points were derived from the complete R1CS. The original phase-1 powers of tau
+is not recorded. Full setup consistency therefore remains part of P9. The gate
+reports `setup: partial`; its `--ptau` path requires a manifest-pinned file and
+runs snarkjs's full check. The unused JSON pairing cache is outside the native
+gate, although an independent export matches the complete pinned JSON. Until a ceremony
 replaces the zkey, the claims that allow a bad event give no guarantee for the
 pinned artifacts.
 

@@ -1,6 +1,6 @@
 # Pinned R1CS extraction
 
-This is the first concrete artifact-binding step. The extractor checks every
+The extractor checks every
 constraint and wire label in the pinned `build/spend.r1cs`, reproduces the exact
 binary and symbol file with the pinned compiler, and exports the constraints as
 Lean data interpreted by `R1CS.lean`. It does **not** prove C1 or C1c or replace
@@ -109,8 +109,8 @@ requires only that the raw assignment satisfies the complete `Spend.system`;
 it has no unproved containment premise. The byte-for-byte regeneration check
 connects the full Lean data to the pinned binary outside Lean. No kernel-checked
 binary parser is claimed.
-The theorem does not yet show `w[1] = β(statement(w))`, agreement of the fee and
-other projected values with all remaining gadgets, C1, or C1c. The code leaves
+The theorem does not yet show `w[1] = β(statement(w))`, agreement with
+all remaining hash gadgets, C1, or C1c. The code leaves
 `Spec.Circuit`'s opaque definitions unchanged.
 
 `lake build Artifacts` checks the fragment and full-system compression theorems. Their
@@ -119,7 +119,7 @@ no admissions.
 The Python test suite also checks exact fragment reproduction and rejects a
 one-byte artifact mutation and a mutated generated Lean constraint.
 
-## First input range proof
+## Amount and address range proofs
 
 `Range.first_input_range` proves `(w 10).val < 2^128` for every assignment
 satisfying the complete pinned R1CS. Its only premise is full-system
@@ -138,11 +138,52 @@ lake build Artifacts.Range Proofs.AxiomAudit
 With `--sym /path/to/reproduced/spend.sym`, the generator also checks the exact
 pinned symbol map, including wire 10's first input value and all 128 bit
 signals (the last is eliminated). That check passed for the reproduced symbols.
-The other five amount range gates and the complete
-circuit relation remain open. `RangeLemmas.lean` provides the shared algebra
+`RangeLemmas.lean` provides the shared algebra
 for reconstructing an eliminated high bit. All named range theorems depend
 only on standard Lean logical axioms. The parser suite includes exact range
 fragment regeneration and rejection of a mutated source artifact.
+
+`RangeAmounts.all_amount_ranges` now proves all six 128-bit bounds from the
+complete pinned system. The eliminated fee uses the same expression as gamma.
+Its reordered coefficients are checked by a permutation certificate that
+preserves every term. `RangeAmounts.integer_conservation` lifts the field
+identity to integer conservation using those actual bounds. `RangeAddress`
+similarly proves both 160-bit address bounds, including each eliminated top bit.
+
+```sh
+python3 formal/tools/range_amounts.py
+python3 formal/tools/range_address_fragment.py
+cd formal
+lake build Artifacts.RangeAmounts Artifacts.RangeAddress
+```
+
+## Private witness and remaining non-hash checks
+
+`Witness.lean` defines the private projection from the exact reproduced symbol
+map. `PathBits` proves all 40 path wires Boolean and both reconstructed indices
+less than `2^DEPTH`. Their field casts equal the weighted raw wires. This does
+not yet bind path selection or optimized hash inputs.
+
+`InputNonzero` derives positive input value from the actual inverse constraint.
+`BasicGates` proves nonzero authorization, distinct nullifiers and outputs,
+and equivalence of zero public amount and zero recipient. `SinkGates` proves
+both output sink rules from the actual IsZero, IsEqual and control constraints.
+All these theorems require only full-system satisfaction. The sink tests give
+counterexamples to six deleted fragment controls; they do not claim satisfying
+assignments for mutated complete circuits.
+
+`RelationFragments.relation_of_hash_bindings` assembles R1 and R5–R9 for those
+same statement and witness projections. The nullifier, output commitment and
+gated Merkle membership equations remain explicit premises. It is therefore a
+conditional relation theorem, not C1. `Proofs/AxiomAudit.lean` checks its full
+dependency closure for admissions and nonstandard axioms.
+
+```sh
+python3 formal/tools/path_bits_fragment.py --sym /path/to/reproduced/spend.sym
+python3 formal/tools/sink_gates.py --sym /path/to/reproduced/spend.sym
+cd formal
+lake build Artifacts.RelationFragments Proofs.AxiomAudit
+```
 
 ## Exact serialization exception
 
@@ -176,21 +217,14 @@ These are decoder tests, **not** SPEC.md's required semantic circuit mutations.
 
 ## Remaining proof frontier
 
-1. Reconstruct eliminated signals from retained wires and prove the projections
-   are the ones required by `Spec.Circuit`. `main.stmt[4..9]` are eliminated, as
-   is the private input `main.fee`; even the top fee range-check bit is
-   eliminated. The source's conservation equation suggests reconstructing fee
-   as `in_value[0] + in_value[1] - out_value[0] - out_value[1] - public_amount`
-   in the field. This is a candidate projection, not a proved binding. A symbol
-   hash or a source-level alias is insufficient to establish it. The first
-   nine actual R1CS constraints encode the Horner chain; constraint 1 already
-   contains this exact fee expression. The gamma equation for this projection
-   is now proved from those actual constraints as described above. Next connect
-   the same projection to the remaining gadgets and establish its beta digest.
+1. Prove beta and all optimized Poseidon gadgets agree with the reference hash.
+   The fee projection is now tied to its actual range gate, integer accounting
+   and gamma. Its beta use and all other hash inputs still need checked binding.
+   A symbol hash or source-level alias alone does not establish a semantic
+   connection to the optimized constraints.
 2. Establish the complete constraints-to-semantics connection, including
-   optimized Poseidon gadgets, bit decompositions, path selection, membership
-   gating, sink/distinctness constraints, field-to-integer accounting and
-   compression. The exported constraints are data; compiling them alone does
+   optimized Poseidon gadgets, path selection, membership gating and beta.
+   The exported constraints are data; compiling them alone does
    not prove their equivalence to the intended circuit.
 3. Instantiate `Assignment`, `Satisfied`, `stmtOf`, `witOf` and `publicOf` from
    that concrete system and prove C1 and C1c, including witness construction for

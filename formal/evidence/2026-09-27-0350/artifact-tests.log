@@ -1,0 +1,31 @@
+test_all_forty_constraints_match_saved_pinned_wire_map (test_path_bits_fragment.PathBitsTests) ... ok
+test_mutated_r1cs_is_rejected_before_symbols (test_path_bits_fragment.PathBitsTests) ... ok
+test_required_private_input_may_not_be_eliminated (test_path_bits_fragment.PathBitsTests) ... ok
+test_unpinned_symbol_bytes_are_rejected (test_path_bits_fragment.PathBitsTests) ... ok
+test_exact_pinned_prefix_is_the_checked_in_data (test_r1cs_artifact.CompressionFragmentTests) ... ok
+test_fragment_rejects_mutated_artifact (test_r1cs_artifact.CompressionFragmentTests) ... ok
+test_bad_header_and_sections (test_r1cs_artifact.ParserTests) ... ok
+test_every_truncation (test_r1cs_artifact.ParserTests) ... ok
+test_export_is_deterministic_and_requires_pinned_provenance (test_r1cs_artifact.ParserTests) ... ok
+test_huge_counts_are_bounded_by_payload (test_r1cs_artifact.ParserTests) ... ok
+test_pin_rejects_structurally_valid_alternative (test_r1cs_artifact.ParserTests) ... ok
+test_pinned_defect_and_mutation (test_r1cs_artifact.ParserTests) ... ok
+test_terms (test_r1cs_artifact.ParserTests) ... ok
+test_valid_and_section_order (test_r1cs_artifact.ParserTests) ... ok
+test_exact_pinned_address_data (test_range_address_fragment.AddressRangeTests) ... ok
+test_mutated_artifact_rejected (test_range_address_fragment.AddressRangeTests) ... ok
+test_two_gate_layouts_and_eliminated_top_coefficients (test_range_address_fragment.AddressRangeTests) ... ok
+test_exact_pinned_amount_data (test_range_amounts.AmountRangeTests) ... ok
+test_five_gate_layout_and_eliminated_fee_coefficients (test_range_amounts.AmountRangeTests) ... ok
+test_mutated_artifact_rejected (test_range_amounts.AmountRangeTests) ... ok
+test_exact_pinned_range_data (test_range_fragment.RangeFragmentTests) ... ok
+test_mutated_source_is_rejected (test_range_fragment.RangeFragmentTests) ... ok
+test_changed_r1cs_rejected (test_sink_gates.SinkGateTests) ... ok
+test_each_control_rejects_its_forbidden_output (test_sink_gates.SinkGateTests) ... ok
+test_exact_data (test_sink_gates.SinkGateTests) ... ok
+test_valid_zero_and_positive_outputs (test_sink_gates.SinkGateTests) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 4.606s
+
+OK

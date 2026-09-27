@@ -1,0 +1,14 @@
+$ python3 formal/tools/range_fragment.py --sym /private/tmp/msp-fv-r1cs-reproduce-20260927/spend.sym
+RangeData.lean matches exact constraints 13870..13997 for the first input amount gate.
+$ python3 formal/tools/range_amounts.py --sym /private/tmp/msp-fv-r1cs-reproduce-20260927/spend.sym
+RangeAmountsData.lean matches exact pinned constraints 13998..14637, including the eliminated fee.
+$ python3 formal/tools/range_address_fragment.py --sym /private/tmp/msp-fv-r1cs-reproduce-20260927/spend.sym
+RangeAddressData.lean matches exact pinned recipient and authorizer 160-bit gates.
+$ python3 formal/tools/path_bits_fragment.py --sym /private/tmp/msp-fv-r1cs-reproduce-20260927/spend.sym
+PathBitsData.lean matches exact pinned path constraints and witness/public wire symbols.
+$ python3 formal/tools/sink_gates.py --sym /private/tmp/msp-fv-r1cs-reproduce-20260927/spend.sym
+SinkGatesData.lean matches exact pinned constraints 468..473 and 13856..13867.
+$ python3 formal/tools/r1cs_artifact.py --check-lean formal/Artifacts/Spend.lean
+{"constraints": 14802, "lean_checked": true, "pinned_section_count_exception": true, "result": "artifact checked; C1/C1c and projections remain unproved", "sha256": "e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf", "symbols_checked": false, "terms": 185677, "wires": 14842}
+$ python3 formal/tools/compression_fragment.py
+CompressionData.lean matches exact pinned constraints 0..8; full C1/C1c remains open.

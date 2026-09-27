@@ -5,6 +5,11 @@ import Proofs.CircuitGadgets
 import Proofs.C6
 import Artifacts.FullCompression
 import Artifacts.Range
+import Artifacts.RangeAmounts
+import Artifacts.RangeAddress
+import Artifacts.BasicGates
+import Artifacts.RelationFragments
+import Artifacts.PathIndex
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 
@@ -46,3 +51,14 @@ assert_standard_axioms MSP.Artifacts.Compression.gamma_of_constraints
 assert_standard_axioms MSP.Artifacts.Compression.gamma_of_system
 assert_standard_axioms MSP.Artifacts.FullCompression.gamma_of_pinned_r1cs
 assert_standard_axioms MSP.Artifacts.Range.first_input_range
+assert_standard_axioms MSP.Artifacts.RangeAmounts.all_amount_ranges
+assert_standard_axioms MSP.Artifacts.RangeAmounts.integer_conservation
+assert_standard_axioms MSP.Artifacts.RangeAddress.address_ranges
+assert_standard_axioms MSP.Artifacts.InputNonzero.positive_input_value
+assert_standard_axioms MSP.Artifacts.BasicGates.statement_checks
+assert_standard_axioms MSP.Artifacts.SinkGates.sink_rules
+assert_standard_axioms MSP.Artifacts.ConcreteWitness.R1
+assert_standard_axioms MSP.Artifacts.ConcreteWitness.index_cast
+assert_standard_axioms MSP.Artifacts.ConcreteWitness.public_gamma
+assert_standard_axioms MSP.Artifacts.RelationFragments.relation_of_hash_bindings
+assert_standard_axioms MSP.Artifacts.PathIndex.MR_eq_raw_fold

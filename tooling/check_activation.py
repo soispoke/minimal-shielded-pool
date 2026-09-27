@@ -121,6 +121,7 @@ REQUIRED_ARTIFACTS = (
 R1CS = "build/spend.r1cs"
 ZKEY = "build/spend_final.zkey"
 VERIFIER = "contracts/src/Groth16Verifier.sol"
+VERIFICATION_KEY = "contracts/vectors/spend_vkey.json"
 SNARKJS = ROOT / "tooling/node_modules/.bin/snarkjs"
 
 
@@ -178,7 +179,9 @@ def r1cs_terms(path):
 
 def zkey_setup(path):
     """A snarkjs Groth16 zkey's field and sizes, verification key and section 4 terms."""
-    data, found = sections(path, b"zkey", 2, 3, 4)
+    data, found = sections(path, b"zkey", 1, 2, 3, 4)
+    if struct.unpack_from("<I", data, found[1])[0] != 1:
+        raise SystemExit("proving key is not a Groth16 zkey")
     offset = found[2]
     n8q = struct.unpack_from("<I", data, offset)[0]
     q = int.from_bytes(data[offset + 4:offset + 4 + n8q], "little")
@@ -213,8 +216,48 @@ def zkey_setup(path):
     return r, n_vars, n_public, vk, terms
 
 
-def check_setup(r1cs, zkey, verifier):
-    """Check that the proving key was set up from the R1CS and that the verifier holds its key.
+def check_verification_key(path, vk, n_public):
+    """Bind the JSON's verification inputs to the decoded zkey, in snarkjs's encoding.
+
+    G2 JSON coordinates are [c0, c1], the reverse of the Solidity constants'
+    x1/x2 and y1/y2 names. Require the canonical decimal strings and affine
+    projective coordinates emitted by snarkjs, including its infinity encoding.
+    `vk_alphabeta_12` is an unused export cache: snarkjs 0.7.5 groth16_verify.js
+    computes the pairing from alpha and beta instead. It is not checked here.
+    """
+    if (vk["q"], vk["r"]) != (
+            21888242871839275222246405745257275088696311157297823662689037894645226208583,
+            21888242871839275222246405745257275088548364400416034343698204186575808495617):
+        raise SystemExit("verification key JSON binding requires the BN254 fields")
+
+    def g1(x, y):
+        return ["0", "1", "0"] if x == y == 0 else [str(x), str(y), "1"]
+
+    def g2(name):
+        x = [vk[f"{name}x2"], vk[f"{name}x1"]]
+        y = [vk[f"{name}y2"], vk[f"{name}y1"]]
+        if x == y == [0, 0]:
+            return [["0", "0"], ["1", "0"], ["0", "0"]]
+        return [list(map(str, x)), list(map(str, y)), ["1", "0"]]
+
+    expected = {
+        "protocol": "groth16", "curve": "bn128", "nPublic": n_public,
+        "vk_alpha_1": g1(vk["alphax"], vk["alphay"]),
+        "vk_beta_2": g2("beta"), "vk_gamma_2": g2("gamma"), "vk_delta_2": g2("delta"),
+        "IC": [g1(vk[f"IC{i}x"], vk[f"IC{i}y"]) for i in range(n_public + 1)],
+    }
+    actual = json.loads(path.read_text())
+    if not isinstance(actual, dict):
+        raise SystemExit("verification key JSON must be an object")
+    wrong = [name for name, value in expected.items() if actual.get(name) != value]
+    if type(actual.get("nPublic")) is not int and "nPublic" not in wrong:
+        wrong.append("nPublic")
+    if wrong:
+        raise SystemExit(f"verification key JSON does not match the proving key: {', '.join(wrong)}")
+
+
+def check_setup(r1cs, zkey, verifier, verification_key):
+    """Check the R1CS A/B terms and bind the Solidity and JSON verification keys.
 
     A key set up from a different R1CS, for example one missing a constraint that
     honest witnesses satisfy anyway, passes every honest-proof test while letting
@@ -242,6 +285,7 @@ def check_setup(r1cs, zkey, verifier):
     wrong = sorted(name for name in constants.keys() | vk.keys() if constants.get(name) != vk.get(name))
     if wrong:
         raise SystemExit(f"verifier constants do not match the proving key: {', '.join(wrong)}")
+    check_verification_key(verification_key, vk, zkey_public)
 
 
 def verify_with_ptau(ptau, pinned):
@@ -285,7 +329,7 @@ def main():
         if actual != expected:
             raise SystemExit(f"artifact hash mismatch: {rel}\nexpected {expected}\nactual   {actual}")
     # The hashes pin each file; these check that the circuit, key and verifier belong together.
-    check_setup(ROOT / R1CS, ROOT / ZKEY, ROOT / VERIFIER)
+    check_setup(ROOT / R1CS, ROOT / ZKEY, ROOT / VERIFIER, ROOT / VERIFICATION_KEY)
     if args.ptau:
         verify_with_ptau(args.ptau, manifest["ceremony"].get("phase1_ptau_sha256"))
 
@@ -376,7 +420,8 @@ def main():
     elif contributions < 2 or verified is not True:
         raise SystemExit("activation blocked: production ceremony evidence is incomplete")
 
-    # "partial": A/B terms and verifier checked, the key's points not (see check_setup).
+    # "partial": A/B terms and both verification keys checked; the proving-key
+    # points' setup relation to the complete R1CS still needs ptau (see check_setup).
     print(json.dumps({"artifacts": "match", "profile": "match",
                       "production": manifest["production"],
                       "setup": "verified" if args.ptau else "partial"}, sort_keys=True))

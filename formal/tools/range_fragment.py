@@ -52,7 +52,7 @@ def main():
         DESTINATION.write_bytes(expected)
     else:
         require(DESTINATION.read_bytes() == expected, 'RangeData.lean differs from exact pinned range constraints')
-    print('RangeData.lean matches exact constraints 13870..13997; five other amount gates remain open.')
+    print('RangeData.lean matches exact constraints 13870..13997 for the first input amount gate.')
 
 
 if __name__ == '__main__':

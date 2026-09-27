@@ -33,11 +33,12 @@ def ceremony(**fields):
     return lambda m: m["ceremony"].update(fields)
 
 
-def setup_rejected(message, r1cs=None, zkey=None, verifier=None):
+def setup_rejected(message, r1cs=None, zkey=None, verifier=None, verification_key=None):
     """check_setup must reject the committed artifacts with one of them replaced."""
     with tempfile.TemporaryDirectory() as tmp:
         paths = []
-        for rel, content in ((gate.R1CS, r1cs), (gate.ZKEY, zkey), (gate.VERIFIER, verifier)):
+        for rel, content in ((gate.R1CS, r1cs), (gate.ZKEY, zkey), (gate.VERIFIER, verifier),
+                             (gate.VERIFICATION_KEY, verification_key)):
             path = ROOT / rel
             if content is not None:
                 path = Path(tmp) / path.name
@@ -54,8 +55,10 @@ def setup_rejected(message, r1cs=None, zkey=None, verifier=None):
 def setup_cases():
     """A key, R1CS or verifier that honest proofs cannot tell apart must still fail."""
     zkey = bytearray((ROOT / gate.ZKEY).read_bytes())
-    _, found = gate.sections(ROOT / gate.ZKEY, b"zkey", 4)
+    _, found = gate.sections(ROOT / gate.ZKEY, b"zkey", 1, 4)
     zkey[found[4] + 4 + 12] ^= 1  # the first A coefficient
+    wrong_protocol = bytearray((ROOT / gate.ZKEY).read_bytes())
+    struct.pack_into("<I", wrong_protocol, found[1], 2)  # PLONK, not Groth16
 
     # A circuit with one fewer constraint than the key was set up from.
     r1cs = bytearray((ROOT / gate.R1CS).read_bytes())
@@ -66,17 +69,37 @@ def setup_cases():
     verifier = (ROOT / gate.VERIFIER).read_text()
     assert verifier.count("deltax1 = ") == 1
     cases = (
+        ("not a Groth16 zkey", {"zkey": bytes(wrong_protocol)}),
         ("A/B terms", {"zkey": bytes(zkey)}),
         ("A/B terms", {"r1cs": bytes(r1cs)}),
         ("deltax1", {"verifier": verifier.replace("deltax1 = ", "deltax1 = 1").encode()}),
     )
     for message, replaced in cases:
         setup_rejected(message, **replaced)
-    return len(cases)
+    key = json.loads((ROOT / gate.VERIFICATION_KEY).read_text())
+    mutations = (
+        ("vk_alpha_1", lambda k: k["vk_alpha_1"].__setitem__(0, str(int(k["vk_alpha_1"][0]) + 1))),
+        ("vk_delta_2", lambda k: k["vk_delta_2"][0].reverse()),
+        ("IC", lambda k: k["IC"][1].__setitem__(1, str(int(k["IC"][1][1]) + 1))),
+        ("IC", lambda k: k["IC"].pop()),
+        ("vk_alpha_1", lambda k: k["vk_alpha_1"].__setitem__(2, "0")),
+        ("protocol", lambda k: k.update(protocol="plonk")),
+        ("curve", lambda k: k.update(curve="bls12381")),
+        ("nPublic", lambda k: k.update(nPublic=4)),
+        ("nPublic", lambda k: k.update(nPublic=3.0)),
+    )
+    for field, mutate in mutations:
+        changed = copy.deepcopy(key)
+        mutate(changed)
+        setup_rejected(f"verification key JSON does not match the proving key: {field}",
+                       verification_key=json.dumps(changed).encode())
+    return len(cases) + len(mutations)
 
 
 def main():
-    assert run(BASE, "--allow-testbed").returncode == 0
+    allowed = run(BASE, "--allow-testbed")
+    assert allowed.returncode == 0, allowed.stderr
+    assert json.loads(allowed.stdout)["setup"] == "partial"
     blocked = run(BASE)
     assert blocked.returncode != 0 and "testbed-only" in blocked.stderr, blocked.stderr
 
