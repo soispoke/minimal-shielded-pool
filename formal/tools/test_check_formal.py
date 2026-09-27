@@ -1,6 +1,10 @@
+import os
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -77,6 +81,31 @@ class CheckFormal(unittest.TestCase):
             self.assertTrue(c.META.search(c.strip_comments(code)), code)
         for code in ('theorem elaborate_ok : True := trivial', 'def prefix_len := 0', '-- #eval 1'):
             self.assertFalse(c.META.search(c.strip_comments(code)), code)
+
+
+    def test_escaped_names_are_seen(self):
+        for code in ('set_option debug.\u00abskipKernelTC\u00bb true in', 'exact \u00absorryAx\u00bb _ false',
+                     '@[\u00abimplemented_by\u00bb foo] def f := 0'):
+            self.assertTrue(c.BANNED.search(c.strip_comments(code)), code)
+        self.assertTrue(c.META.search(c.strip_comments('open \u00abLean\u00bb in')))
+
+    def test_hidden_modules_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            formal = root / 'formal'
+            (formal / 'Proofs').mkdir(parents=True)
+            (formal / 'Proofs' / 'Ok.lean').write_text('theorem ok : True := trivial\n')
+            subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+            with mock.patch.object(c, 'FORMAL', formal), mock.patch.object(c, 'ROOT', root):
+                self.assertTrue(c.sources())
+                (formal / 'Artifacts' / '.lake').mkdir(parents=True)
+                (formal / 'Artifacts' / '.lake' / 'Cheat.lean').write_text('theorem t : True := trivial\n')
+                self.assertFalse(c.sources())
+                (formal / 'Artifacts' / '.lake' / 'Cheat.lean').unlink()
+                (formal / 'Artifacts' / '.lake').rmdir()
+                (root / 'hidden').mkdir()
+                os.symlink(root / 'hidden', formal / 'Artifacts' / 'Hidden')
+                self.assertFalse(c.sources())
 
 
 if __name__ == '__main__':

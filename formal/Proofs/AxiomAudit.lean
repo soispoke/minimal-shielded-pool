@@ -145,15 +145,29 @@ assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_injective
 assert_standard_axioms MSP.Groth16.G1Point.coordinates_toPoint
 
 /-! Pin the statement of every principal result to the locked `Spec` claim, so
-weakening a theorem, for example by adding a hypothesis, fails the build. -/
-example : MSP.C1 := MSP.c1
-example : MSP.C1c := MSP.c1c
-example : MSP.ModelTheorem := MSP.model_theorem
-example : MSP.C6 := MSP.c6
-example : MSP.W1 := MSP.w1
-example : MSP.Composes := MSP.composes
-example : MSP.C1 ∧ MSP.C1c ∧ MSP.ModelTheorem := MSP.circuit_model
-example : MSP.C2 → MSP.C2c → MSP.C8 → MSP.C9 → MSP.C10 → MSP.Refines → MSP.MainTheorem :=
+weakening a theorem, for example by adding a hypothesis, fails the build. Each
+pin is a theorem whose own axioms are audited, so a coercion that elaboration
+inserts to make a weaker proof fit the claim must itself be proved. -/
+theorem pin_c1 : MSP.C1 := MSP.c1
+theorem pin_c1c : MSP.C1c := MSP.c1c
+theorem pin_model_theorem : MSP.ModelTheorem := MSP.model_theorem
+theorem pin_c6 : MSP.C6 := MSP.c6
+theorem pin_w1 : MSP.W1 := MSP.w1
+theorem pin_composes : MSP.Composes := MSP.composes
+theorem pin_circuit_model : MSP.C1 ∧ MSP.C1c ∧ MSP.ModelTheorem := MSP.circuit_model
+theorem pin_main_theorem_of_chain :
+    MSP.C2 → MSP.C2c → MSP.C8 → MSP.C9 → MSP.C10 → MSP.Refines → MSP.MainTheorem :=
   MSP.main_theorem_of_chain
-example : MSP.C2 → MSP.C2c → MSP.C8 → MSP.C9 → MSP.C10 → MSP.Refines → MSP.ChainCorollary :=
+theorem pin_chain_corollary_of_chain :
+    MSP.C2 → MSP.C2c → MSP.C8 → MSP.C9 → MSP.C10 → MSP.Refines → MSP.ChainCorollary :=
   MSP.chain_corollary_of_chain
+
+assert_standard_axioms pin_c1
+assert_standard_axioms pin_c1c
+assert_standard_axioms pin_model_theorem
+assert_standard_axioms pin_c6
+assert_standard_axioms pin_w1
+assert_standard_axioms pin_composes
+assert_standard_axioms pin_circuit_model
+assert_standard_axioms pin_main_theorem_of_chain
+assert_standard_axioms pin_chain_corollary_of_chain

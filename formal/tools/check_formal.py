@@ -4,7 +4,7 @@
   statements  SPEC.md, every project module `Spec` imports, transitively, and
               Proofs/AxiomAudit.lean, which pins the principal theorems' types,
               match formal/STATEMENTS.lock
-  pins        every artifact in SPEC.md's §1 table has its pinned SHA-256
+  pins        every artifact in SPEC.md's §1 table has its full pinned SHA-256
   sources     no Lean file admits a proof (sorry, admit, native evaluation),
               skips the kernel (debug.skipKernelTC) or uses axiom, unsafe or
               implemented_by; no Lean file outside the lock, except the
@@ -22,6 +22,7 @@
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -88,7 +89,7 @@ def pins():
             continue
         cells = [c.strip() for c in line.strip('|').split('|')]
         paths = re.findall(r'`([^`]+)`', cells[0])
-        hashes = re.findall(r'`([0-9a-f]{16})`', cells[1])
+        hashes = re.findall(r'`([0-9a-f]{64})`', cells[1])
         # a row may pin several files of one directory: `a/B.sol`, `C.sol`
         base = paths[0].rsplit('/', 1)[0] + '/' if '/' in paths[0] else ''
         for i, (name, want) in enumerate(zip(paths, hashes)):
@@ -97,7 +98,7 @@ def pins():
             if not path.exists():
                 print(f'pinned artifact missing: {path.relative_to(ROOT)}')
                 ok = False
-            elif sha256(path)[:16] != want:
+            elif sha256(path) != want:
                 print(f'pinned artifact changed: {path.relative_to(ROOT)}')
                 ok = False
     if count == 0:
@@ -129,7 +130,8 @@ def strip_comments(text):
     `dbg_trace`, `throwError` and similar, which interpolate a string without
     a prefix. So a plain string containing `{` also becomes `__raw_string__`,
     rejected outside the lock; inside the lock, such a string's code is not
-    scanned. A `«...»` identifier is skipped whole."""
+    scanned. A `«...»` identifier is emitted as its bare name, so an escaped
+    name such as `debug.«skipKernelTC»` is still seen."""
     out, i, n = [], 0, len(text)
     stack = []  # for each open interpolated string, the enclosing brace depth
     mode, depth = 'code', 0
@@ -185,8 +187,9 @@ def strip_comments(text):
             i += 1
         elif c == '\u00ab':
             j = text.find('\u00bb', i + 1)
-            out.append('\u00ab\u00bb')
-            i = n if j < 0 else j + 1
+            j = n if j < 0 else j
+            out.append(' ' + text[i + 1:j] + ' ')
+            i = j + 1
         elif char:
             out.append("' '")
             i = char.end()
@@ -212,10 +215,25 @@ def sources():
         print(f'formal/{name} is committed; Lake would replay it instead of building the source')
         ok = False
     locked = {p.resolve() for p in statement_files()}
-    for path in sorted(FORMAL.rglob('*.lean')):
+    lean_files = []
+    # Walk without following links, so every file Lake could compile is read:
+    # a symlink or a nested `.lake` directory could hide a module from the scan.
+    for top, dirs, files in os.walk(FORMAL, followlinks=False):
+        here = Path(top)
+        if here == FORMAL and '.lake' in dirs:
+            dirs.remove('.lake')
+        for name in dirs + files:
+            entry = here / name
+            if entry.is_symlink():
+                print(f'{entry.relative_to(ROOT)} is a symlink; the scan does not follow links')
+                ok = False
+            elif name == '.lake':
+                print(f'{entry.relative_to(ROOT)} is a nested .lake directory')
+                ok = False
+        dirs[:] = [d for d in dirs if not (here / d).is_symlink() and d != '.lake']
+        lean_files += [here / f for f in files if f.endswith('.lean') and not (here / f).is_symlink()]
+    for path in sorted(lean_files):
         rel = path.relative_to(FORMAL)
-        if '.lake' in rel.parts:
-            continue
         count += 1
         code = strip_comments(path.read_text())
         found = list(BANNED.finditer(code))

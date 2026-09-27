@@ -11,21 +11,21 @@ premise, here or in Lean, needs the same review as changing the pool.
 ## 1. Scope
 
 The subject is `main` at `8835be7`, pool profile `position-notes-v2`, fixed by
-these artifacts (SHA-256, first 16 hex digits):
+these artifacts (SHA-256):
 
 | Artifact | Hash |
 |---|---|
-| `build/spend.r1cs` | `e2f6fc89bc0e4782` |
-| `build/spend_final.zkey` | `587c048b06d68c61` |
-| `circuits/spend.circom` | `97c24b754549fd57` |
-| `devnet/build/shielded_pool_dispatcher_init.hex` | `8339dab370f7fc24` |
-| `devnet/ShieldedPoolDispatcher.yul` | `32e4701834435d21` |
-| `contracts/src/ShieldedPoolLogic.sol` | `fa9d7b1fc5fdca83` |
-| `contracts/src/Groth16Verifier.sol` | `5bcda629ac9fa431` |
-| `contracts/vectors/spend_vkey.json` | `2b37d2e021ef759d` |
-| `contracts/foundry.toml` (the pinned settings) | `af279592ce45b3be` |
-| `activation_manifest.testbed.json` (whole file; its `compiler` entry pins the settings) | `b85d5808c6b71748` |
-| `contracts/src/PoseidonT3.sol`, `PoseidonT4.sol` | `f353af63ac124e51`, `2384b8f71a2ed09f` |
+| `build/spend.r1cs` | `e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf` |
+| `build/spend_final.zkey` | `587c048b06d68c61dcb0a9a57b51229def97b219b11827042f4a8faa49499376` |
+| `circuits/spend.circom` | `97c24b754549fd576c1e3d1e70345eba5570143895a0a9cceeb7e22176cdf8af` |
+| `devnet/build/shielded_pool_dispatcher_init.hex` | `8339dab370f7fc24a7584d48d08df7bd21296b6840a4bc66fbb8165ea35e1bf4` |
+| `devnet/ShieldedPoolDispatcher.yul` | `32e4701834435d2157cdb1acda219fa16957b5e7b3abae64eede7f2ddd29ea60` |
+| `contracts/src/ShieldedPoolLogic.sol` | `fa9d7b1fc5fdca83c3a78cdd81cd3856dbfc9e18d20095054c22c6c248ad753b` |
+| `contracts/src/Groth16Verifier.sol` | `5bcda629ac9fa4317d52aef102281b12419c1c385abfe0fa991c5ed22e906676` |
+| `contracts/vectors/spend_vkey.json` | `2b37d2e021ef759dd2b40f4daa8c0b68aec7f705aa71ee4cf69cb25e55906d7c` |
+| `contracts/foundry.toml` (the pinned settings) | `af279592ce45b3be466ff10f0d20c4b3107ba47776259a738176fc789d59b817` |
+| `activation_manifest.testbed.json` (whole file; its `compiler` entry pins the settings) | `b85d5808c6b717484bd6ce98f3adaee361fb1be33326e260c129fb247fad37f9` |
+| `contracts/src/PoseidonT3.sol`, `PoseidonT4.sol` | `f353af63ac124e51a37e78dc5278bcb2e93c19e44aa8dd13a4ecb4c54212720b`, `2384b8f71a2ed09f3b16c6b0d135bedcd293cb1c862e8a3c893d0ac79eae0960` |
 
 In scope: the circuit, the dispatcher, the settlement logic, the verifier and
 the Poseidon libraries, deployed together, and the safety of the funds they
@@ -412,7 +412,7 @@ caller other than the pool has a valid environment there. The 2026-09-25 run
 of the `position-notes-v2` deployment recorded in `SECURITY.md` (pool and block
 in `devnet/deploy_config.json`) is informal evidence.
 
-**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements, not results: none has yet been checked against the mutated artifact.
+**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements, not results: none has been checked formally. As tests, not proofs, `wallet/test_occurrence.py` (run in CI's `test` job) builds circuits without one range check, and without the membership, sink and other listed constraints together, and shows each admits a complete witness violating R5, R3 or R7 that the pinned R1CS rejects.
 
 | Mutation | Claim that must fail |
 |---|---|
@@ -515,7 +515,8 @@ encoded accepted spend and the complete finite bad-event query support.
 W2 and the rest of the chain half of `MainTheorem` (C6 is proved) remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 `MainTheorem` and `ChainCorollary` from exactly those obligations. No row of
-§6's mutation table has yet been checked against its mutated artifact.
+§6's mutation table has been checked formally; for R3, R5 and R7 only the
+tests §6 names exist.
 
 CI checks this project on every push in two jobs. The `formal` job runs no
 unowned repository code before the proofs are checked. It trusts elan's
@@ -533,11 +534,14 @@ macros, syntax, elaborators, the `Lean` namespace) and raw string literals in
 every Lean file outside
 the lock except the code-owned differential-test driver
 `tools/DifferentialModel.lean`, which `lake build` does not compile and which
-runs only after the rechecks, a `lakefile.lean` and any committed build output under `.lake`; then,
+runs only after the rechecks, a `lakefile.lean`, any committed build output
+under `.lake`, and any symlink or nested `.lake` directory that could hide a
+module from the scan; then,
 with `.lake` removed (so every project module, but not Mathlib, is built from source), `lake build`, failing on any `sorry`
 warning, with `Proofs/AxiomAudit.lean` rejecting any axiom beyond Lean's
 standard three for the principal results and pinning each one's type to its
-claim; then the audit, `check_formal.py` and `git diff` again, so a build
+claim with a theorem whose own axioms it audits, so a coercion elaboration
+inserts to fit a weaker proof must itself be proved; then the audit, `check_formal.py` and `git diff` again, so a build
 that rewrote a checked file fails; and finally the differential test of the
 executable model against `wallet/wallet.py`. The `formal-artifacts` job runs
 the R1CS import checks above, with the circuit recompiled, and every generator
