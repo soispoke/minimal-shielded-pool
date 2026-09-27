@@ -156,7 +156,8 @@ every credited or claimed recipient and of every closed epoch, every foreign
 root write's source, and any inputs a claim names explicitly. It is two
 distinct inputs with equal outputs; a degenerate output, meaning a Poseidon
 output of 0 (the empty leaf) or a Keccak output below `2^64` (where empty
-storage and fixed slots live); an approved spend whose extraction fails; or a
+storage and fixed slots live) other than a domain's, which is used only
+modulo `p`; an approved spend whose extraction fails; or a
 compression break. Collisions that merely exist do not count. Every witness a
 claim ranges over is fixed by an extractor quantified universally, never chosen
 by the proof. Because `H2`, `H3`, `H10` and `K` are fixed and unkeyed, P1, P2
