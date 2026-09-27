@@ -87,9 +87,8 @@ def statements(update):
 def pins():
     section = FORMAL.joinpath('SPEC.md').read_text().split('## 2.')[0]
     ok, count = True, 0
-    for line in section.splitlines():
-        if not line.startswith('| `'):
-            continue
+    rows = [line for line in section.splitlines() if line.startswith('|')]
+    for line in rows[2:]:  # every row after the header and the |---| separator
         cells = [c.strip() for c in line.strip('|').split('|')]
         # file names contain '/' or '.', which drops prose such as `compiler`
         paths = [p for p in re.findall(r'`([^`]+)`', cells[0]) if '/' in p or '.' in p]
