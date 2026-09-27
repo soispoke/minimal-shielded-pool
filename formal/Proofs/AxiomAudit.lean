@@ -29,6 +29,11 @@ import Artifacts.ConstraintCoverage
 import Artifacts.AssignmentAssembly
 import Artifacts.CircuitCompleteness
 import Proofs.CircuitModel
+import Keccak.Labels
+import Keccak.Vectors
+import Groth16.KeyData
+import Groth16.Encoding
+import Proofs.NonVacuityEncoding
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 
@@ -116,3 +121,14 @@ assert_standard_axioms MSP.c1c
 
 assert_standard_axioms MSP.circuit_model
 assert_standard_axioms MSP.chain_corollary_of_chain
+
+assert_standard_axioms MSP.K_lt
+assert_standard_axioms MSP.Keccak.hash_lt
+assert_standard_axioms MSP.Keccak.domain_one_one_zero_eq
+assert_standard_axioms MSP.Keccak.source_one_zero_nondegenerate
+assert_standard_axioms MSP.Groth16.pinnedKey_coordinateChecks
+assert_standard_axioms MSP.Groth16.G2Coordinates.onCurve_iff
+assert_standard_axioms MSP.Groth16.decodeProof_eq_some_iff
+assert_standard_axioms MSP.Groth16.decoded_g2_order
+assert_standard_axioms MSP.NonVacuity.decode_encodeSettlement
+assert_standard_axioms MSP.NonVacuity.encodeTx_Acc

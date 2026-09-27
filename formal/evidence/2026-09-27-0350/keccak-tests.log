@@ -1,0 +1,13 @@
+test_digest_word_order (test_vectors.KeccakVectors) ... ok
+test_generated_lean_exact (test_vectors.KeccakVectors) ... ok
+test_independent_native_oracle (test_vectors.KeccakVectors) ... ok
+test_known_legacy_hashes (test_vectors.KeccakVectors) ... ok
+test_lfsr_constants (test_vectors.KeccakVectors) ... ok
+test_no_sha3_substitution (test_vectors.KeccakVectors) ... ok
+test_padding_boundaries (test_vectors.KeccakVectors) ... ok
+test_saved_round_checkpoints (test_vectors.KeccakVectors) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.032s
+
+OK

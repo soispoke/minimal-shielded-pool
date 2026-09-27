@@ -50,3 +50,15 @@ Remaining completion gates include C2/C2c/C8/C9/C10 and refinement,
 the required concrete key/verifier/library/bytecode bindings, W1/W2, and the
 semantic mutation failures in `SPEC.md`. The decoder's negative tests do not
 discharge those mutation gates. End-to-end formal verification is incomplete.
+
+
+`NonVacuityBytes` proves the concrete big-endian word round trips.
+`NonVacuityEncoding` constructs the actual three-frame calldata and proves
+all A1–A7 checks from explicit field bounds, proof checks and verifier acceptance.
+These reusable encoding lemmas support W1; they do not themselves prove an
+accepted run, no bad event or any chain-level non-vacuity claim.
+
+The specification's `K` is now the concrete Ethereum Keccak definition in
+`Keccak/`. Its fixed source/domain digests have kernel certificates.
+The key and strict proof-decoding layer in `Groth16/` is also checked; pairing,
+subgroup and deployed-bytecode binding remain separate obligations.

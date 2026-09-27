@@ -22,15 +22,20 @@ the verifier-used JSON key fields to the zkey. It still reports `setup: partial`
 
 **Current ownership, September 27 heartbeat:** this Codex heartbeat owns the durable checkout.
 C1 and C1c are proved for all 14,802 pinned constraints with only standard Lean
-axioms. C1's checkpoint is `7c96e43`; the subsequent C1c commit includes the
-full assignment, exact projections, read/write boundaries and constraint
-coverage. The default `lake build` passes 3,563 jobs. Current bounded
-subagents are proving compact tree-query support for W1, implementing concrete
-Keccak, and binding the pinned Groth16 key and proof decoding. Root owns
-integration and documentation. Before taking ownership, inspect fresh task
-status, relevant Claude log timestamps and actual proof processes. A quota
-reset or resident parent process alone does not transfer ownership. Do not
-edit files while another worker is making progress.
+axioms, at `7c96e43` and `6618d0d`. The full build passed 3,563 jobs there.
+Concrete Ethereum Keccak is now bound as `K`; the circuit, model, composition,
+key/encoding libraries and automated axiom audit pass 3,574 jobs after that
+change. Ten Keccak fixtures and eight independent tests pass. The exact key
+coordinate checks and strict proof decoder pass six artifact tests.
+
+At 05:13 UTC Claude explicitly paused after reading this handoff, leaving the
+original checkout clean at `57ad96b`. Root owns integration and generic frame
+encoding. Bounded subagents own W1's actual run and query support, numeric
+Poseidon certificates, and numeric Keccak certificates respectively. W1's
+final assembly remains in progress. Before taking ownership, inspect fresh
+task status, relevant Claude log timestamps and actual proof processes.
+A quota reset or resident parent process alone does not transfer ownership.
+Do not edit files while another worker is making progress.
 
 Original Claude session: `e9529fa7-10f6-4fd3-a0b1-195641fd261d`.
 Original checkout:
@@ -194,10 +199,20 @@ semantic boundary and exact projections. `Proofs/CircuitModel.lean` connects
 the completed circuit/model proofs to `MainTheorem` and `ChainCorollary`,
 with only the still-open chain obligations as arguments.
 
-The current independent work is W1's compact tree-query/collision support,
-concrete Keccak, and exact Groth16 key/proof-decoding binding. W1 requires an
-actual approved spend with no bad event; the compact support lemma alone is
-not W1. A concrete K is needed for its source nondegeneracy facts.
+The current independent work is W1's actual run and complete finite collision
+table. Compact queries preserve the exact original bad-event predicate.
+`NonVacuityEncoding` proves that the constructed calldata round-trips and
+its transaction satisfies every A1–A7 check given explicit data, proof and
+verifier conditions. Its validation frame reserves both gas dimensions.
+Neither that generic encoding theorem nor compact support alone proves W1.
+The source/domain Keccak facts and the fixture's Poseidon inequalities are
+now computed kernel certificates. The full no-bad-event assembly is next.
+
+`Keccak/` defines the concrete reference bound by `Spec.Hash.K`, with legacy
+Keccak padding, 24 rounds and big-endian digest output. It is not yet a proof
+of the EVM/client hash implementation. `Groth16/` binds exact pinned key
+coordinates and strict 256-byte decoding, including EIP-197's G2 ordering.
+Base-field/group/subgroup/pairing and deployed-verifier bindings remain open.
 
 P3 setup honesty and P9 key/R1CS consistency are explicit canonical premises.
 The activation gate's partial setup result and missing original powers-of-tau

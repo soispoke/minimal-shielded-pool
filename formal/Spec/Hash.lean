@@ -1,4 +1,5 @@
 import Poseidon.Hash
+import Keccak.Hash
 import Mathlib.Algebra.BigOperators.Fin
 
 /-!
@@ -10,14 +11,18 @@ namespace MSP
 /-- D2. Concrete circomlib reference Poseidon over BN254. The irreducibility
 attribute keeps symbolic proofs from expanding the rounds accidentally; the
 definitions remain available for explicit unfolding and kernel checking.
-Equivalence with the optimized circuit and deployed libraries remains open. -/
+Optimized-circuit equivalence is proved; deployed-library refinement remains open. -/
 @[irreducible] def H2 (a b : F) : F := Poseidon.hash2 a b
 @[irreducible] def H3 (a b c : F) : F := Poseidon.hash3 a b c
 @[irreducible] def H10 (x : Fin 10 → F) : F := Poseidon.hash10 x
 
-/-- D2. Keccak-256, read as a big-endian number below `2 ^ 256`. Step 3 binds it
-to a verified implementation. -/
-opaque K : List UInt8 → ℕ
+/-- D2. Concrete Ethereum Keccak-256, read as a big-endian natural. The
+reference uses the legacy Keccak suffix and explicit kernel-computable rounds. -/
+@[irreducible] def K (bytes : List UInt8) : ℕ := Keccak.hash bytes
+
+theorem K_lt (bytes : List UInt8) : K bytes < 2^256 := by
+  unfold K
+  exact Keccak.hash_lt bytes
 
 /-- D3. -/
 def pk (sk : F) : F := H3 1 sk 0

@@ -1,5 +1,5 @@
 name = "msp-formal"
-defaultTargets = ["Spec", "Sanity", "Proofs", "Artifacts", "Poseidon", "Primality"]
+defaultTargets = ["Spec", "Sanity", "Proofs", "Artifacts", "Poseidon", "Primality", "Keccak", "Groth16"]
 
 [[require]]
 name = "mathlib"
@@ -27,3 +27,11 @@ globs = ["Poseidon.+"]
 [[lean_lib]]
 name = "Primality"
 globs = ["Primality.+"]
+
+[[lean_lib]]
+name = "Keccak"
+globs = ["Keccak.+"]
+
+[[lean_lib]]
+name = "Groth16"
+globs = ["Groth16.+"]

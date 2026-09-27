@@ -1,0 +1,11 @@
+test_affine_and_ic_shape (test_groth16_key.KeyTests) ... ok
+test_coordinate_aliases (test_groth16_key.KeyTests) ... ok
+test_exact_export (test_groth16_key.KeyTests) ... ok
+test_g2_order (test_groth16_key.KeyTests) ... ok
+test_metadata (test_groth16_key.KeyTests) ... ok
+test_pin_precedes_parse (test_groth16_key.KeyTests) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.093s
+
+OK
