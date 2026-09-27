@@ -309,7 +309,8 @@ a run of the model, and
 the chain shows that run's state: balance, credits, consumed keys, epoch, leaf
 count, current and final roots, the logs of appended leaves, the latest
 recent-root entry of each of the pool's sources in the usable window, the ETH
-paid to each address, and the slot. Otherwise the run has a bad event, or, if
+paid to each address by plain calls with empty calldata (so a payout that runs
+code of the pool's choosing at the recipient breaks refinement), and the slot. Otherwise the run has a bad event, or, if
 the model cannot follow some event, the run up to and including that event has
 one. What the
 chain shows about hash-indexed storage names only keys the model holds, so a

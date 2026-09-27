@@ -28,7 +28,9 @@ structure ChainState where
   storage : ℕ → ℕ → ℕ
   /-- the `cm` of every persisting `LeafAppended` log each address emitted for each epoch, in order -/
   leafLogs : ℕ → ℕ → List F
-  /-- all ETH each address sent to each other address in transfers that persist, other than gas payments and refunds -/
+  /-- all ETH each address sent to each other address, in transfers that persist,
+  by a `CALL` with empty calldata; value moved any other way (a call with data,
+  `CALLCODE` or `SELFDESTRUCT`), gas payments and refunds are not counted -/
   sentTo : ℕ → ℕ → ℕ
   /-- every persisting EIP-8272 write, in order: writer, salt, slot, root word -/
   rootWrites : List (ℕ × ℕ × ℕ × ℕ)
