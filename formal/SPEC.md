@@ -516,7 +516,9 @@ hashes of §1, and textually rejects, outside comments and string literals,
 `sorry`, `admit`, native evaluation, `debug.skipKernelTC`, `axiom`, `unsafe`
 and `implemented_by` in every Lean file, metaprograms (`#eval`, `run_cmd`,
 macros, syntax, elaborators, the `Lean` namespace) in every Lean file outside
-the lock, a `lakefile.lean` and any committed build output under `.lake`; then,
+the lock except the code-owned differential-test driver
+`tools/DifferentialModel.lean`, which `lake build` does not compile and which
+runs only after the rechecks, a `lakefile.lean` and any committed build output under `.lake`; then,
 with `.lake` removed, `lake build`, failing on any `sorry`
 warning, with `Proofs/AxiomAudit.lean` rejecting any axiom beyond Lean's
 standard three for the principal results and pinning each one's type to its
@@ -597,12 +599,14 @@ Step 5's definitions of the opaque types `RawTx`, `Env`, `Deployment` and
 `RawTx.view`, `Groth16Accepts` and `Honest`, are checked against their
 docstrings and D12 by review only.
 A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep` or
-`Honest`, or a wrong `chainInit`, leaves states uncovered by refinement, C2,
-C2c and C10, and a narrower `EnvValid` leaves environments uncovered by C10. A looser `eventsOf` or
+a wrong `chainInit` leaves states uncovered by refinement, C2, C2c and C10, a
+narrower `Honest` leaves deployments uncovered by those claims and by C8 and
+C9, and a narrower `EnvValid` leaves environments uncovered by C10. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
 weakens C2 and a looser one weakens C2c and W2, a stronger `PreValid` weakens
 C2c, a looser `callPool` or `firstPayout` weakens C10, a `verifierOf` not defined
-by running the linked verifier makes C9 vacuous and weakens C2 and C2c, and a
+by running the linked verifier makes C9 vacuous and weakens C2, C2c and
+refinement, whose spend step checks `Acc` with it through `poolOf`, and a
 `libHash2` or `libHash3` not defined by running the linked libraries makes C8
 vacuous. A `Groth16Accepts` other than textbook
 verification for the committed key makes C9 and P3 refer to the wrong

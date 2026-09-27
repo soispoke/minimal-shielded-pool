@@ -7,7 +7,8 @@
   pins        every artifact in SPEC.md's §1 table has its pinned SHA-256
   sources     no Lean file admits a proof (sorry, admit, native evaluation),
               skips the kernel (debug.skipKernelTC) or uses axiom, unsafe or
-              implemented_by; no Lean file outside the lock runs or defines
+              implemented_by; no Lean file outside the lock, except the
+              step-4 driver tools/DifferentialModel.lean, runs or defines
               metaprograms (#eval, run_cmd, macros, syntax, elaborators, the
               `Lean` namespace), which could rewrite files or the audit during
               the build; no lakefile.lean overrides lakefile.toml; and no
