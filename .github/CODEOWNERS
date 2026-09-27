@@ -1,0 +1,6 @@
+# The reviewed formal statements. A change here needs the owner's review and a
+# matching update of formal/STATEMENTS.lock, which CI checks.
+/formal/SPEC.md @soispoke
+/formal/Spec.lean @soispoke
+/formal/Spec/ @soispoke
+/formal/STATEMENTS.lock @soispoke

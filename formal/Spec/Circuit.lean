@@ -8,8 +8,8 @@ The circuit definitions below use the pinned `build/spend.r1cs`: a generated
 file lists its constraints over `F` and names signals through a symbol file
 that recompiling the pinned circuit produces. `formal/tools/r1cs_artifact.py
 --check-lean` regenerates that file from the artifact (SHA-256
-`e2f6fc89bc0e4782…`) and compares it byte for byte; CI does not yet run this
-check.
+`e2f6fc89bc0e4782…`) and compares it byte for byte, and CI's `formal` job runs
+it with the symbol file from recompiling the circuit.
 -/
 
 namespace MSP

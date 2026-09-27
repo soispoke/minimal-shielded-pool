@@ -1,0 +1,13 @@
+{
+  "formal/SPEC.md": "e05f48e80c54c9b45e7b7db0ee538630b4a0474248bc9af9b396c919d4428a4e",
+  "formal/Spec.lean": "17eb68c9778dc67e4238112341bb6a6a79c14e781df391761a75a2a5ddf4a58a",
+  "formal/Spec/Basic.lean": "30abafbf4c76ebc78444e41bf89af4f60f557e5b6f643931207e1c6286652572",
+  "formal/Spec/Circuit.lean": "e524cb8e4e1576d287f06eff2484e61ee28d9078afe1d53f6880f47514f512bf",
+  "formal/Spec/Evm.lean": "d88b1d8fc8c9ed48af76784eda92cc897580c6c2d3273b93f21738dfacfd4950",
+  "formal/Spec/FrameTx.lean": "34ac13363452469bf438a4cf55aeb60cf0bd1edb6520aed34aac454c80710e2e",
+  "formal/Spec/Hash.lean": "a3e66bc20a289d75094655f75c5ee248bdb3e6db0623a6e6a73393b4bd2bce04",
+  "formal/Spec/Main.lean": "fdc4015c706736c052d13b2363fde3aaf93176150e1e965f0e0ca026b149a330",
+  "formal/Spec/Relation.lean": "ef8e29d80b313a39dc0d650591555c0b98e00f647206021dae35879b72ca7c60",
+  "formal/Spec/System.lean": "0561577a1636f18eb9e6ac2b6ef57014445641a120aa77eb319c3b8f9ec03007",
+  "formal/Spec/Tree.lean": "d269fbc7d37aceb14538e59c3f6f980f2d6e55c53017fb32cd0b679ab8f24254"
+}

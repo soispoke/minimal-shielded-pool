@@ -147,3 +147,41 @@ jobs:
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
         run: python devnet/native_occurrence/run.py --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
+
+  formal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tooling/package-lock.json
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Check the statement lock, artifact pins and Lean sources
+        run: python formal/tools/check_formal.py all
+      - name: Check the Lean R1CS and its symbols against the pinned artifact
+        run: |
+          npm ci --prefix tooling
+          mkdir -p "$RUNNER_TEMP/circuit"
+          tooling/node_modules/.bin/circom2 circuits/spend.circom \
+            --r1cs --sym -l tooling/node_modules -o "$RUNNER_TEMP/circuit"
+          cmp "$RUNNER_TEMP/circuit/spend.r1cs" build/spend.r1cs
+          python formal/tools/r1cs_artifact.py --sym "$RUNNER_TEMP/circuit/spend.sym" \
+            --check-lean formal/Artifacts/Spend.lean
+          MSP_SPEND_SYM="$RUNNER_TEMP/circuit/spend.sym" \
+            python -m unittest discover -s formal/tools -p 'test_*.py'
+      - name: Install Lean
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Fetch the Mathlib build cache
+        working-directory: formal
+        run: lake exe cache get
+      - name: Build the proofs and audit their axioms
+        working-directory: formal
+        run: lake build

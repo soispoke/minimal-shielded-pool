@@ -502,6 +502,16 @@ W2 and the chain half of `MainTheorem` remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 `MainTheorem` and `ChainCorollary` from exactly those obligations.
 
+CI's `formal` job checks this project on every push: `lake build`, with
+`Proofs/AxiomAudit.lean` rejecting any axiom beyond Lean's standard three for
+the principal results; `tools/check_formal.py`, which rejects `sorry`, `admit`,
+`native_decide`, new axioms and unsafe code in any Lean file, checks the
+artifact hashes of §1, and checks the statement files (this file, `Spec.lean`
+and `Spec/`) against `STATEMENTS.lock`; and the R1CS import check above, with
+the circuit recompiled. `.github/CODEOWNERS` assigns the statement files and
+the lock to the owner, which binds only if branch protection requires code
+owner review.
+
 ## 8. Limits
 
 A proof shows the code meets this specification under the premises. It does
