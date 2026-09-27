@@ -320,7 +320,8 @@ def C3 (P : Pool) : Prop :=
 /-- P13's bound: the epoch counter can still roll over, and the balance is a word. -/
 def Bounded (s : PoolState) : Prop := s.E + 1 < 2 ^ 64 ∧ s.balance < 2 ^ 256
 
-/-- C4 over the model: an approved spend's settlement passes every check. -/
+/-- C4 over the model: an approved spend's settlement passes every check unless
+P13's bound fails. -/
 def C4 (P : Pool) : Prop :=
   ∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' →
     BadEvent P (evs ++ [.spend tx g]) s' ∨ ¬ Bounded s ∨ SettlePre s P (settleData tx)
@@ -335,8 +336,8 @@ def C5a (P : Pool) : Prop :=
       ∃ inr, (s.leaves e).getD i 0 = cm inr ((s.vals e).getD i 0 : F)
 
 /-- C5b. Each nonzero-value input of an approved spend is an existing, unspent
-occurrence of the spend's epoch, holding the witness's leaf and value, and a
-spend's two inputs differ. -/
+occurrence of the spend's epoch, holding the witness's leaf and value, and when
+both inputs have nonzero value they are different occurrences. -/
 def C5b (P : Pool) : Prop :=
   ∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' →
     BadEvent P (evs ++ [.spend tx g]) s' ∨

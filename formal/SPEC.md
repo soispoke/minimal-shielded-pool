@@ -48,7 +48,8 @@ BN254 base field order
 `21888242871839275222246405745257275088696311157297823662689037894645226208583`.
 
 **D2. Hashes.** `H2`, `H3`, `H10` are circomlib's Poseidon over BN254 with 2, 3
-and 10 inputs, with the constants in `reference/poseidon_bn254.py`. `K(bytes)` is
+and 10 inputs, with the constants in `reference/poseidon_bn254_constants.json`,
+which `reference/poseidon_bn254.py` loads. `K(bytes)` is
 Keccak-256 read as a big-endian integer. `u256(n)` and `uint64_be(n)` are the
 32-byte and 8-byte big-endian encodings of `n` modulo `2^256` and `2^64`, and
 `addr20(a)` is the 20-byte address.
@@ -253,7 +254,9 @@ hashes and the spend's.
 yields `TR` of the inserted leaves.
 
 **C7 Gas** is part of refinement: whenever the model's settlement passes
-`SettlePre`, the chain's succeeds, so it never runs out of gas.
+`SettlePre`, the chain's succeeds, so it never runs out of gas. The exception is
+a settlement that inserts no leaf and credits nothing, whose failure changes
+nothing the chain shows, so refinement cannot tell it from success.
 
 **C8 Libraries.** `hash2` and `hash3` return `H2` and `H3` within 200,000 gas.
 
@@ -441,7 +444,7 @@ hashes do not produce (argued during review):
 | Claim | Lean name | File |
 |---|---|---|
 | D1 to D10 | definitions, `R` | `Basic`, `Hash`, `Relation` |
-| D11, D15 | `Mode`, `Frame`, `Signature`, `FrameTx`, `RawTx`, `RawTx.view`, `Acc`, `PointsNotInfinity`, `SettleData`, `SettleData.decode`, `SettleData.stmt`, `settleData`, `RECENT_ROOT`, `SETTLE_SELECTOR`, `RR_ENTRY_DOMAIN`, `RR_STORAGE_DOMAIN`, `keysHash`, `sourceId`, `SignsCanonicalHash` | `FrameTx`, `Evm` |
+| D11, D15 | `Mode`, `Frame`, `Signature`, `FrameTx`, `RawTx`, `RawTx.view`, `Acc`, `PointsNotInfinity`, `SettleData`, `SettleData.decode`, `SettleData.stmt`, `settleData`, `RECENT_ROOT`, `SETTLE_SELECTOR`, `RR_ENTRY_DOMAIN`, `RR_STORAGE_DOMAIN`, `keysHash`, `sourceId`, `SignsCanonicalHash` | `FrameTx`, `Evm`, `System` |
 | D12 | `Deployment`, `Honest`, `addrOf`, `chainOf`, `verifierOf`, `poolOf`, `NONCE_MANAGER` | `Evm` |
 | D13, D14 | `Pool`, `PoolState`, `PoolState.init`, `PoolState.append`, `rollsOver`, `CAPACITY`, `Event`, `Step`, `Run`, `Occ` | `System`, `Tree` |
 | P3, P4, P13, C4's checks, bad events | `Pool.ext`, `extOf`, `proofOf`, `verifiedPublics`, `Query.collide`, `Query.degenerate`, `BadEvent`, `pathQueries`, `newCount`, `ExtractionFailure`, `CompressionBreak`, `Bounded`, `SettlePre` | `System` |
@@ -514,12 +517,14 @@ rejects.
 
 Step 5's definitions of `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
 `ValidTx`, `PreValid`, `approvalsIn`, `EnvValid`, `callPool`, `firstPayout`,
+`verifierOf`, `libHash2`, `libHash3`, `addrOf`, `chainOf`, `NONCE_MANAGER`,
 `RawTx.view` and `Honest` are checked against their docstrings by review only.
 A narrower `ChainStep`, `EnvValid` or `Honest`, or a wrong `chainInit`, leaves
 states uncovered by refinement, C2, C2c and C10. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
 weakens C2 and a looser one weakens C2c and W2, a stronger `PreValid` weakens
-C2c, and a looser `callPool` or
-`firstPayout` weakens C10.
+C2c, a looser `callPool` or `firstPayout` weakens C10, and a `verifierOf`,
+`libHash2` or `libHash3` not defined by running the linked bytecode makes C9 or
+C8 vacuous and weakens C2 and C2c.
 
 Privacy and inclusion are outside this specification.
