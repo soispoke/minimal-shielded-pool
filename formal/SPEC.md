@@ -416,8 +416,7 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 **Model mutants.** Refinement certifies any code that matches `Step`, so the
 model claims must also reject a wrong `Step`. Each variant below makes the named
 claim force a bad event at every step of the stated shape, which ordinary
-hashes do not produce (argued during review; the first six rows were also
-checked in Lean against a copy of `Step`):
+hashes do not produce (argued during review):
 
 | `Step` variant | Claim that fails |
 |---|---|
@@ -473,7 +472,7 @@ the bytecode's `_zeros`, `EMPTY_ROOT`, `_insert` and `_computeRoot` equal
 `ZEROS`, `EMPTY_ROOT_CONST`, `LogicTree.insert` and `LogicTree.root`. `formal/Sanity/` holds
 proofs, written during review, that parts of the specification mean what they
 should. `formal/Proofs/` proves `ModelTheorem`, every model claim from C1, with the
-hashes kept opaque.
+hashes kept opaque, and `Composes`.
 
 ## 8. Limits
 
@@ -518,7 +517,8 @@ Step 5's definitions of `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
 A narrower `ChainStep`, `EnvValid` or `Honest`, or a wrong `chainInit`, leaves
 states uncovered by refinement, C2, C2c and C10. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
-weakens C2, a stronger `PreValid` weakens C2c, and a looser `callPool` or
+weakens C2 and a looser one weakens C2c and W2, a stronger `PreValid` weakens
+C2c, and a looser `callPool` or
 `firstPayout` weakens C10.
 
 Privacy and inclusion are outside this specification.

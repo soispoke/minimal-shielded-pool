@@ -16,8 +16,9 @@ on Lean's standard axioms, and `lake build` checks them.
 | `C5b.lean` | `C1 → C5b P` |
 | `Model.lean` | `C1 → C5g P`, `C1 → C5h P`, `C1 → Spendable P`, and `model_theorem_of` |
 | `Effects.lean` | `C5k P`, `C1 → C5j P`, `C1 → C5l P`, `C5m P`, `C5n P`, `StepFunctional P`, and `model_theorem : ModelTheorem` |
+| `Composes.lean` | `composes : Composes` |
 
 `ModelTheorem` is proven: every model claim holds for every pool from C1. What
 remains: C1 and C1c against the constraint system (step 3), the chain half
-(step 5), `Composes`, and the non-vacuity witnesses `W1` (needs concrete
+(step 5), and the non-vacuity witnesses `W1` (needs concrete
 hashes) and `W2` (needs the EVM semantics).
