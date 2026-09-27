@@ -1,0 +1,12 @@
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.120s
+
+OK
+sources: 1 Lean files admit nothing and add no axiom
+formal/tools/DifferentialModel.lean: `__brace_string__` near code line 2
+sources: 1 Lean files admit nothing and add no axiom
+formal/Artifacts/.lake is a nested .lake directory
+formal/Artifacts/Hidden is a symlink; the scan does not follow links
+malformed pin row: | `build/spend.r1cs` | `e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9b` |
+malformed pin row: | build/spend.r1cs | `e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf` |

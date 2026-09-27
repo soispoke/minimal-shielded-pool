@@ -1,0 +1,6 @@
+'MSP.Groth16.g1Point_card' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g1Point_natCard' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g1BasePoint_generates' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g1Point_exists_unique_scalar' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g1Point_scalar_prime_torsion' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.G1Coordinates.toPoint_order' depends on axioms: [propext, Classical.choice, Quot.sound]

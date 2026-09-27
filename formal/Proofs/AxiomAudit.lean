@@ -37,6 +37,7 @@ import Proofs.NonVacuityEncoding
 import Proofs.NonVacuityFixtureVerified
 import Groth16.Group
 import Groth16.SubgroupKey
+import Groth16.Cardinality
 import Chain.Dispatcher
 import Mutations.Check
 import Proofs.AuditCommand
@@ -147,6 +148,11 @@ assert_standard_axioms MSP.Groth16.TwistPoint.coordinates_toTwistPoint
 assert_standard_axioms MSP.Groth16.Subgroup.pinnedKey_subgroupChecks
 assert_standard_axioms MSP.Groth16.Subgroup.pinnedKey_pointOrders
 assert_standard_axioms MSP.Groth16.Subgroup.g1BasePoint_order
+assert_standard_axioms MSP.Groth16.g1Point_card
+assert_standard_axioms MSP.Groth16.g1BasePoint_generates
+assert_standard_axioms MSP.Groth16.g1Point_exists_unique_scalar
+assert_standard_axioms MSP.Groth16.g1Point_scalar_prime_torsion
+assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_order
 assert_standard_axioms MSP.Chain.Dispatcher.sender_mismatch_pinned
 assert_standard_axioms MSP.Mutations.satisfied_of_blocks
 

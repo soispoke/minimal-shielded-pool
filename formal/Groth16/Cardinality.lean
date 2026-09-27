@@ -1,6 +1,7 @@
 import Groth16.SubgroupKey
 import Mathlib.GroupTheory.Perm.Cycle.Type
-import Mathlib.GroupTheory.SpecificGroups.Cyclic.Basic
+import Mathlib.GroupTheory.SpecificGroups.Cyclic
+import Mathlib.SetTheory.Cardinal.NatCard
 
 /-! Exact G1 cardinality without a Hasse-bound assumption. An injective
 coordinate encoding bounds the size by `2*q+1`. A cubic nonresidue certificate
@@ -63,13 +64,15 @@ instance g1Point_finite : Finite G1Point :=
 noncomputable instance g1Point_fintype : Fintype G1Point := Fintype.ofFinite G1Point
 
 theorem g1Point_card_le : Fintype.card G1Point ≤ 2 * q + 1 := by
-  have h := Fintype.card_le_of_injective g1PointCode g1PointCode_injective
-  simpa only [Fintype.card_option, Fintype.card_prod, ZMod.card, Fintype.card_bool,
-    mul_comm q 2] using h
+  rw [← Nat.card_eq_fintype_card]
+  have h := Nat.card_le_card_of_injective g1PointCode g1PointCode_injective
+  have hc : Nat.card (Option (Fq × Bool)) = 2 * q + 1 := by
+    rw [Finite.card_option, Nat.card_prod, Nat.card_zmod]
+    simp only [Nat.card_eq_fintype_card, Fintype.card_bool, mul_comm q 2]
+  exact h.trans_eq hc
 
 /-- A checked finite-field obstruction to `x³=-3`. -/
 theorem minus_three_cubic_nonresidue : (-3 : Fq) ^ ((q - 1) / 3) ≠ 1 := by
-  reduce_mod_char
   decide
 
 theorem no_cube_minus_three (x : Fq) : x ^ 3 ≠ -3 := by
@@ -94,7 +97,7 @@ theorem g1Point_two_nsmul_eq_zero (P : G1Point) (h : (2 : ℕ) • P = 0) : P = 
         | .zero => (0 : Fq)
         | .some _ yy _ => yy) hn
       change y = g1Curve.negY x y at hy'
-      simpa [g1Curve] using hy' 
+      simpa [g1Curve] using hy'
     have hz : y = 0 := by
       have hm : (2 : Fq) * y = 0 := by linear_combination hy
       exact (mul_eq_zero.mp hm).resolve_left (by decide)
@@ -154,5 +157,31 @@ theorem g1Point_exists_scalar (P : G1Point) :
 theorem g1Point_scalar_prime_torsion (P : G1Point) : p • P = 0 := by
   rw [← g1Point_card]
   exact card_nsmul_eq_zero
+
+
+/-- The scalar field is additively isomorphic to the full G1 group, sending
+one to the conventional base point. This is mathematical, not a discrete-log
+algorithm or an extra cryptographic premise. -/
+noncomputable def g1ScalarEquiv : F ≃+ G1Point :=
+  zmodAddEquivOfGenerator (fun P => by rw [g1BasePoint_generates]; trivial)
+    g1Point_natCard
+
+theorem g1ScalarEquiv_one : g1ScalarEquiv 1 = g1BasePoint :=
+  zmodAddEquivOfGenerator_apply_one _ _
+
+theorem g1ScalarEquiv_natCast (n : ℕ) : g1ScalarEquiv (n : F) = n • g1BasePoint := by
+  simpa [g1ScalarEquiv] using zmodAddEquivOfGenerator_apply_intCast
+    (fun P => by rw [g1BasePoint_generates]; trivial) g1Point_natCard (n : ℤ)
+
+/-- Each point has a unique scalar-field representative. -/
+theorem g1Point_exists_unique_scalar (P : G1Point) :
+    ∃! s : F, g1ScalarEquiv s = P :=
+  g1ScalarEquiv.toEquiv.bijective.existsUnique P
+
+/-- A finite on-curve G1 input has exact prime order, without an additional
+subgroup-membership assumption. Coordinate canonicity is checked separately. -/
+theorem G1Coordinates.toPoint_order (a : G1Coordinates) (h : a.OnCurve) :
+    addOrderOf (a.toPoint h) = p :=
+  addOrderOf_eq_prime (g1Point_scalar_prime_torsion _) (a.toPoint_ne_zero h)
 
 end MSP.Groth16

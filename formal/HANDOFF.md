@@ -19,6 +19,28 @@ Claude session `7847c0ed-ff3d-4c1a-b5a2-4cc806ef6bc6` now owns that worktree
 and is rerunning round 35. Ownership remains with Claude; Codex should not edit
 the specification or proofs.
 
+## Resumed proof progress
+
+The reconciled baseline is `640c260`, merging Claude through `b1a15ef` with
+all checked Codex increments. It passes 3,662 build jobs; all 30 statement
+locks, 12 artifact pins and 515 Lean source checks pass, as do the ten harness
+tests. Canonical `Spec/` and `SPEC.md` match Claude's checkpoint exactly.
+
+`Groth16/Cardinality.lean` now proves the full G1 group cardinality `p`, that
+`(1,2)` generates it, a scalar-field additive isomorphism, and exact order `p`
+for every finite on-curve point. Its standalone and integrated standard-axiom
+audits pass. The former pending file is replaced by this checked module.
+A cardinality argument over `Nat.card` avoids the previous kernel reduction
+of an enormous concrete finite enumeration; no mathematical premise changed.
+See `evidence/2026-09-27-resumed/` for the checked outputs.
+
+Full kernel certificates for the four circuit mutants are the current work.
+The generic checker now accepts a binary witness table, and its exporter
+independently decodes the archived exact R1CS/WTNS and compares every constraint
+with the previous JS decoder. It checks every reused signal projection against
+the original symbol map. Completion is recorded only after every constraint,
+relation failure and whole-mutant C1 refutation checks.
+
 ## Ownership transfer, 2026-09-27 05:52 UTC
 
 Thomas asked the Claude session `e9529fa7-10f6-4fd3-a0b1-195641fd261d` to

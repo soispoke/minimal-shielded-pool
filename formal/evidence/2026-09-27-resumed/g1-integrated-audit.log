@@ -1,0 +1,407 @@
+ℹ [3128/3248] Replayed Proofs.CircuitGadgets
+info: Proofs/CircuitGadgets.lean:83:0: 'MSP.scalar_prime' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:84:0: 'MSP.boolean_constraint' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:85:0: 'MSP.isZero_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:86:0: 'MSP.isZero_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:87:0: 'MSP.bitsValue_cast' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:88:0: 'MSP.bitsValue_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:89:0: 'MSP.num2Bits_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3129/3248] Replayed Artifacts.RangeLemmas
+info: Artifacts/RangeLemmas.lean:66:0: 'MSP.Artifacts.RangeLemmas.bitsField_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:67:0: 'MSP.Artifacts.RangeLemmas.bitsField_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:68:0: 'MSP.Artifacts.RangeLemmas.weightedWires_eval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:69:0: 'MSP.Artifacts.RangeLemmas.bitsField_wires_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:70:0: 'MSP.Artifacts.RangeLemmas.num2Bits_wires_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3144/3248] Replayed Proofs.C5d
+warning: Proofs/C5d.lean:30:35: This simp argument is unused:
+  Finsupp.single_apply
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [Finsupp.erase_ne hr, Ne.symm hr]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [3145/3248] Replayed Sanity.Mono
+warning: Sanity/Mono.lean:97:30: This simp argument is unused:
+  List.mem_append
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_flatMap, List.mem_range] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Sanity/Mono.lean:97:47: This simp argument is unused:
+  List.mem_flatMap
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_append, List.mem_range] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Sanity/Mono.lean:97:65: This simp argument is unused:
+  List.mem_range
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_append, List.mem_flatMap] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Sanity/Mono.lean:126:0: 'MSP.grows_step' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/Mono.lean:127:0: 'MSP.bad_mono' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3146/3248] Replayed Proofs.C3
+warning: Proofs/C3.lean:53:19: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/C3.lean:54:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C3.lean:57:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C3.lean:58:19: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/C3.lean:59:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [3148/3248] Replayed Sanity.Capacity
+warning: Sanity/Capacity.lean:26:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Sanity/Capacity.lean:33:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Sanity/Capacity.lean:64:0: 'MSP.capInv_run' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3149/3248] Replayed Sanity.C4Sinks
+info: Sanity/C4Sinks.lean:65:0: 'MSP.o2_ne_sink0' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/C4Sinks.lean:66:0: 'MSP.o1_ne_sink1' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/C4Sinks.lean:67:0: 'MSP.out_queries_in_trace' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3151/3248] Replayed Proofs.C5cC4
+warning: Proofs/C5cC4.lean:62:51: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C5cC4.lean:63:51: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C5cC4.lean:93:57: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/C5cC4.lean:104:45: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/C5cC4.lean:260:25: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+warning: Proofs/C5cC4.lean:348:21: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+ℹ [3152/3248] Replayed Sanity.TreeLemma
+info: Sanity/TreeLemma.lean:107:0: 'MSP.MR_siblingsOf' depends on axioms: [propext, choice, Quot.sound]
+info: Sanity/TreeLemma.lean:121:0: 'MSP.spendable_R3' depends on axioms: [propext, choice, Quot.sound]
+⚠ [3156/3248] Replayed Sanity.SpendableR
+warning: Sanity/SpendableR.lean:25:44: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+info: Sanity/SpendableR.lean:43:0: 'MSP.mkSpend_R' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3158/3248] Replayed Proofs.Effects
+warning: Proofs/Effects.lean:51:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:61:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:66:48: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:79:58: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:81:77: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:81:87: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:84:77: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:84:87: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:87:58: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:79:85: This simp argument is unused:
+  hz 0 h0
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [h0, h1, ne_eq, not_true_eq_false, if_false, List.append_nil, hz 1 h1]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Proofs/Effects.lean:79:94: This simp argument is unused:
+  hz 1 h1
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [h0, h1, ne_eq, not_true_eq_false, if_false, List.append_nil, hz 0 h0]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Proofs/Effects.lean:106:57: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:114:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:117:45: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:279:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:281:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:285:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:370:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:440:17: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:444:17: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:444:79: Unused tactic linter: `simp` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: Proofs/Effects.lean:444:79: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+ℹ [3159/3248] Replayed Proofs.Composes
+info: Proofs/Composes.lean:74:0: 'MSP.run_nodup' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/Composes.lean:75:0: 'MSP.composes' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3160/3248] Replayed Proofs.Composition
+info: Proofs/Composition.lean:14:0: 'MSP.spent_nodup_of_c5b' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3161/3248] Replayed Proofs.CircuitArithmetic
+info: Proofs/CircuitArithmetic.lean:47:0: 'MSP.nat_eq_of_field_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:48:0: 'MSP.value_conservation_iff' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:49:0: 'MSP.input_sum_pos' depends on axioms: [propext, Quot.sound]
+ℹ [3162/3248] Replayed Proofs.PoseidonConstants
+info: Proofs/PoseidonConstants.lean:273:0: 'MSP.poseidon_zero_constants' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/PoseidonConstants.lean:274:0: 'MSP.poseidon_zero_constants_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/PoseidonConstants.lean:275:0: 'MSP.poseidon_empty_root' depends on axioms: [propext, Quot.sound]
+ℹ [3163/3248] Replayed Sanity.C6Proof
+info: Sanity/C6Proof.lean:186:0: 'MSP.C6_third' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3164/3248] Replayed Proofs.C6
+info: Proofs/C6.lean:31:0: 'MSP.c6' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3172/3248] Replayed Artifacts.InputNonzero
+info: Artifacts/InputNonzero.lean:35:0: 'MSP.Artifacts.InputNonzero.sum_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/InputNonzero.lean:36:0: 'MSP.Artifacts.InputNonzero.positive_input_value' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3173/3248] Replayed Artifacts.BasicGates
+info: Artifacts/BasicGates.lean:123:0: 'MSP.Artifacts.BasicGates.statement_checks' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3175/3248] Replayed Artifacts.SinkGates
+info: Artifacts/SinkGates.lean:137:0: 'MSP.Artifacts.SinkGates.sink_rules' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3179/3248] Replayed Artifacts.RelationFragments
+info: Artifacts/RelationFragments.lean:81:0: 'MSP.Artifacts.RelationFragments.non_hash_checks' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RelationFragments.lean:82:0: 'MSP.Artifacts.RelationFragments.relation_of_hash_bindings' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RelationFragments.lean:83:0: 'MSP.Artifacts.RelationFragments.relation_of_gadget_hashes' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3185/3248] Replayed Artifacts.BetaGatesSigma
+info: Artifacts/BetaGatesSigma.lean:50:0: 'MSP.Artifacts.BetaGates.sigma_triple' depends on axioms: [propext, Quot.sound]
+ℹ [3186/3248] Replayed Artifacts.BetaGatesPartialCertificates
+info: Artifacts/BetaGatesPartialCertificates.lean:343:0: 'MSP.Artifacts.BetaGatesCertificates.partial_steps' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3187/3248] Replayed Artifacts.BetaGates
+info: Artifacts/BetaGates.lean:148:0: 'MSP.Artifacts.BetaGates.beta_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3190/3248] Replayed Poseidon.OptimizedEquivalence
+warning: Poseidon/OptimizedEquivalence.lean:93:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+ℹ [3191/3248] Replayed Artifacts.PublicSignals
+info: Artifacts/PublicSignals.lean:25:0: 'MSP.Artifacts.PublicSignals.beta_of_pinned_r1cs' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PublicSignals.lean:26:0: 'MSP.Artifacts.PublicSignals.compression_of_pinned_r1cs' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3196/3248] Replayed Poseidon.Optimized3Equivalence
+warning: Poseidon/Optimized3Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [3201/3248] Replayed Poseidon.Optimized4Equivalence
+warning: Poseidon/Optimized4Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+ℹ [3203/3248] Replayed Artifacts.RangeCompleteness
+info: Artifacts/RangeCompleteness.lean:66:0: 'MSP.Artifacts.RangeCompleteness.gate_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3204/3248] Replayed Artifacts.PinnedRangeCompleteness
+info: Artifacts/PinnedRangeCompleteness.lean:129:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:130:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:131:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_output_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:132:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_output_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:133:0: 'MSP.Artifacts.PinnedRangeCompleteness.public_amount_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:134:0: 'MSP.Artifacts.PinnedRangeCompleteness.fee_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:135:0: 'MSP.Artifacts.PinnedRangeCompleteness.recipient_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:136:0: 'MSP.Artifacts.PinnedRangeCompleteness.authorizer_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3205/3248] Replayed Artifacts.InputCompleteness
+info: Artifacts/InputCompleteness.lean:28:0: 'MSP.Artifacts.InputCompleteness.input_gate_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3210/3248] Replayed Artifacts.SmallHashGatesCertificates
+info: Artifacts/SmallHashGatesCertificates.lean:285:0: 'MSP.Artifacts.SmallHashGatesCertificates.signs' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3211/3248] Replayed Artifacts.SmallHashGates
+info: Artifacts/SmallHashGates.lean:58:0: 'MSP.Artifacts.SmallHashGates.sigma_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:59:0: 'MSP.Artifacts.SmallHashGates.full_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:60:0: 'MSP.Artifacts.SmallHashGates.partial_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3213/3248] Replayed Artifacts.SmallHashGatesBinding
+info: Artifacts/SmallHashGatesBinding.lean:137:0: 'MSP.Artifacts.SmallHashGates.hash_of_affine' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3324/3647] Replayed Artifacts.SmallHashGatesComplete
+info: Artifacts/SmallHashGatesComplete.lean:300:0: 'MSP.Artifacts.SmallHashGates.hash_bindings_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3325/3647] Replayed Artifacts.CircuitSoundness
+info: Artifacts/CircuitSoundness.lean:31:0: 'MSP.c1' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3326/3647] Replayed Artifacts.ControlCompleteness
+info: Artifacts/ControlCompleteness.lean:219:0: 'MSP.Artifacts.ControlCompleteness.complete_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:220:0: 'MSP.Artifacts.ControlCompleteness.constraints_mem' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:221:0: 'MSP.Artifacts.ControlCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:222:0: 'MSP.Artifacts.ControlCompleteness.complete_holds_of_relation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+ℹ [3351/3647] Replayed Artifacts.PathCompleteness
+info: Artifacts/PathCompleteness.lean:96:0: 'MSP.Artifacts.PathCompleteness.complete_index' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3352/3647] Replayed Artifacts.PathCompletenessGates
+info: Artifacts/PathCompletenessGates.lean:210:0: 'MSP.Artifacts.PathCompleteness.complete_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:211:0: 'MSP.Artifacts.PathCompleteness.constraints_mem' depends on axioms: [propext, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:212:0: 'MSP.Artifacts.PathCompleteness.complete_holds_of_MR' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:213:0: 'MSP.Artifacts.PathCompleteness.complete_path' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3353/3647] Replayed Artifacts.BaseAssignment
+info: Artifacts/BaseAssignment.lean:174:0: 'MSP.Artifacts.BaseAssignment.statementOf' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/BaseAssignment.lean:175:0: 'MSP.Artifacts.BaseAssignment.ofAssignment' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/BaseAssignment.lean:176:0: 'MSP.Artifacts.BaseAssignment.projections_of_agreement' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3354/3647] Replayed Artifacts.GammaCompleteness
+info: Artifacts/GammaCompleteness.lean:86:0: 'MSP.Artifacts.GammaCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/GammaCompleteness.lean:87:0: 'MSP.Artifacts.GammaCompleteness.base_complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/GammaCompleteness.lean:88:0: 'MSP.Artifacts.GammaCompleteness.preserves_projections' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3355/3647] Replayed Artifacts.RangeAssignmentCompleteness
+info: Artifacts/RangeAssignmentCompleteness.lean:134:0: 'MSP.Artifacts.RangeAssignmentCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3419/3647] Replayed Artifacts.HashAssignmentCompletenessAffine
+warning: Artifacts/HashAssignmentCompletenessAffine.lean:91:28: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Artifacts/HashAssignmentCompletenessAffine.lean:170:0: 'MSP.Artifacts.HashAssignmentCompleteness.input_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/HashAssignmentCompletenessAffine.lean:171:0: 'MSP.Artifacts.HashAssignmentCompleteness.output_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3479/3647] Replayed Artifacts.ConstraintCoverage
+info: Artifacts/ConstraintCoverage.lean:60:0: 'MSP.Artifacts.ConstraintCoverage.ordered_eq' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:61:0: 'MSP.Artifacts.ConstraintCoverage.covers' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:62:0: 'MSP.Artifacts.ConstraintCoverage.satisfied_of_fragments' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:63:0: 'MSP.Artifacts.ConstraintCoverage.small_count' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:64:0: 'MSP.Artifacts.ConstraintCoverage.family_counts' depends on axioms: [propext]
+ℹ [3480/3647] Replayed Artifacts.AssignmentAssembly
+info: Artifacts/AssignmentAssembly.lean:95:0: 'MSP.Artifacts.AssignmentAssembly.satisfied' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3484/3647] Replayed Artifacts.CircuitAssemblyLayoutExclusive
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:63:0: 'MSP.Artifacts.CircuitAssemblyLayout.exclusive' depends on axioms: [propext, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:64:0: 'MSP.Artifacts.CircuitAssemblyLayout.hash_boundary_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:65:0: 'MSP.Artifacts.CircuitAssemblyLayout.nonhash_boundary' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3486/3647] Replayed Artifacts.CircuitAssemblyLayoutBindings
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:589:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_writes' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:590:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:591:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_output_form' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:592:0: 'MSP.Artifacts.CircuitAssemblyLayout.beta_writes' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:593:0: 'MSP.Artifacts.CircuitAssemblyLayout.coverage' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3547/3647] Replayed Artifacts.CircuitAssemblyLayoutSupport
+info: Artifacts/CircuitAssemblyLayoutSupport.lean:125:0: 'MSP.Artifacts.CircuitAssemblyLayout.supported' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3551/3647] Replayed Artifacts.RangeAssignmentCompletenessRelation
+info: Artifacts/RangeAssignmentCompletenessRelation.lean:23:0: 'MSP.Artifacts.RangeAssignmentCompleteness.complete_holds_of_relation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+ℹ [3552/3647] Replayed Artifacts.CircuitCompleteness
+info: Artifacts/CircuitCompleteness.lean:186:0: 'MSP.c1c' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3553/3647] Replayed Proofs.CircuitModel
+info: Proofs/CircuitModel.lean:21:0: 'MSP.circuit_model' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitModel.lean:22:0: 'MSP.chain_corollary_of_chain' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3560/3647] Replayed Keccak.Labels
+info: Keccak/Labels.lean:51:0: 'MSP.Keccak.byteArray_toList' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:52:0: 'MSP.Keccak.utf8_ofList' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:53:0: 'MSP.Keccak.domain_tag_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:54:0: 'MSP.Keccak.rr_entry_tag_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:55:0: 'MSP.Keccak.rr_storage_tag_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:56:0: 'MSP.Keccak.domain_one_one_zero_eq' depends on axioms: [propext, Quot.sound]
+ℹ [3566/3647] Replayed Keccak.Vectors
+info: Keccak/Vectors.lean:21:0: 'MSP.Keccak.hash_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Keccak/Vectors.lean:22:0: 'MSP.Keccak.word_toNat' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Keccak/Vectors.lean:23:0: 'MSP.Keccak.pad_length' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:24:0: 'MSP.Keccak.Vectors.empty.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:25:0: 'MSP.Keccak.Vectors.abc.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:26:0: 'MSP.Keccak.source_one_zero_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:27:0: 'MSP.Keccak.source_one_zero_nondegenerate' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:28:0: 'MSP.Keccak.Vectors.rate_minus_one.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:29:0: 'MSP.Keccak.Vectors.rate_exact.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:30:0: 'MSP.Keccak.Vectors.rate_plus_one.hash_eq' depends on axioms: [propext, Quot.sound]
+ℹ [3590/3647] Replayed Proofs.NonVacuityKeccak
+info: Proofs/NonVacuityKeccak.lean:48:0: 'MSP.NonVacuity.sourceId_one_zero_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccak.lean:49:0: 'MSP.NonVacuity.sourceId_one_zero_nondegenerate' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccak.lean:50:0: 'MSP.NonVacuity.domain_one_one_zero_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccak.lean:51:0: 'MSP.NonVacuity.domain_one_one_zero_val' depends on axioms: [propext, Quot.sound]
+ℹ [3595/3647] Replayed Proofs.NonVacuityKeccakTable
+info: Proofs/NonVacuityKeccakTable.lean:60:0: 'MSP.NonVacuity.fixtureKeccakTable_values' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccakTable.lean:61:0: 'MSP.NonVacuity.fixtureKeccakTable_unique' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccakTable.lean:62:0: 'MSP.NonVacuity.fixtureKeccakTable_large' depends on axioms: [propext]
+ℹ [3596/3647] Replayed Proofs.NonVacuityFixtureTableCombined
+info: Proofs/NonVacuityFixtureTableCombined.lean:29:0: 'MSP.NonVacuity.fixtureTable_values' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixtureTableCombined.lean:30:0: 'MSP.NonVacuity.fixtureTable_large' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixtureTableCombined.lean:31:0: 'MSP.NonVacuity.fixtureTable_unique' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3603/3647] Replayed Proofs.NonVacuityFixturePathSupport
+info: Proofs/NonVacuityFixturePathSupport.lean:89:0: 'MSP.NonVacuity.pathQueries_zero_trace' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityFixturePathSupport.lean:90:0: 'MSP.NonVacuity.fixture_real_path_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixturePathSupport.lean:91:0: 'MSP.NonVacuity.fixture_dummy_path_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixturePathSupport.lean:92:0: 'MSP.NonVacuity.fixture_path_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3604/3647] Replayed Proofs.NonVacuityKeccakBindings
+info: Proofs/NonVacuityKeccakBindings.lean:68:0: 'MSP.NonVacuity.fixtureNonceMsg_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityKeccakBindings.lean:69:0: 'MSP.NonVacuity.fixtureEntryMsg_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityKeccakBindings.lean:70:0: 'MSP.NonVacuity.fixtureKeccakTable_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3605/3647] Replayed Proofs.NonVacuityFixtureVerified
+info: Proofs/NonVacuityFixtureVerified.lean:82:0: 'MSP.w1' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3647/3647] Built Proofs.AxiomAudit (2.2s)
+Build completed successfully (3647 jobs).

@@ -1,0 +1,860 @@
+✔ [3148/3662] Built Proofs.AuditCommand (295ms)
+✔ [3149/3662] Built Spec.Basic (1.1s)
+✔ [3150/3662] Built Poseidon.Permutation (1.5s)
+✔ [3151/3662] Built Artifacts.R1CS (1.5s)
+✔ [3152/3662] Built Keccak.Hash (1.6s)
+ℹ [3153/3662] Built Proofs.CircuitGadgets (2.6s)
+info: Proofs/CircuitGadgets.lean:83:0: 'MSP.scalar_prime' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:84:0: 'MSP.boolean_constraint' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:85:0: 'MSP.isZero_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:86:0: 'MSP.isZero_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:87:0: 'MSP.bitsValue_cast' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:88:0: 'MSP.bitsValue_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:89:0: 'MSP.num2Bits_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3154/3662] Built Proofs.CircuitArithmetic (2.6s)
+info: Proofs/CircuitArithmetic.lean:47:0: 'MSP.nat_eq_of_field_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:48:0: 'MSP.value_conservation_iff' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:49:0: 'MSP.input_sum_pos' depends on axioms: [propext, Quot.sound]
+✔ [3155/3662] Built Groth16.Curve (2.7s)
+✔ [3156/3662] Built Artifacts.CompressionData (2.6s)
+ℹ [3157/3662] Built Artifacts.AssignmentAssembly (2.6s)
+info: Artifacts/AssignmentAssembly.lean:95:0: 'MSP.Artifacts.AssignmentAssembly.satisfied' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3158/3662] Built Mutations.Check (2.6s)
+✔ [3160/3662] Built Artifacts.SinkGatesData (2.8s)
+✔ [3161/3662] Built Artifacts.RangeData (2.0s)
+✔ [3162/3662] Built Keccak.Encoding (3.6s)
+✔ [3163/3662] Built Artifacts.RangeAddressData (6.1s)
+✔ [3164/3662] Built Poseidon.Constants (8.7s)
+✔ [3165/3662] Built Artifacts.RangeAmountsData (9.5s)
+ℹ [3166/3662] Built Artifacts.RangeLemmas (4.0s)
+info: Artifacts/RangeLemmas.lean:66:0: 'MSP.Artifacts.RangeLemmas.bitsField_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:67:0: 'MSP.Artifacts.RangeLemmas.bitsField_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:68:0: 'MSP.Artifacts.RangeLemmas.weightedWires_eval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:69:0: 'MSP.Artifacts.RangeLemmas.bitsField_wires_append' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RangeLemmas.lean:70:0: 'MSP.Artifacts.RangeLemmas.num2Bits_wires_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3167/3662] Built Proofs.NonVacuityKeccakCreditData (11s)
+✔ [3168/3662] Built Keccak.Vector_rr_storage_tag (12s)
+✔ [3169/3662] Built Keccak.Vector_domain_tag (12s)
+✔ [3170/3662] Built Keccak.Vector_rr_entry_tag (12s)
+✔ [3171/3662] Built Proofs.NonVacuityKeccakNonceData (12s)
+✔ [3172/3662] Built Proofs.NonVacuityKeccakEntryData (12s)
+✔ [3173/3662] Built Proofs.CircuitCompleteness (3.8s)
+✔ [3174/3662] Built Groth16.Group (3.4s)
+✔ [3175/3662] Built Keccak.Vector_source_one_zero (10s)
+✔ [3176/3662] Built Keccak.Vector_abc (11s)
+✔ [3177/3662] Built Proofs.NonVacuityKeccakKeyData (10s)
+✔ [3178/3662] Built Keccak.Vector_rate_minus_one (11s)
+✔ [3179/3662] Built Groth16.Encoding (2.8s)
+✔ [3180/3662] Built Keccak.Vector_empty (11s)
+✔ [3181/3662] Built Poseidon.Hash (1.9s)
+✔ [3182/3662] Built Keccak.Vector_domain_one_one_zero (9.7s)
+✔ [3183/3662] Built Groth16.KeyData (3.0s)
+✔ [3184/3662] Built Artifacts.RangeAddressGate (3.1s)
+✔ [3185/3662] Built Artifacts.RangeGate (2.0s)
+✔ [3186/3662] Built Groth16.Quadratic (2.8s)
+✔ [3187/3662] Built Poseidon.Optimized3Data (3.4s)
+✔ [3188/3662] Built Poseidon.Evaluate (1.6s)
+ℹ [3189/3662] Built Poseidon.Audit (1.6s)
+info: Poseidon/Audit.lean:5:0: 'MSP.Poseidon.hash2' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:6:0: 'MSP.Poseidon.hash3' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:7:0: 'MSP.Poseidon.hash10' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:8:0: 'MSP.Poseidon.zeroHash' depends on axioms: [propext, Quot.sound]
+✔ [3190/3662] Built Spec.Hash (1.7s)
+ℹ [3191/3662] Built Keccak.Labels (1.6s)
+info: Keccak/Labels.lean:51:0: 'MSP.Keccak.byteArray_toList' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:52:0: 'MSP.Keccak.utf8_ofList' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:53:0: 'MSP.Keccak.domain_tag_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:54:0: 'MSP.Keccak.rr_entry_tag_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:55:0: 'MSP.Keccak.rr_storage_tag_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Labels.lean:56:0: 'MSP.Keccak.domain_one_one_zero_eq' depends on axioms: [propext, Quot.sound]
+✔ [3192/3662] Built Poseidon.Optimized4Data (4.1s)
+✔ [3193/3662] Built Keccak.Vector_rate_exact (16s)
+✔ [3194/3662] Built Keccak.Vector_rate_plus_one (16s)
+✔ [3195/3662] Built Spec.Relation (2.3s)
+✔ [3196/3662] Built Spec.Tree (2.3s)
+✔ [3197/3662] Built Artifacts.PathBitsData (2.3s)
+✔ [3198/3662] Built Spec.FrameTx (2.4s)
+✔ [3199/3662] Built Proofs.NonVacuityPoseidonData (2.4s)
+✔ [3200/3662] Built Artifacts.PathGatesData (2.7s)
+✔ [3201/3662] Built Artifacts.Compression (2.8s)
+ℹ [3202/3662] Built Artifacts.RangeCompleteness (3.4s)
+info: Artifacts/RangeCompleteness.lean:66:0: 'MSP.Artifacts.RangeCompleteness.gate_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3203/3662] Built Poseidon.Optimized3 (3.3s)
+✔ [3204/3662] Built Groth16.Twist (3.4s)
+ℹ [3205/3662] Built Keccak.Vectors (1.4s)
+info: Keccak/Vectors.lean:21:0: 'MSP.Keccak.hash_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Keccak/Vectors.lean:22:0: 'MSP.Keccak.word_toNat' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Keccak/Vectors.lean:23:0: 'MSP.Keccak.pad_length' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:24:0: 'MSP.Keccak.Vectors.empty.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:25:0: 'MSP.Keccak.Vectors.abc.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:26:0: 'MSP.Keccak.source_one_zero_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:27:0: 'MSP.Keccak.source_one_zero_nondegenerate' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:28:0: 'MSP.Keccak.Vectors.rate_minus_one.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:29:0: 'MSP.Keccak.Vectors.rate_exact.hash_eq' depends on axioms: [propext, Quot.sound]
+info: Keccak/Vectors.lean:30:0: 'MSP.Keccak.Vectors.rate_plus_one.hash_eq' depends on axioms: [propext, Quot.sound]
+✔ [3207/3662] Built Poseidon.Optimized4 (2.9s)
+ℹ [3208/3662] Built Proofs.NonVacuityKeccak (2.8s)
+info: Proofs/NonVacuityKeccak.lean:48:0: 'MSP.NonVacuity.sourceId_one_zero_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccak.lean:49:0: 'MSP.NonVacuity.sourceId_one_zero_nondegenerate' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccak.lean:50:0: 'MSP.NonVacuity.domain_one_one_zero_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccak.lean:51:0: 'MSP.NonVacuity.domain_one_one_zero_val' depends on axioms: [propext, Quot.sound]
+✔ [3209/3662] Built Groth16.Subgroup (3.7s)
+✔ [3210/3662] Built Proofs.NonVacuityPoseidonNodes1 (6.6s)
+✔ [3211/3662] Built Proofs.NonVacuityPoseidonNodes0 (6.7s)
+✔ [3212/3662] Built Proofs.NonVacuityPoseidonNodes3 (6.8s)
+✔ [3213/3662] Built Proofs.NonVacuityPoseidonNodes2 (6.9s)
+✔ [3214/3662] Built Poseidon.Optimized3Certificates (6.7s)
+✔ [3215/3662] Built Proofs.NonVacuityPoseidonBase (12s)
+✔ [3216/3662] Built Poseidon.Optimized4Certificates (11s)
+✔ [3217/3662] Built Poseidon.Optimized3Reference (5.2s)
+ℹ [3218/3662] Built Proofs.PoseidonConstants (12s)
+info: Proofs/PoseidonConstants.lean:273:0: 'MSP.poseidon_zero_constants' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/PoseidonConstants.lean:274:0: 'MSP.poseidon_zero_constants_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/PoseidonConstants.lean:275:0: 'MSP.poseidon_empty_root' depends on axioms: [propext, Quot.sound]
+✔ [3219/3662] Built Groth16.SubgroupAlpha (9.3s)
+✔ [3220/3662] Built Groth16.SubgroupIc3 (9.3s)
+✔ [3221/3662] Built Groth16.SubgroupIc2 (9.4s)
+✔ [3222/3662] Built Groth16.SubgroupBase (9.5s)
+✔ [3223/3662] Built Groth16.SubgroupIc0 (9.5s)
+✔ [3224/3662] Built Groth16.SubgroupIc1 (9.6s)
+✔ [3225/3662] Built Groth16.SubgroupGamma (10s)
+✔ [3226/3662] Built Groth16.SubgroupDelta (10s)
+⚠ [3227/3662] Built Poseidon.Optimized3Equivalence (2.6s)
+warning: Poseidon/Optimized3Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+✔ [3228/3662] Built Poseidon.Optimized4Reference (2.9s)
+✔ [3229/3662] Built Groth16.SubgroupBeta (8.8s)
+⚠ [3230/3662] Built Poseidon.Optimized4Equivalence (1.9s)
+warning: Poseidon/Optimized4Equivalence.lean:94:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+✔ [3231/3662] Built Poseidon.OptimizedData (23s)
+✔ [3232/3662] Built Groth16.SubgroupKey (1.8s)
+✔ [3234/3662] Built Poseidon.Optimized (1.5s)
+✔ [3235/3662] Built Artifacts.BetaGatesLemmas (2.0s)
+✔ [3236/3662] Built Artifacts.AssignmentRecovery (2.1s)
+✔ [3237/3662] Built Artifacts.BetaGatesData (30s)
+✔ [3238/3662] Built Artifacts.AssignmentRecoveryBetaData (5.8s)
+✔ [3239/3662] Built Artifacts.AssignmentRecoveryBetaCertificates7 (5.0s)
+✔ [3240/3662] Built Artifacts.AssignmentRecoveryBetaCertificates19 (4.0s)
+✔ [3241/3662] Built Artifacts.AssignmentRecoveryBetaCertificates6 (5.4s)
+✔ [3242/3662] Built Artifacts.AssignmentRecoveryBetaCertificates9 (5.6s)
+✔ [3243/3662] Built Artifacts.AssignmentRecoveryBetaCertificates10 (5.6s)
+✔ [3244/3662] Built Artifacts.AssignmentRecoveryBetaCertificates12 (5.6s)
+✔ [3245/3662] Built Artifacts.AssignmentRecoveryBetaCertificates11 (5.9s)
+✔ [3246/3662] Built Artifacts.AssignmentRecoveryBetaCertificates13 (6.1s)
+✔ [3247/3662] Built Artifacts.AssignmentRecoveryBetaCertificates14 (6.6s)
+✔ [3248/3662] Built Artifacts.AssignmentRecoveryBetaCertificates15 (6.7s)
+✔ [3249/3662] Built Artifacts.AssignmentRecoveryBetaCertificates16 (7.3s)
+✔ [3250/3662] Built Artifacts.AssignmentRecoveryBetaCertificates17 (7.7s)
+✔ [3251/3662] Built Artifacts.AssignmentRecoveryBetaCertificates18 (8.3s)
+✔ [3252/3662] Built Artifacts.AssignmentRecoveryBetaCertificates3 (3.7s)
+✔ [3253/3662] Built Artifacts.AssignmentRecoveryBetaCertificates8 (3.7s)
+✔ [3254/3662] Built Artifacts.AssignmentRecoveryBetaCertificates0 (3.3s)
+✔ [3255/3662] Built Artifacts.AssignmentRecoveryBetaCertificates1 (3.4s)
+✔ [3256/3662] Built Artifacts.AssignmentRecoveryBetaCertificates2 (3.5s)
+✔ [3257/3662] Built Poseidon.OptimizedCertificates (69s)
+✔ [3258/3662] Built Poseidon.OptimizedReference (1.7s)
+⚠ [3259/3662] Built Poseidon.OptimizedEquivalence (1.7s)
+warning: Poseidon/OptimizedEquivalence.lean:93:37: This simp argument is unused:
+  Fin.val_mk
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+✔ [3261/3662] Built Artifacts.AssignmentRecoveryBetaCertificates5 (35s)
+✔ [3262/3662] Built Artifacts.Spend (120s)
+✔ [3263/3662] Built Artifacts.BetaGatesCertificates (52s)
+✔ [3264/3662] Built Artifacts.FullCompression (1.8s)
+✔ [3265/3662] Built Artifacts.PathBits (3.1s)
+ℹ [3266/3662] Built Artifacts.InputNonzero (2.0s)
+info: Artifacts/InputNonzero.lean:35:0: 'MSP.Artifacts.InputNonzero.sum_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/InputNonzero.lean:36:0: 'MSP.Artifacts.InputNonzero.positive_input_value' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3267/3662] Built Artifacts.SmallHashGatesLemmas (3.1s)
+✔ [3268/3662] Built Artifacts.Range (3.1s)
+ℹ [3269/3662] Built Artifacts.SinkGates (3.2s)
+info: Artifacts/SinkGates.lean:137:0: 'MSP.Artifacts.SinkGates.sink_rules' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3270/3662] Built Artifacts.RangeAddress (3.2s)
+ℹ [3271/3662] Built Artifacts.BetaGatesSigma (2.8s)
+info: Artifacts/BetaGatesSigma.lean:50:0: 'MSP.Artifacts.BetaGates.sigma_triple' depends on axioms: [propext, Quot.sound]
+ℹ [3272/3662] Built Artifacts.InputCompleteness (3.2s)
+info: Artifacts/InputCompleteness.lean:28:0: 'MSP.Artifacts.InputCompleteness.input_gate_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3273/3662] Built Artifacts.Witness (3.3s)
+ℹ [3274/3662] Built Artifacts.BasicGates (3.3s)
+info: Artifacts/BasicGates.lean:123:0: 'MSP.Artifacts.BasicGates.statement_checks' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3275/3662] Built Artifacts.RangeAmounts (6.2s)
+✔ [3276/3662] Built Spec.Circuit (3.4s)
+✔ [3277/3662] Built Artifacts.PathIndex (3.5s)
+ℹ [3278/3662] Built Artifacts.ControlCompleteness (5.0s)
+info: Artifacts/ControlCompleteness.lean:219:0: 'MSP.Artifacts.ControlCompleteness.complete_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:220:0: 'MSP.Artifacts.ControlCompleteness.constraints_mem' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:221:0: 'MSP.Artifacts.ControlCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ControlCompleteness.lean:222:0: 'MSP.Artifacts.ControlCompleteness.complete_holds_of_relation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+✔ [3279/3662] Built Spec.System (4.3s)
+✔ [3280/3662] Built Artifacts.SmallHashGatesData (11s)
+ℹ [3281/3662] Built Artifacts.PinnedRangeCompleteness (5.8s)
+info: Artifacts/PinnedRangeCompleteness.lean:129:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:130:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_input_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:131:0: 'MSP.Artifacts.PinnedRangeCompleteness.first_output_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:132:0: 'MSP.Artifacts.PinnedRangeCompleteness.second_output_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:133:0: 'MSP.Artifacts.PinnedRangeCompleteness.public_amount_complete' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:134:0: 'MSP.Artifacts.PinnedRangeCompleteness.fee_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:135:0: 'MSP.Artifacts.PinnedRangeCompleteness.recipient_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PinnedRangeCompleteness.lean:136:0: 'MSP.Artifacts.PinnedRangeCompleteness.authorizer_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3282/3662] Built Proofs.NonVacuityPoseidonTableData (3.3s)
+✔ [3283/3662] Built Artifacts.SmallHashGatesInterface (3.2s)
+✔ [3284/3662] Built Artifacts.AssignmentRecoverySmallLemmas (3.2s)
+✔ [3285/3662] Built Spec.Evm (3.4s)
+ℹ [3286/3662] Built Artifacts.RangeAssignmentCompleteness (4.5s)
+info: Artifacts/RangeAssignmentCompleteness.lean:134:0: 'MSP.Artifacts.RangeAssignmentCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3287/3662] Built Spec.Main (3.5s)
+ℹ [3288/3662] Built Artifacts.RangeAssignmentCompletenessRelation (3.3s)
+info: Artifacts/RangeAssignmentCompletenessRelation.lean:23:0: 'MSP.Artifacts.RangeAssignmentCompleteness.complete_holds_of_relation' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+✔ [3289/3662] Built Spec (3.5s)
+✔ [3291/3662] Built Proofs.NonVacuityQueries (3.6s)
+✔ [3292/3662] Built Artifacts.PathGates (18s)
+ℹ [3293/3662] Built Sanity.TreeLemma (4.1s)
+info: Sanity/TreeLemma.lean:107:0: 'MSP.MR_siblingsOf' depends on axioms: [propext, choice, Quot.sound]
+info: Sanity/TreeLemma.lean:121:0: 'MSP.spendable_R3' depends on axioms: [propext, choice, Quot.sound]
+⚠ [3294/3662] Built Sanity.Mono (4.0s)
+warning: Sanity/Mono.lean:97:30: This simp argument is unused:
+  List.mem_append
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_flatMap, List.mem_range] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Sanity/Mono.lean:97:47: This simp argument is unused:
+  List.mem_flatMap
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_append, List.mem_range] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Sanity/Mono.lean:97:65: This simp argument is unused:
+  List.mem_range
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_append, List.mem_flatMap] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Sanity/Mono.lean:126:0: 'MSP.grows_step' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/Mono.lean:127:0: 'MSP.bad_mono' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3295/3662] Built Sanity.C4Sinks (4.1s)
+info: Sanity/C4Sinks.lean:65:0: 'MSP.o2_ne_sink0' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/C4Sinks.lean:66:0: 'MSP.o1_ne_sink1' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/C4Sinks.lean:67:0: 'MSP.out_queries_in_trace' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3296/3662] Built Sanity.C9Guard (4.1s)
+info: Sanity/C9Guard.lean:22:0: 'MSP.acc_groth16' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3297/3662] Built Sanity.History (4.1s)
+info: Sanity/History.lean:74:0: 'MSP.historyEvents_run' depends on axioms: [propext, choice, Quot.sound]
+⚠ [3298/3662] Built Sanity.Capacity (4.2s)
+warning: Sanity/Capacity.lean:26:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Sanity/Capacity.lean:33:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Sanity/Capacity.lean:64:0: 'MSP.capInv_run' depends on axioms: [propext, choice, Quot.sound]
+⚠ [3299/3662] Built Proofs.C5d (4.2s)
+warning: Proofs/C5d.lean:30:35: This simp argument is unused:
+  Finsupp.single_apply
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [Finsupp.erase_ne hr, Ne.symm hr]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [3300/3662] Built Sanity.SpendableR (4.2s)
+warning: Sanity/SpendableR.lean:25:44: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+info: Sanity/SpendableR.lean:43:0: 'MSP.mkSpend_R' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3301/3662] Built Artifacts.AssignmentRecoveryBetaCertificates4 (75s)
+ℹ [3302/3662] Built Artifacts.RelationFragments (3.0s)
+info: Artifacts/RelationFragments.lean:81:0: 'MSP.Artifacts.RelationFragments.non_hash_checks' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RelationFragments.lean:82:0: 'MSP.Artifacts.RelationFragments.relation_of_hash_bindings' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/RelationFragments.lean:83:0: 'MSP.Artifacts.RelationFragments.relation_of_gadget_hashes' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3303/3662] Built Proofs.C5a (3.1s)
+ℹ [3304/3662] Built Sanity.C6Proof (3.7s)
+info: Sanity/C6Proof.lean:186:0: 'MSP.C6_third' depends on axioms: [propext, choice, Quot.sound]
+✔ [3306/3662] Built Artifacts.AssignmentRecoveryBeta (2.6s)
+⚠ [3307/3662] Built Proofs.C3 (4.3s)
+warning: Proofs/C3.lean:53:19: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/C3.lean:54:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C3.lean:57:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C3.lean:58:19: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/C3.lean:59:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+ℹ [3308/3662] Built Artifacts.PathCompleteness (4.8s)
+info: Artifacts/PathCompleteness.lean:96:0: 'MSP.Artifacts.PathCompleteness.complete_index' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3309/3662] Built Artifacts.NoteBindings (2.7s)
+ℹ [3310/3662] Built Proofs.C6 (2.4s)
+info: Proofs/C6.lean:31:0: 'MSP.c6' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3311/3662] Built Proofs.NonVacuityTrace (10s)
+✔ [3312/3662] Built Proofs.NonVacuityBytes (2.9s)
+ℹ [3313/3662] Built Artifacts.BaseAssignment (3.4s)
+info: Artifacts/BaseAssignment.lean:174:0: 'MSP.Artifacts.BaseAssignment.statementOf' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/BaseAssignment.lean:175:0: 'MSP.Artifacts.BaseAssignment.ofAssignment' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/BaseAssignment.lean:176:0: 'MSP.Artifacts.BaseAssignment.projections_of_agreement' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3314/3662] Built Proofs.C5cC4 (4.2s)
+warning: Proofs/C5cC4.lean:62:51: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C5cC4.lean:63:51: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C5cC4.lean:93:57: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/C5cC4.lean:104:45: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/C5cC4.lean:260:25: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+warning: Proofs/C5cC4.lean:348:21: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+✔ [3315/3662] Built Proofs.NonVacuityPoseidonZeros (2.5s)
+ℹ [3316/3662] Built Artifacts.PathCompletenessGates (4.9s)
+info: Artifacts/PathCompletenessGates.lean:210:0: 'MSP.Artifacts.PathCompleteness.complete_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:211:0: 'MSP.Artifacts.PathCompleteness.constraints_mem' depends on axioms: [propext, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:212:0: 'MSP.Artifacts.PathCompleteness.complete_holds_of_MR' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PathCompletenessGates.lean:213:0: 'MSP.Artifacts.PathCompleteness.complete_path' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3317/3662] Built Artifacts.AssignmentRecoverySmallTemplateData (20s)
+✔ [3318/3662] Built Proofs.NonVacuityEncoding (2.9s)
+✔ [3319/3662] Built Proofs.Path (2.7s)
+✔ [3320/3662] Built Proofs.NonVacuityPoseidonSteps (2.7s)
+✔ [3321/3662] Built Artifacts.ConstraintCoverageLemmas (3.2s)
+✔ [3322/3662] Built Artifacts.SemanticAssignment (3.5s)
+ℹ [3323/3662] Built Artifacts.GammaCompleteness (5.7s)
+info: Artifacts/GammaCompleteness.lean:86:0: 'MSP.Artifacts.GammaCompleteness.complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/GammaCompleteness.lean:87:0: 'MSP.Artifacts.GammaCompleteness.base_complete_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/GammaCompleteness.lean:88:0: 'MSP.Artifacts.GammaCompleteness.preserves_projections' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3324/3662] Built Proofs.C5i (2.6s)
+✔ [3325/3662] Built Artifacts.SemanticAssignmentHashes (2.6s)
+✔ [3326/3662] Built Artifacts.AssignmentRecoverySmallData (8.2s)
+✔ [3327/3662] Built Proofs.C5b (4.8s)
+✔ [3328/3662] Built Proofs.Model (2.8s)
+✔ [3329/3662] Built Artifacts.ConstraintCoverageData (15s)
+ℹ [3330/3662] Built Artifacts.ConstraintCoverage (2.3s)
+info: Artifacts/ConstraintCoverage.lean:60:0: 'MSP.Artifacts.ConstraintCoverage.ordered_eq' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:61:0: 'MSP.Artifacts.ConstraintCoverage.covers' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:62:0: 'MSP.Artifacts.ConstraintCoverage.satisfied_of_fragments' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:63:0: 'MSP.Artifacts.ConstraintCoverage.small_count' depends on axioms: [propext, Quot.sound]
+info: Artifacts/ConstraintCoverage.lean:64:0: 'MSP.Artifacts.ConstraintCoverage.family_counts' depends on axioms: [propext]
+✔ [3331/3662] Built Artifacts.CircuitAssemblyLayout (2.4s)
+✔ [3332/3662] Built Artifacts.CircuitAssemblyLayoutSupport56 (4.4s)
+✔ [3333/3662] Built Artifacts.CircuitAssemblyLayoutSupport57 (4.4s)
+✔ [3334/3662] Built Artifacts.CircuitAssemblyLayoutSupport58 (4.5s)
+✔ [3335/3662] Built Artifacts.CircuitAssemblyLayoutSupport46 (6.0s)
+✔ [3336/3662] Built Artifacts.CircuitAssemblyLayoutSupport48 (6.0s)
+✔ [3337/3662] Built Artifacts.CircuitAssemblyLayoutSupport51 (5.0s)
+✔ [3338/3662] Built Artifacts.CircuitAssemblyLayoutSupport47 (6.1s)
+✔ [3339/3662] Built Artifacts.CircuitAssemblyLayoutSupport50 (6.2s)
+✔ [3340/3662] Built Artifacts.CircuitAssemblyLayoutSupport52 (6.2s)
+✔ [3341/3662] Built Artifacts.CircuitAssemblyLayoutSupport53 (6.2s)
+✔ [3342/3662] Built Artifacts.CircuitAssemblyLayoutSupport54 (6.2s)
+✔ [3343/3662] Built Artifacts.CircuitAssemblyLayoutSupport55 (7.1s)
+✔ [3344/3662] Built Artifacts.CircuitAssemblyLayoutSupport45 (4.7s)
+✔ [3345/3662] Built Artifacts.CircuitAssemblyLayoutSupport49 (4.7s)
+✔ [3346/3662] Built Artifacts.CircuitAssemblyLayoutSupport43 (4.7s)
+✔ [3347/3662] Built Artifacts.CircuitAssemblyLayoutSupport44 (6.2s)
+✔ [3348/3662] Built Artifacts.CircuitAssemblyLayoutSupport40 (6.2s)
+✔ [3349/3662] Built Artifacts.CircuitAssemblyLayoutSupport41 (6.3s)
+✔ [3350/3662] Built Artifacts.CircuitAssemblyLayoutSupport42 (6.3s)
+✔ [3351/3662] Built Artifacts.CircuitAssemblyLayoutSupport39 (6.2s)
+✔ [3352/3662] Built Artifacts.CircuitAssemblyLayoutSupport36 (6.2s)
+✔ [3353/3662] Built Artifacts.CircuitAssemblyLayoutSupport37 (6.3s)
+✔ [3354/3662] Built Artifacts.CircuitAssemblyLayoutSupport38 (6.3s)
+✔ [3355/3662] Built Artifacts.CircuitAssemblyLayoutSupport35 (5.7s)
+✔ [3356/3662] Built Artifacts.CircuitAssemblyLayoutSupport34 (5.4s)
+✔ [3357/3662] Built Artifacts.CircuitAssemblyLayoutSupport32 (5.3s)
+✔ [3358/3662] Built Artifacts.CircuitAssemblyLayoutSupport33 (5.5s)
+✔ [3359/3662] Built Artifacts.CircuitAssemblyLayoutSupport27 (5.7s)
+✔ [3360/3662] Built Artifacts.CircuitAssemblyLayoutSupport30 (6.2s)
+✔ [3361/3662] Built Artifacts.CircuitAssemblyLayoutSupport31 (6.2s)
+✔ [3362/3662] Built Artifacts.CircuitAssemblyLayoutSupport28 (6.3s)
+✔ [3363/3662] Built Artifacts.CircuitAssemblyLayoutSupport25 (6.2s)
+✔ [3364/3662] Built Artifacts.CircuitAssemblyLayoutSupport26 (6.3s)
+✔ [3365/3662] Built Artifacts.CircuitAssemblyLayoutSupport29 (6.4s)
+✔ [3366/3662] Built Artifacts.CircuitAssemblyLayoutSupport24 (6.4s)
+✔ [3367/3662] Built Artifacts.CircuitAssemblyLayoutSupport23 (6.2s)
+✔ [3368/3662] Built Artifacts.CircuitAssemblyLayoutSupport20 (5.1s)
+✔ [3369/3662] Built Artifacts.CircuitAssemblyLayoutSupport21 (5.1s)
+✔ [3370/3662] Built Artifacts.CircuitAssemblyLayoutSupport22 (5.2s)
+✔ [3371/3662] Built Artifacts.CircuitAssemblyLayoutSupport19 (5.4s)
+✔ [3372/3662] Built Artifacts.CircuitAssemblyLayoutSupport18 (6.2s)
+✔ [3373/3662] Built Artifacts.CircuitAssemblyLayoutSupport17 (6.3s)
+✔ [3374/3662] Built Artifacts.CircuitAssemblyLayoutSupport16 (6.3s)
+✔ [3375/3662] Built Artifacts.CircuitAssemblyLayoutSupport13 (6.3s)
+✔ [3376/3662] Built Artifacts.CircuitAssemblyLayoutSupport14 (6.3s)
+✔ [3377/3662] Built Artifacts.CircuitAssemblyLayoutSupport15 (6.3s)
+✔ [3378/3662] Built Artifacts.CircuitAssemblyLayoutSupport12 (6.2s)
+✔ [3379/3662] Built Artifacts.CircuitAssemblyLayoutSupport11 (6.2s)
+✔ [3380/3662] Built Artifacts.CircuitAssemblyLayoutSupport8 (5.8s)
+✔ [3381/3662] Built Artifacts.CircuitAssemblyLayoutSupport9 (5.8s)
+✔ [3382/3662] Built Artifacts.CircuitAssemblyLayoutSupport10 (5.8s)
+✔ [3383/3662] Built Artifacts.CircuitAssemblyLayoutSupport7 (4.2s)
+⚠ [3384/3662] Built Proofs.Effects (40s)
+warning: Proofs/Effects.lean:51:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:61:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:66:48: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:79:58: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:81:77: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:81:87: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:84:77: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:84:87: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:87:58: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:79:85: This simp argument is unused:
+  hz 0 h0
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [h0, h1, ne_eq, not_true_eq_false, if_false, List.append_nil, hz 1 h1]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Proofs/Effects.lean:79:94: This simp argument is unused:
+  hz 1 h1
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [h0, h1, ne_eq, not_true_eq_false, if_false, List.append_nil, hz 0 h0]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Proofs/Effects.lean:106:57: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/Effects.lean:114:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:117:45: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/Effects.lean:279:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:281:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:285:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:370:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:440:17: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Proofs/Effects.lean:444:17: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/Effects.lean:444:79: Unused tactic linter: `simp` does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: Proofs/Effects.lean:444:79: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+✔ [3385/3662] Built Artifacts.CircuitAssemblyLayoutSupport6 (5.1s)
+✔ [3386/3662] Built Artifacts.CircuitAssemblyLayoutSupport1 (4.8s)
+✔ [3387/3662] Built Artifacts.CircuitAssemblyLayoutSupport5 (5.2s)
+✔ [3388/3662] Built Artifacts.CircuitAssemblyLayoutSupport4 (5.3s)
+✔ [3389/3662] Built Artifacts.CircuitAssemblyLayoutSupport2 (5.2s)
+✔ [3390/3662] Built Artifacts.CircuitAssemblyLayoutSupport3 (5.4s)
+ℹ [3391/3662] Built Proofs.Composes (2.4s)
+info: Proofs/Composes.lean:74:0: 'MSP.run_nodup' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/Composes.lean:75:0: 'MSP.composes' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3392/3662] Built Artifacts.CircuitAssemblyLayoutExclusive (7.7s)
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:63:0: 'MSP.Artifacts.CircuitAssemblyLayout.exclusive' depends on axioms: [propext, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:64:0: 'MSP.Artifacts.CircuitAssemblyLayout.hash_boundary_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutExclusive.lean:65:0: 'MSP.Artifacts.CircuitAssemblyLayout.nonhash_boundary' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3393/3662] Built Proofs.Composition (2.1s)
+info: Proofs/Composition.lean:14:0: 'MSP.spent_nodup_of_c5b' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3394/3662] Built Artifacts.CircuitAssemblyLayoutSupport0 (8.0s)
+ℹ [3395/3662] Built Artifacts.CircuitAssemblyLayoutSupport (2.0s)
+info: Artifacts/CircuitAssemblyLayoutSupport.lean:125:0: 'MSP.Artifacts.CircuitAssemblyLayout.supported' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3396/3662] Built Artifacts.BetaGatesPartialCertificates (104s)
+info: Artifacts/BetaGatesPartialCertificates.lean:343:0: 'MSP.Artifacts.BetaGatesCertificates.partial_steps' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3397/3662] Built Artifacts.BetaGates (2.2s)
+info: Artifacts/BetaGates.lean:148:0: 'MSP.Artifacts.BetaGates.beta_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3398/3662] Built Artifacts.PublicSignals (2.2s)
+info: Artifacts/PublicSignals.lean:25:0: 'MSP.Artifacts.PublicSignals.beta_of_pinned_r1cs' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/PublicSignals.lean:26:0: 'MSP.Artifacts.PublicSignals.compression_of_pinned_r1cs' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3399/3662] Built Artifacts.SmallHashGatesCertificates (98s)
+info: Artifacts/SmallHashGatesCertificates.lean:285:0: 'MSP.Artifacts.SmallHashGatesCertificates.signs' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3400/3662] Built Artifacts.SmallHashGates (1.9s)
+info: Artifacts/SmallHashGates.lean:58:0: 'MSP.Artifacts.SmallHashGates.sigma_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:59:0: 'MSP.Artifacts.SmallHashGates.full_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/SmallHashGates.lean:60:0: 'MSP.Artifacts.SmallHashGates.partial_stage_sbox' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3401/3662] Built Artifacts.SmallHashGatesSchedule (1.8s)
+ℹ [3402/3662] Built Artifacts.SmallHashGatesBinding (5.1s)
+info: Artifacts/SmallHashGatesBinding.lean:137:0: 'MSP.Artifacts.SmallHashGates.hash_of_affine' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3403/3662] Built Artifacts.SmallHashGatesAffineData40 (13s)
+✔ [3404/3662] Built Artifacts.SmallHashGatesAffineData42 (13s)
+✔ [3405/3662] Built Artifacts.SmallHashGatesAffineData44 (13s)
+✔ [3406/3662] Built Artifacts.SmallHashGatesAffineData45 (13s)
+✔ [3407/3662] Built Artifacts.SmallHashGatesAffineData43 (13s)
+✔ [3408/3662] Built Artifacts.SmallHashGatesAffineData47 (13s)
+✔ [3409/3662] Built Artifacts.SmallHashGatesAffineData41 (13s)
+✔ [3410/3662] Built Artifacts.SmallHashGatesAffineData46 (13s)
+✔ [3411/3662] Built Artifacts.SmallHashGatesAffineData48 (13s)
+✔ [3412/3662] Built Artifacts.SmallHashGatesAffineData50 (13s)
+✔ [3413/3662] Built Artifacts.SmallHashGatesAffineData39 (11s)
+✔ [3414/3662] Built Artifacts.SmallHashGatesAffineData49 (16s)
+✔ [3415/3662] Built Artifacts.SmallHashGatesAffineData51 (16s)
+✔ [3416/3662] Built Artifacts.SmallHashGatesAffineData53 (16s)
+✔ [3417/3662] Built Artifacts.SmallHashGatesAffineData52 (16s)
+✔ [3418/3662] Built Artifacts.SmallHashGatesAffineData38 (13s)
+✔ [3419/3662] Built Artifacts.SmallHashGatesAffineData30 (13s)
+✔ [3420/3662] Built Artifacts.SmallHashGatesAffineData36 (14s)
+✔ [3421/3662] Built Artifacts.SmallHashGatesAffineData37 (14s)
+✔ [3422/3662] Built Artifacts.SmallHashGatesAffineData29 (14s)
+✔ [3423/3662] Built Artifacts.SmallHashGatesAffineData31 (14s)
+✔ [3424/3662] Built Artifacts.SmallHashGatesAffineData32 (14s)
+✔ [3425/3662] Built Artifacts.SmallHashGatesAffineData33 (14s)
+✔ [3426/3662] Built Artifacts.SmallHashGatesAffineData34 (14s)
+✔ [3427/3662] Built Artifacts.SmallHashGatesAffineData35 (14s)
+✔ [3428/3662] Built Artifacts.SmallHashGatesAffineData27 (13s)
+✔ [3429/3662] Built Artifacts.SmallHashGatesAffineData26 (13s)
+✔ [3430/3662] Built Artifacts.SmallHashGatesAffineData24 (13s)
+✔ [3431/3662] Built Artifacts.SmallHashGatesAffineData28 (17s)
+✔ [3432/3662] Built Artifacts.SmallHashGatesAffineData25 (18s)
+✔ [3433/3662] Built Artifacts.SmallHashGatesAffineData22 (14s)
+✔ [3434/3662] Built Artifacts.SmallHashGatesAffineData14 (14s)
+✔ [3435/3662] Built Artifacts.SmallHashGatesAffineData15 (14s)
+✔ [3436/3662] Built Artifacts.SmallHashGatesAffineData20 (14s)
+✔ [3437/3662] Built Artifacts.SmallHashGatesAffineData21 (14s)
+✔ [3438/3662] Built Artifacts.SmallHashGatesAffineData16 (14s)
+✔ [3439/3662] Built Artifacts.SmallHashGatesAffineData17 (14s)
+✔ [3440/3662] Built Artifacts.SmallHashGatesAffineData18 (14s)
+✔ [3441/3662] Built Artifacts.SmallHashGatesAffineData19 (14s)
+✔ [3442/3662] Built Artifacts.SmallHashGatesAffineData12 (13s)
+✔ [3443/3662] Built Artifacts.SmallHashGatesAffineData13 (13s)
+✔ [3444/3662] Built Artifacts.SmallHashGatesAffineData11 (12s)
+✔ [3445/3662] Built Artifacts.SmallHashGatesAffineData23 (17s)
+✔ [3446/3662] Built Artifacts.SmallHashGatesAffineData9 (11s)
+✔ [3447/3662] Built Artifacts.SmallHashGatesAffineData10 (11s)
+✔ [3448/3662] Built Artifacts.HashTraceCompleteness (4.4s)
+✔ [3449/3662] Built Artifacts.SmallHashGatesAffineData8 (12s)
+✔ [3450/3662] Built Artifacts.SmallHashGatesAffineData7 (12s)
+✔ [3451/3662] Built Artifacts.SmallHashGatesAffineData4 (12s)
+✔ [3452/3662] Built Artifacts.SmallHashGatesAffineData0 (12s)
+✔ [3453/3662] Built Artifacts.SmallHashGatesAffineData1 (12s)
+✔ [3454/3662] Built Artifacts.SmallHashGatesAffineData3 (12s)
+✔ [3455/3662] Built Artifacts.SmallHashGatesAffineData5 (12s)
+✔ [3456/3662] Built Artifacts.SmallHashGatesAffineData6 (12s)
+✔ [3457/3662] Built Artifacts.SmallHashGatesAffineData2 (15s)
+✔ [3458/3662] Built Artifacts.AssignmentRecoverySmallTemplateCertificates0 (160s)
+✔ [3459/3662] Built Artifacts.AssignmentRecoverySmallTemplateCertificates2 (161s)
+✔ [3460/3662] Built Artifacts.AssignmentRecoverySmallTemplateCertificates1 (162s)
+✔ [3461/3662] Built Artifacts.SmallHashGatesAffineCertificates42 (53s)
+✔ [3462/3662] Built Artifacts.SmallHashGatesAffineCertificates45 (56s)
+✔ [3463/3662] Built Artifacts.SmallHashGatesAffineCertificates44 (55s)
+✔ [3464/3662] Built Artifacts.SmallHashGatesAffineCertificates47 (55s)
+✔ [3465/3662] Built Artifacts.SmallHashGatesAffineCertificates40 (55s)
+✔ [3466/3662] Built Artifacts.SmallHashGatesAffineCertificates43 (53s)
+✔ [3467/3662] Built Artifacts.SmallHashGatesAffineCertificates41 (54s)
+✔ [3468/3662] Built Artifacts.SmallHashGatesAffineCertificates50 (56s)
+✔ [3469/3662] Built Artifacts.SmallHashGatesAffineCertificates46 (56s)
+✔ [3470/3662] Built Artifacts.SmallHashGatesAffineCertificates48 (56s)
+✔ [3471/3662] Built Artifacts.SmallHashGatesAffineCertificates39 (56s)
+✔ [3472/3662] Built Artifacts.SmallHashGatesAffineCertificates49 (85s)
+✔ [3473/3662] Built Artifacts.SmallHashGatesAffineCertificates51 (85s)
+✔ [3474/3662] Built Artifacts.SmallHashGatesAffineCertificates53 (85s)
+✔ [3475/3662] Built Artifacts.SmallHashGatesAffineCertificates38 (57s)
+✔ [3476/3662] Built Artifacts.SmallHashGatesAffineCertificates37 (57s)
+✔ [3477/3662] Built Artifacts.SmallHashGatesAffineCertificates36 (57s)
+✔ [3478/3662] Built Artifacts.SmallHashGatesAffineCertificates52 (83s)
+✔ [3479/3662] Built Artifacts.SmallHashGatesAffineCertificates30 (56s)
+✔ [3480/3662] Built Artifacts.SmallHashGatesAffineCertificates31 (56s)
+✔ [3481/3662] Built Artifacts.SmallHashGatesAffineCertificates35 (57s)
+✔ [3482/3662] Built Artifacts.SmallHashGatesAffineCertificates34 (57s)
+✔ [3483/3662] Built Artifacts.SmallHashGatesAffineCertificates29 (57s)
+✔ [3484/3662] Built Artifacts.SmallHashGatesAffineCertificates32 (57s)
+✔ [3485/3662] Built Artifacts.SmallHashGatesAffineCertificates26 (55s)
+✔ [3486/3662] Built Artifacts.SmallHashGatesAffineCertificates33 (57s)
+✔ [3487/3662] Built Artifacts.SmallHashGatesAffineCertificates27 (56s)
+✔ [3488/3662] Built Artifacts.SmallHashGatesAffineCertificates24 (57s)
+✔ [3489/3662] Built Artifacts.HashAssignmentCompletenessStage (3.0s)
+✔ [3490/3662] Built Artifacts.SmallHashGatesAffineCertificates20 (54s)
+✔ [3491/3662] Built Artifacts.SmallHashGatesAffineCertificates21 (55s)
+✔ [3492/3662] Built Artifacts.SmallHashGatesAffineCertificates22 (57s)
+✔ [3493/3662] Built Artifacts.SmallHashGatesAffineCertificates28 (86s)
+✔ [3494/3662] Built Artifacts.SmallHashGatesAffineCertificates14 (57s)
+✔ [3495/3662] Built Artifacts.SmallHashGatesAffineCertificates19 (55s)
+✔ [3496/3662] Built Artifacts.SmallHashGatesAffineCertificates15 (56s)
+✔ [3497/3662] Built Artifacts.SmallHashGatesAffineCertificates18 (57s)
+✔ [3498/3662] Built Artifacts.SmallHashGatesAffineCertificates17 (57s)
+✔ [3499/3662] Built Artifacts.SmallHashGatesAffineData (3.2s)
+✔ [3500/3662] Built Artifacts.SmallHashGatesAffineCertificates16 (57s)
+✔ [3501/3662] Built Artifacts.SmallHashGatesAffineCertificates12 (57s)
+✔ [3502/3662] Built Artifacts.SmallHashGatesAffineCertificates11 (56s)
+✔ [3503/3662] Built Artifacts.SmallHashGatesAffineCertificates13 (57s)
+✔ [3504/3662] Built Artifacts.AssignmentRecoverySmallCertificates0 (8.7s)
+✔ [3505/3662] Built Artifacts.SmallHashGatesAffineCertificates10 (56s)
+✔ [3506/3662] Built Artifacts.SmallHashGatesAffineCertificates9 (56s)
+✔ [3507/3662] Built Artifacts.AssignmentRecoverySmallCertificates1 (8.6s)
+✔ [3508/3662] Built Artifacts.AssignmentRecoverySmallCertificates3 (8.9s)
+✔ [3509/3662] Built Artifacts.SmallHashGatesAffineCertificates25 (86s)
+✔ [3510/3662] Built Artifacts.AssignmentRecoverySmallCertificates4 (10s)
+✔ [3511/3662] Built Artifacts.SmallHashGatesAffineCertificates8 (56s)
+✔ [3512/3662] Built Artifacts.AssignmentRecoverySmallCertificates5 (11s)
+✔ [3513/3662] Built Artifacts.AssignmentRecoverySmallCertificates7 (9.6s)
+✔ [3514/3662] Built Artifacts.AssignmentRecoverySmallCertificates8 (9.4s)
+✔ [3515/3662] Built Artifacts.AssignmentRecoverySmallCertificates9 (9.3s)
+✔ [3516/3662] Built Artifacts.AssignmentRecoverySmallCertificates10 (9.0s)
+✔ [3517/3662] Built Artifacts.AssignmentRecoverySmallCertificates11 (8.7s)
+✔ [3518/3662] Built Artifacts.AssignmentRecoverySmallCertificates6 (11s)
+✔ [3519/3662] Built Artifacts.AssignmentRecoverySmallCertificates12 (8.5s)
+✔ [3520/3662] Built Artifacts.AssignmentRecoverySmallCertificates13 (8.3s)
+✔ [3521/3662] Built Artifacts.AssignmentRecoverySmallCertificates14 (8.3s)
+✔ [3522/3662] Built Artifacts.AssignmentRecoverySmallCertificates15 (9.5s)
+✔ [3523/3662] Built Artifacts.AssignmentRecoverySmallCertificates16 (9.3s)
+✔ [3524/3662] Built Artifacts.AssignmentRecoverySmallCertificates17 (9.4s)
+✔ [3525/3662] Built Artifacts.AssignmentRecoverySmallCertificates18 (9.3s)
+✔ [3526/3662] Built Artifacts.AssignmentRecoverySmallCertificates19 (10s)
+✔ [3527/3662] Built Artifacts.AssignmentRecoverySmallCertificates24 (8.4s)
+✔ [3528/3662] Built Artifacts.AssignmentRecoverySmallCertificates22 (8.0s)
+✔ [3529/3662] Built Artifacts.AssignmentRecoverySmallCertificates21 (10s)
+✔ [3530/3662] Built Artifacts.AssignmentRecoverySmallCertificates20 (12s)
+✔ [3531/3662] Built Artifacts.AssignmentRecoverySmallCertificates29 (9.3s)
+✔ [3532/3662] Built Artifacts.AssignmentRecoverySmallCertificates30 (8.9s)
+✔ [3533/3662] Built Artifacts.SmallHashGatesAffineCertificates5 (55s)
+✔ [3534/3662] Built Artifacts.AssignmentRecoverySmallCertificates27 (10s)
+✔ [3535/3662] Built Artifacts.SmallHashGatesAffineCertificates23 (87s)
+✔ [3536/3662] Built Artifacts.SmallHashGatesAffineCertificates4 (57s)
+✔ [3537/3662] Built Artifacts.SmallHashGatesAffineCertificates7 (58s)
+✔ [3538/3662] Built Artifacts.AssignmentRecoverySmallCertificates31 (9.1s)
+✔ [3539/3662] Built Artifacts.AssignmentRecoverySmallCertificates32 (8.0s)
+✔ [3540/3662] Built Artifacts.AssignmentRecoverySmallCertificates33 (8.0s)
+✔ [3541/3662] Built Artifacts.AssignmentRecoverySmallCertificates34 (8.8s)
+✔ [3542/3662] Built Artifacts.AssignmentRecoverySmallCertificates26 (12s)
+✔ [3543/3662] Built Artifacts.SmallHashGatesAffineCertificates6 (56s)
+✔ [3544/3662] Built Artifacts.AssignmentRecoverySmallCertificates35 (8.4s)
+✔ [3545/3662] Built Artifacts.SmallHashGatesAffineCertificates0 (58s)
+✔ [3546/3662] Built Artifacts.SmallHashGatesAffineCertificates1 (58s)
+✔ [3547/3662] Built Artifacts.SmallHashGatesAffineCertificates3 (58s)
+✔ [3548/3662] Built Artifacts.AssignmentRecoverySmallCertificates36 (8.6s)
+✔ [3549/3662] Built Artifacts.AssignmentRecoverySmallCertificates37 (9.4s)
+✔ [3550/3662] Built Artifacts.AssignmentRecoverySmallCertificates38 (10s)
+✔ [3551/3662] Built Artifacts.AssignmentRecoverySmallCertificates39 (10s)
+✔ [3552/3662] Built Artifacts.AssignmentRecoverySmallCertificates40 (11s)
+✔ [3553/3662] Built Artifacts.AssignmentRecoverySmallCertificates45 (11s)
+✔ [3554/3662] Built Artifacts.AssignmentRecoverySmallCertificates44 (11s)
+✔ [3555/3662] Built Artifacts.AssignmentRecoverySmallCertificates46 (11s)
+✔ [3556/3662] Built Artifacts.AssignmentRecoverySmallCertificates47 (11s)
+✔ [3557/3662] Built Artifacts.AssignmentRecoverySmallCertificates48 (11s)
+✔ [3558/3662] Built Artifacts.AssignmentRecoverySmallCertificates50 (11s)
+✔ [3559/3662] Built Artifacts.AssignmentRecoverySmallCertificates25 (11s)
+✔ [3560/3662] Built Artifacts.AssignmentRecoverySmallCertificates51 (11s)
+✔ [3561/3662] Built Artifacts.AssignmentRecoverySmallCertificates2 (11s)
+✔ [3562/3662] Built Artifacts.AssignmentRecoverySmallCertificates43 (13s)
+✔ [3563/3662] Built Artifacts.AssignmentRecoverySmallCertificates41 (13s)
+✔ [3564/3662] Built Artifacts.AssignmentRecoverySmallCertificates42 (14s)
+✔ [3565/3662] Built Artifacts.HashAssignmentCompletenessPowers (3.1s)
+⚠ [3566/3662] Built Artifacts.HashAssignmentCompletenessAffine (3.1s)
+warning: Artifacts/HashAssignmentCompletenessAffine.lean:91:28: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Artifacts/HashAssignmentCompletenessAffine.lean:170:0: 'MSP.Artifacts.HashAssignmentCompleteness.input_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/HashAssignmentCompletenessAffine.lean:171:0: 'MSP.Artifacts.HashAssignmentCompleteness.output_agrees' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3567/3662] Built Artifacts.AssignmentRecoverySmallCertificates23 (8.6s)
+✔ [3568/3662] Built Artifacts.AssignmentRecoverySmallCertificates28 (8.7s)
+✔ [3569/3662] Built Artifacts.AssignmentRecoverySmallCertificates49 (8.3s)
+✔ [3570/3662] Built Artifacts.AssignmentRecoverySmallCertificates52 (8.0s)
+✔ [3571/3662] Built Artifacts.AssignmentRecoverySmallCertificates53 (8.4s)
+✔ [3572/3662] Built Artifacts.HashAssignmentCompletenessData42 (11s)
+✔ [3573/3662] Built Artifacts.HashAssignmentCompletenessData46 (11s)
+✔ [3574/3662] Built Artifacts.HashAssignmentCompletenessData47 (11s)
+✔ [3575/3662] Built Artifacts.HashAssignmentCompletenessData44 (12s)
+✔ [3576/3662] Built Artifacts.HashAssignmentCompletenessData45 (12s)
+✔ [3577/3662] Built Artifacts.HashAssignmentCompletenessData48 (12s)
+✔ [3578/3662] Built Artifacts.HashAssignmentCompletenessData41 (11s)
+✔ [3579/3662] Built Artifacts.HashAssignmentCompletenessData43 (12s)
+✔ [3580/3662] Built Artifacts.HashAssignmentCompletenessData50 (12s)
+✔ [3581/3662] Built Artifacts.HashAssignmentCompletenessData51 (12s)
+✔ [3582/3662] Built Artifacts.HashAssignmentCompletenessData52 (12s)
+✔ [3583/3662] Built Artifacts.HashAssignmentCompletenessData49 (12s)
+✔ [3584/3662] Built Artifacts.HashAssignmentCompletenessData40 (11s)
+✔ [3585/3662] Built Artifacts.HashAssignmentCompletenessData53 (12s)
+✔ [3586/3662] Built Artifacts.HashAssignmentCompletenessData38 (10s)
+✔ [3587/3662] Built Artifacts.HashAssignmentCompletenessData39 (10s)
+✔ [3588/3662] Built Artifacts.HashAssignmentCompletenessData37 (9.6s)
+✔ [3589/3662] Built Artifacts.HashAssignmentCompletenessData35 (10s)
+✔ [3590/3662] Built Artifacts.HashAssignmentCompletenessData33 (11s)
+✔ [3591/3662] Built Artifacts.HashAssignmentCompletenessData32 (11s)
+✔ [3592/3662] Built Artifacts.HashAssignmentCompletenessData34 (11s)
+✔ [3593/3662] Built Artifacts.HashAssignmentCompletenessData36 (11s)
+✔ [3594/3662] Built Artifacts.HashAssignmentCompletenessData29 (11s)
+✔ [3595/3662] Built Artifacts.HashAssignmentCompletenessData31 (11s)
+✔ [3596/3662] Built Artifacts.HashAssignmentCompletenessData30 (11s)
+✔ [3597/3662] Built Artifacts.HashAssignmentCompletenessData27 (12s)
+✔ [3598/3662] Built Artifacts.HashAssignmentCompletenessData26 (12s)
+✔ [3599/3662] Built Artifacts.HashAssignmentCompletenessData28 (12s)
+✔ [3600/3662] Built Artifacts.HashAssignmentCompletenessData21 (11s)
+✔ [3601/3662] Built Artifacts.HashAssignmentCompletenessData22 (11s)
+✔ [3602/3662] Built Artifacts.HashAssignmentCompletenessData24 (12s)
+✔ [3603/3662] Built Artifacts.HashAssignmentCompletenessData20 (10s)
+✔ [3604/3662] Built Artifacts.HashAssignmentCompletenessData25 (12s)
+✔ [3605/3662] Built Artifacts.HashAssignmentCompletenessData23 (12s)
+✔ [3606/3662] Built Artifacts.HashAssignmentCompletenessData19 (9.4s)
+✔ [3607/3662] Built Artifacts.HashAssignmentCompletenessData18 (9.6s)
+✔ [3608/3662] Built Artifacts.HashAssignmentCompletenessData15 (9.8s)
+✔ [3609/3662] Built Artifacts.HashAssignmentCompletenessData17 (9.9s)
+✔ [3610/3662] Built Artifacts.HashAssignmentCompletenessData16 (9.9s)
+✔ [3611/3662] Built Artifacts.HashAssignmentCompletenessData13 (10s)
+✔ [3612/3662] Built Artifacts.HashAssignmentCompletenessData14 (10s)
+✔ [3613/3662] Built Artifacts.HashAssignmentCompletenessData12 (10s)
+✔ [3614/3662] Built Artifacts.HashAssignmentCompletenessData10 (10s)
+✔ [3615/3662] Built Artifacts.HashAssignmentCompletenessData11 (10s)
+✔ [3616/3662] Built Artifacts.HashAssignmentCompletenessData6 (10s)
+✔ [3617/3662] Built Artifacts.HashAssignmentCompletenessData7 (10s)
+✔ [3618/3662] Built Artifacts.HashAssignmentCompletenessData8 (10s)
+✔ [3619/3662] Built Artifacts.HashAssignmentCompletenessData3 (10s)
+✔ [3620/3662] Built Artifacts.HashAssignmentCompletenessData4 (10s)
+✔ [3621/3662] Built Artifacts.HashAssignmentCompletenessData5 (10s)
+✔ [3622/3662] Built Artifacts.HashAssignmentCompletenessData9 (10s)
+✔ [3623/3662] Built Artifacts.HashAssignmentCompleteness (3.6s)
+✔ [3624/3662] Built Artifacts.AssignmentRecoverySmall (3.9s)
+✔ [3625/3662] Built Artifacts.SmallHashGatesAffineCertificates2 (92s)
+✔ [3626/3662] Built Artifacts.HashAssignmentCompletenessData1 (6.8s)
+✔ [3627/3662] Built Artifacts.HashAssignmentCompletenessData0 (6.6s)
+✔ [3628/3662] Built Artifacts.HashAssignmentCompletenessData2 (7.3s)
+✔ [3629/3662] Built Artifacts.SmallHashGatesAffineCertificates (2.3s)
+✔ [3630/3662] Built Artifacts.HashAssignmentCompletenessData (1.7s)
+ℹ [3631/3662] Built Artifacts.SmallHashGatesComplete (2.7s)
+info: Artifacts/SmallHashGatesComplete.lean:300:0: 'MSP.Artifacts.SmallHashGates.hash_bindings_of_system' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3632/3662] Built Artifacts.CircuitSoundness (1.0s)
+info: Artifacts/CircuitSoundness.lean:31:0: 'MSP.c1' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3633/3662] Built Artifacts.HashAssignmentCompletenessSmall (3.0s)
+✔ [3634/3662] Built Artifacts.HashAssignmentCompletenessBetaData (10s)
+ℹ [3635/3662] Built Artifacts.CircuitAssemblyLayoutBindings (5.0s)
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:589:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_writes' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:590:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_preserves' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:591:0: 'MSP.Artifacts.CircuitAssemblyLayout.small_output_form' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:592:0: 'MSP.Artifacts.CircuitAssemblyLayout.beta_writes' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Artifacts/CircuitAssemblyLayoutBindings.lean:593:0: 'MSP.Artifacts.CircuitAssemblyLayout.coverage' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3636/3662] Built Artifacts.SemanticAssignmentBoundary (2.1s)
+✔ [3637/3662] Built Artifacts.HashAssignmentCompletenessBetaBridge (66s)
+✔ [3638/3662] Built Artifacts.HashAssignmentCompletenessBetaAffine (1.6s)
+✔ [3639/3662] Built Artifacts.HashAssignmentCompletenessBeta (1.8s)
+ℹ [3640/3662] Built Artifacts.CircuitCompleteness (1.8s)
+info: Artifacts/CircuitCompleteness.lean:186:0: 'MSP.c1c' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3642/3662] Built Proofs.NonVacuityFixtureIdeal (2.1s)
+ℹ [3643/3662] Built Proofs.CircuitModel (2.1s)
+info: Proofs/CircuitModel.lean:21:0: 'MSP.circuit_model' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitModel.lean:22:0: 'MSP.chain_corollary_of_chain' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3644/3662] Built Proofs.NonVacuityFixture (1.7s)
+✔ [3645/3662] Built Proofs.NonVacuityPoseidonBindings (2.2s)
+✔ [3646/3662] Built Proofs.NonVacuityFixtureRun (2.2s)
+✔ [3647/3662] Built Proofs.NonVacuityFixtureTable (2.3s)
+ℹ [3648/3662] Built Proofs.NonVacuityKeccakTable (2.4s)
+info: Proofs/NonVacuityKeccakTable.lean:60:0: 'MSP.NonVacuity.fixtureKeccakTable_values' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccakTable.lean:61:0: 'MSP.NonVacuity.fixtureKeccakTable_unique' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityKeccakTable.lean:62:0: 'MSP.NonVacuity.fixtureKeccakTable_large' depends on axioms: [propext]
+✔ [3649/3662] Built Proofs.NonVacuityPoseidonPaths (2.6s)
+✔ [3650/3662] Built Proofs.NonVacuityFixtureEncoding (2.6s)
+✔ [3651/3662] Built Proofs.NonVacuityPoseidonTable (3.7s)
+✔ [3652/3662] Built Proofs.NonVacuityPoseidon (2.3s)
+ℹ [3653/3662] Built Proofs.NonVacuityFixturePathSupport (2.5s)
+info: Proofs/NonVacuityFixturePathSupport.lean:89:0: 'MSP.NonVacuity.pathQueries_zero_trace' depends on axioms: [propext, Quot.sound]
+info: Proofs/NonVacuityFixturePathSupport.lean:90:0: 'MSP.NonVacuity.fixture_real_path_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixturePathSupport.lean:91:0: 'MSP.NonVacuity.fixture_dummy_path_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixturePathSupport.lean:92:0: 'MSP.NonVacuity.fixture_path_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3654/3662] Built Proofs.NonVacuityFixtureQueries (5.2s)
+ℹ [3655/3662] Built Proofs.NonVacuityFixtureTableCombined (2.2s)
+info: Proofs/NonVacuityFixtureTableCombined.lean:29:0: 'MSP.NonVacuity.fixtureTable_values' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixtureTableCombined.lean:30:0: 'MSP.NonVacuity.fixtureTable_large' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityFixtureTableCombined.lean:31:0: 'MSP.NonVacuity.fixtureTable_unique' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3656/3662] Built Proofs.NonVacuityFixtureNoteSupport (2.4s)
+✔ [3657/3662] Built Proofs.NonVacuityFixtureTreeSupport (2.8s)
+✔ [3658/3662] Built Proofs.NonVacuityFixtureComplete (2.5s)
+ℹ [3659/3662] Built Proofs.NonVacuityKeccakBindings (2.5s)
+info: Proofs/NonVacuityKeccakBindings.lean:68:0: 'MSP.NonVacuity.fixtureNonceMsg_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityKeccakBindings.lean:69:0: 'MSP.NonVacuity.fixtureEntryMsg_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/NonVacuityKeccakBindings.lean:70:0: 'MSP.NonVacuity.fixtureKeccakTable_support' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3660/3662] Built Proofs.NonVacuityFixtureVerified (2.6s)
+info: Proofs/NonVacuityFixtureVerified.lean:82:0: 'MSP.w1' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3661/3662] Built Proofs.AxiomAudit (2.3s)
+Build completed successfully (3662 jobs).
