@@ -125,9 +125,10 @@ def newLeaves (sd : SettleData) (w : Witness) : List (F × ℕ) :=
 def inputsOf (sd : SettleData) (w : Witness) : List Occ :=
   ((List.finRange 2).filter fun k => w.v k ≠ 0).map fun k => ⟨sd.epoch, w.idx k⟩
 
-/-- Calls into the pool that return successfully and whose effects persist,
-whether or not they change state, and the other chain actions the pool observes.
-A reverted call has no event. -/
+/-- Calls into the pool (as `eventsOf` defines them: decoded from the outer call,
+not the pool's `DELEGATECALL` into its logic) that return successfully and whose
+effects persist, whether or not they change state, and the other chain actions
+the pool observes. A reverted call has no event. -/
 inductive Event
   /-- `shield(inner)` with `msg.value = v` -/
   | shield (inner : F) (v : ℕ)

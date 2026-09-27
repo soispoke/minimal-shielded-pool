@@ -274,10 +274,14 @@ one. What the
 chain shows about hash-indexed storage names only keys the model holds, so a
 collision with a key nobody hashed cannot falsify it. The deployment's events
 are the chain's EIP-8272 writes and slots up to deployment, then the pool's
-balance. A step's events are the calls to `shield`, `publishEpochRoot` and
-`claimWithdrawal` that return successfully and whose effects persist, whether
-or not they change state, decoded from the call (a shield's `inner` is its calldata
-word and its value the `CALLVALUE`); each spend, meaning a transaction whose
+balance. A step's events are the calls into the pool (a `CALL` to `A` or a
+non-VERIFY frame targeting `A`, not the dispatcher's `DELEGATECALL` into `L`)
+whose calldata begins with the selector of `shield`, `publishEpochRoot` or
+`claimWithdrawal` and that return successfully and whose effects persist,
+whether or not they change state, decoded from that outer call's own calldata
+and `CALLVALUE` (a shield's `inner` is its calldata word and its value the
+`CALLVALUE`), so a dispatcher that rewrites calldata before delegating is
+caught; each spend, meaning a transaction whose
 frame 1 the pool approved, with the gas the pool paid, whether or not its
 settlement succeeds; each foreign EIP-8272 write; and the slots. A chain step is any valid transaction, the end of a block with its
 withdrawals, or the next slot, empty or opening a block with any header the
@@ -381,6 +385,7 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 | Logic: pay a claim to `msg.sender`, or less than the credit | refinement |
 | Logic: shield without inserting the leaf, or hashing a different `inner` | refinement |
 | Logic: `publishEpochRoot` returns without writing the root | refinement |
+| Dispatcher: rewrite `shield`'s `inner` or `publishEpochRoot`'s epoch before delegating | refinement |
 | Logic: make `claimWithdrawal` or `publishEpochRoot` always revert | C10 |
 | Verifier: generated from another zkey | C9 |
 | Verifier: skip the canonical-coordinate or infinity checks | C9 |
