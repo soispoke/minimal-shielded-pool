@@ -608,7 +608,10 @@ C2c, a looser `callPool` or `firstPayout` weakens C10, a `verifierOf` not define
 by running the linked verifier makes C9 vacuous and weakens C2, C2c and
 refinement, whose spend step checks `Acc` with it through `poolOf`, and a
 `libHash2` or `libHash3` not defined by running the linked libraries makes C8
-vacuous. A `Groth16Accepts` other than textbook
+vacuous. A wrong `addrOf` or `chainOf` makes C2, C2c, refinement and, for
+`addrOf`, C10 describe another pool; a wrong `NONCE_MANAGER` makes C10 and
+refinement read the wrong nonce storage; and a wrong `RawTx.view` makes C2 and
+C2c check other fields than the transaction carries. A `Groth16Accepts` other than textbook
 verification for the committed key makes C9 and P3 refer to the wrong
 predicate.
 
