@@ -1,0 +1,60 @@
+$ python3 formal/tools/differential_model.py --seed 20260927 -n 100 --direct-levels 8
+# date: 2026-09-27T06:23:03Z  head: 4956d3a (worktree has uncommitted changes)  toolchain: leanprover/lean4:v4.35.0-rc3
+# sha256 wallet/wallet.py: 75de981e8ed09536c5390a5e5b5f1f337f012c8af1a5d251884d68a4498831d0
+# sha256 reference/poseidon_bn254.py: 22e6d2d7fd6984f387ee78215415489b996b77564859bb84a2967a3873cebde7
+{
+  "result": "pass",
+  "seed": 20260927,
+  "cases_per_category": 100,
+  "direct_siblings_levels": 8,
+  "direct_mkSpend_cases": 0,
+  "cases_and_comparisons_by_kind": {
+    "const": {
+      "cases": 1,
+      "comparisons": 46
+    },
+    "note": {
+      "cases": 100,
+      "comparisons": 500
+    },
+    "cm": {
+      "cases": 100,
+      "comparisons": 100
+    },
+    "domain": {
+      "cases": 100,
+      "comparisons": 100
+    },
+    "smalltree": {
+      "cases": 100,
+      "comparisons": 100
+    },
+    "tree": {
+      "cases": 100,
+      "comparisons": 5200
+    },
+    "compression": {
+      "cases": 100,
+      "comparisons": 1300
+    },
+    "spend": {
+      "cases": 100,
+      "comparisons": 6700
+    }
+  },
+  "total_cases": 701,
+  "total_comparisons": 14046,
+  "unexpected_lean_values": 0,
+  "problems": [],
+  "problem_count": 0,
+  "lean_messages": [],
+  "generated_lean_sha256": "cd15c20d21a6f88eef0730b34e57106d8ca81be385db35ad3410b1d81294d6e2",
+  "driver_sha256": "348bd647311d071ac73c42b4552d6ede0a3bd2c26494af83fd47da3d6a015b9d",
+  "lean_seconds": 156.3,
+  "total_seconds": 165.6,
+  "scope": "Executable differential test of Spec definitions against wallet.py; not a proof"
+}
+real 165.65
+user 159.73
+sys 4.19
+exit status: 0

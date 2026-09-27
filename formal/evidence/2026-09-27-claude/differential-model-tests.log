@@ -1,0 +1,16 @@
+$ (cd formal/tools && python3 -m unittest test_differential_model -v)
+test_dummy_index_convention_is_caught (test_differential_model.EndToEndTests) ... ok
+test_reversed_fingerprint_is_caught (test_differential_model.EndToEndTests) ... ok
+test_swapped_nullifier_inputs_are_caught (test_differential_model.EndToEndTests) ... ok
+test_wallet_agrees (test_differential_model.EndToEndTests) ... ok
+test_wrong_auth_path_is_caught (test_differential_model.EndToEndTests) ... ok
+test_wrong_domain_tag_is_caught (test_differential_model.EndToEndTests) ... ok
+test_compare_reports_mismatch_and_missing_value (test_differential_model.HarnessTests) ... ok
+test_generation_is_seeded_and_in_range (test_differential_model.HarnessTests) ... ok
+test_parser_rejects_duplicates_and_malformed_lines (test_differential_model.HarnessTests) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 8.767s
+
+OK
+exit status: 0

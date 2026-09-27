@@ -209,3 +209,7 @@ jobs:
       - name: Build the proofs and audit their axioms
         working-directory: formal
         run: lake build
+      - name: Differential-test the executable model against the wallet
+        run: |
+          python formal/tools/differential_model.py --seed 20260927 -n 100
+          python -m unittest discover -s formal/tools -p 'test_differential_model.py'
