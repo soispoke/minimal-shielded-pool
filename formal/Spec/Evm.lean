@@ -96,6 +96,7 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
       K (rrEntryMsg (sourceId A e) sl r)) ∧
   (∀ r, st.sentTo A r = s.paid r) ∧
   (∀ c ∈ st.extCalls A, c.1 = RECENT_ROOT ∧ c.2.1 = 0 ∧ c.2.2.length = 64) ∧
+  (∀ w ∈ st.rootWrites, w.1 = A → w.2.1 < 2 ^ 64 ∧ (sourceId A w.2.1, w.2.2.1, w.2.2.2) ∈ s.roots) ∧
   st.slot = s.slot
 
 /-- The model events of a chain step, in execution order: each call into the

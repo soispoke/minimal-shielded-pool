@@ -317,9 +317,12 @@ recent-root entry of each of the pool's sources in the usable window, the ETH
 paid to each address by plain calls with empty calldata (so a payout that runs
 code of the pool's choosing at the recipient breaks refinement), that the pool
 made no call or creation other than those plain payouts and zero-value 64-byte
-root writes to `0x8272` (its static calls and its `DELEGATECALL` into `L`
-aside, so it sets no state elsewhere that could redirect a later payout), and
-the slot. Otherwise the run has a bad event, or, if
+root writes to `0x8272`, each of which the model's publication also makes (its
+static calls and its `DELEGATECALL` into `L` aside, so it sets no state
+elsewhere that could redirect a later payout), and the slot. Refinement does
+not constrain what the pool returns to calls that produce no event, or how it
+splits a payout into plain calls, so a recipient that decides where a payout
+goes by calling back into the pool is outside the guarantee. Otherwise the run has a bad event, or, if
 the model cannot follow some event, the run up to and including that event has
 one. What the
 chain shows about hash-indexed storage names only keys the model holds, so a
@@ -659,5 +662,10 @@ refinement read the wrong nonce storage; and a wrong `RawTx.view` makes C2 and
 C2c check other fields than the transaction carries. A `Groth16Accepts` other than textbook
 verification for the committed key makes C9 and P3 refer to the wrong
 predicate.
+
+Refinement pins the pool's state, value flows, calls and root writes, not
+what it returns to calls that produce no event or how it splits a payout into
+plain calls, so a recipient that decides where a payout goes by calling back
+into the pool is outside the guarantee.
 
 Privacy and inclusion are outside this specification.
