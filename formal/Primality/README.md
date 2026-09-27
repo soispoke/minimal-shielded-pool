@@ -11,3 +11,9 @@ tactic generates proof terms; its factoring or primality heuristics are not
 trusted oracles. The Lean kernel checks the resulting certificate. This
 provides the field property needed by circuit gadget proofs, independently of
 the still-open circuit and bytecode bindings.
+
+
+`BN254Base.lean` adds an explicit Pratt certificate for the distinct BN254
+base modulus `q`. It uses the same checked Lucas machinery, with the large
+factor chain written out to avoid repeated factoring. This supplies the Fq
+field for `Groth16/Group.lean`; it proves no curve cardinality or subgroup fact.

@@ -34,6 +34,8 @@ import Keccak.Vectors
 import Groth16.KeyData
 import Groth16.Encoding
 import Proofs.NonVacuityEncoding
+import Proofs.NonVacuityFixtureVerified
+import Groth16.Group
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 
@@ -132,3 +134,11 @@ assert_standard_axioms MSP.Groth16.decodeProof_eq_some_iff
 assert_standard_axioms MSP.Groth16.decoded_g2_order
 assert_standard_axioms MSP.NonVacuity.decode_encodeSettlement
 assert_standard_axioms MSP.NonVacuity.encodeTx_Acc
+
+assert_standard_axioms MSP.w1
+
+assert_standard_axioms BN254.BaseField_is_prime
+assert_standard_axioms MSP.Groth16.g1Curve_discriminant_ne_zero
+assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_coordinates
+assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_injective
+assert_standard_axioms MSP.Groth16.G1Point.coordinates_toPoint

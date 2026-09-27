@@ -465,8 +465,8 @@ storage layout: slot 21 is the leaf count, 22 the current root, 23 the credits,
 `treeQueries`, `eventQueries` and the Keccak inputs `rrEntryMsg`, `rrKeyMsg`,
 `creditMsg` and `finalRootMsg`. Bad events are `BadEventWith`, over `traceQueries`,
 with `Query.degenerate`, `ExtractionFailure` and `CompressionBreak`.
-Declarations marked `opaque` are bound to the artifacts in later steps:
-Keccak and `Groth16Accepts` (textbook Groth16
+Declarations still marked `opaque` are bound to the artifacts in later steps:
+`Groth16Accepts` (textbook Groth16
 verification with the key in `spend_vkey.json`, not the verifier's code) in
 step 3, and the EVM semantics in step 5, where
 `ChainStep`, `eventsOf`, `approvalsIn`, `firstPayout` and the
@@ -484,7 +484,11 @@ proves C1c by constructing and checking the complete assignment, including
 exact statement, private witness and public projections for every alpha.
 `formal/Proofs/` proves `ModelTheorem`, every model claim from C1, and `Composes`.
 It also proves C6 for the specified tree algorithm, including kernel-checked
-zero constants. The bytecode refinement remains open.
+zero constants. `K` is concrete Ethereum Keccak-256, with kernel-checked
+source/domain fixtures. `Proofs.NonVacuityFixtureVerified` proves W1 using
+an actual satisfying circuit assignment, the specified ideal verifier, an
+encoded accepted spend and the complete finite bad-event query support.
+W2 and the bytecode refinement remain open.
 
 ## 8. Limits
 

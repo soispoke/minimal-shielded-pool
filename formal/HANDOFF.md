@@ -31,8 +31,8 @@ coordinate checks and strict proof decoder pass six artifact tests.
 At 05:13 UTC Claude explicitly paused after reading this handoff, leaving the
 original checkout clean at `57ad96b`. Root owns integration and generic frame
 encoding. Bounded subagents own W1's actual run and query support, numeric
-Poseidon certificates, and numeric Keccak certificates respectively. W1's
-final assembly remains in progress. Before taking ownership, inspect fresh
+Poseidon certificates, and numeric Keccak certificates respectively. W1 is now proved as `MSP.w1`, with no hypotheses and only standard axioms.
+The full default build passes 3,639 jobs, including its automated axiom audit. Before taking ownership, inspect fresh
 task status, relevant Claude log timestamps and actual proof processes.
 A quota reset or resident parent process alone does not transfer ownership.
 Do not edit files while another worker is making progress.
@@ -47,7 +47,7 @@ The durable Git object store does not depend on that temporary checkout.
 `SPEC.md` is the canonical functional-verification scope. Read
 `Proofs/README.md` for proven claims; `Spec/Main.lean` states the completion
 theorems. Abstract model proofs do not discharge concrete circuit or chain
-semantics bindings. C1 and C1c are discharged; the chain half, W1/W2 and the
+semantics bindings. C1 and C1c are discharged; the chain half, W2 and the
 required semantic mutation gates remain open. C6 is now discharged for
 the specified algorithm, but not for the deployed bytecode.
 
@@ -199,20 +199,28 @@ semantic boundary and exact projections. `Proofs/CircuitModel.lean` connects
 the completed circuit/model proofs to `MainTheorem` and `ChainCorollary`,
 with only the still-open chain obligations as arguments.
 
-The current independent work is W1's actual run and complete finite collision
-table. Compact queries preserve the exact original bad-event predicate.
-`NonVacuityEncoding` proves that the constructed calldata round-trips and
-its transaction satisfies every A1–A7 check given explicit data, proof and
-verifier conditions. Its validation frame reserves both gas dimensions.
-Neither that generic encoding theorem nor compact support alone proves W1.
-The source/domain Keccak facts and the fixture's Poseidon inequalities are
-now computed kernel certificates. The full no-bad-event assembly is next.
+W1 is discharged in `Proofs/NonVacuityFixtureVerified.lean`. Its actual
+shield/publish/tick/spend run pays one unit in gas and credits one unit for
+withdrawal. C1c supplies the real assignment; exact public triples define
+W1's ideal verifier/extractor. Membership-equivalent compact queries cover
+the whole original trace, and all 80 table entries have kernel-checked values,
+uniqueness and nondegeneracy. No global hash assumption is used for this run.
+The full default build passes 3,639 jobs. W2 remains open.
 
-`Keccak/` defines the concrete reference bound by `Spec.Hash.K`, with legacy
-Keccak padding, 24 rounds and big-endian digest output. It is not yet a proof
-of the EVM/client hash implementation. `Groth16/` binds exact pinned key
-coordinates and strict 256-byte decoding, including EIP-197's G2 ordering.
-Base-field/group/subgroup/pairing and deployed-verifier bindings remain open.
+`Keccak/` defines the concrete reference bound by `Spec.Hash.K`, checkpoint
+`d43388d`, with legacy padding, 24 rounds and big-endian digest output.
+It is not yet a proof of the EVM/client hash implementation. `Groth16/`
+binds exact pinned key coordinates and strict 256-byte decoding, including
+EIP-197's G2 ordering. `Primality/BN254Base.lean` proves q prime; `Group.lean`
+connects actual G1 coordinates to Mathlib's proved elliptic-curve group.
+Quadratic-field/twist/subgroup/pairing and deployed-verifier bindings remain open.
+
+Current subagents own a reproducible four-case circuit semantic mutation check,
+quadratic-field/twist foundations, and a read-only faithful EVMYulLean port
+review. Root owns integration. Mutation evaluations must be distinguished
+from completed Lean counterexample certificates. Upstream EVMYulLean lacks
+MSP custom instructions and currently defaults an undecoded opcode to STOP;
+that must be fixed before claiming any dispatcher execution binding.
 
 P3 setup honesty and P9 key/R1CS consistency are explicit canonical premises.
 The activation gate's partial setup result and missing original powers-of-tau
@@ -221,7 +229,7 @@ verification goal. Keep the gate's precise report, while continuing the actual
 key/pairing/verifier semantics binding.
 
 C2/C2c/C8/C9/C10 and refinement still need one faithful chain semantics, real
-bytecode, custom instructions and both gas dimensions. W1/W2 and required
+bytecode, custom instructions and both gas dimensions. W2 and required
 semantic mutation failures remain open. Keep the spec's cryptographic,
 deployment, fork and lifetime premises; do not add the excluded privacy,
 wallet, inclusion or fee-economics requirements.

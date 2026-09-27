@@ -62,3 +62,20 @@ The specification's `K` is now the concrete Ethereum Keccak definition in
 `Keccak/`. Its fixed source/domain digests have kernel certificates.
 The key and strict proof-decoding layer in `Groth16/` is also checked; pairing,
 subgroup and deployed-bytecode binding remain separate obligations.
+
+
+`NonVacuityFixtureVerified.lean` proves `MSP.w1 : W1` with no hypotheses.
+The witness shields two units, publishes epoch zero's root, advances one slot,
+and spends: one unit pays gas and one becomes withdrawal credit, with both
+outputs equal to their designated sinks. C1c supplies the actual pinned-R1CS
+assignment. The ideal verifier accepts exactly satisfying public triples and
+its extractor is correct for all accepted proofs, as W1 requires.
+
+The complete bad-event predicate is checked. Symbolic membership equivalence
+compresses empty subtrees without discarding any distinct query. The table
+contains 74 Poseidon entries and six Keccak/domain entries, including repeated
+queries, with kernel-checked values, all cross-table collisions and all
+nondegeneracy checks. It covers both input paths, including the dummy path,
+all historical tree prefixes and every storage/nonce/source query in the run.
+Exact assignment projections discharge compression and extraction failures.
+This is model non-vacuity; no claim/payout or chain-level W2 is inferred.

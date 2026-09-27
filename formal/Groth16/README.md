@@ -26,9 +26,14 @@ python3 -m unittest discover -s tools -p test_groth16_key.py
 To regenerate the exact key file, add `--write` to the generator command.
 No ceremony is rerun and no proving artifact is changed.
 
-Remaining mathematical bindings are base-field primality, the quadratic field
-and nonsingular curve groups, prime-order subgroup membership, and the pairing
-relation. `Spec.Circuit.Groth16Accepts` remains opaque. Its faithful definition
+`Primality/BN254Base.lean` proves the exact base modulus prime using an explicit
+Pratt certificate. `Group.lean` supplies the actual Fq field and Mathlib's
+proved nonsingular Weierstrass group for `y²=x³+3`, with canonical coordinate
+round trips and the conventional base point `(1,2)`. It checks the discriminant
+is nonzero; it does not assert the group's order.
+
+Remaining mathematical bindings are the quadratic field and twist group,
+prime-order subgroup membership and group order, and the pairing relation. `Spec.Circuit.Groth16Accepts` remains opaque. Its faithful definition
 must combine these obligations with the strict encoding and the equation
 `e(-A,B)·e(alpha,beta)·e(IC0+β·IC1+γ·IC2+α·IC3,gamma)·e(C,delta)=1`.
 The three public scalars are ordered `(β,γ,α)`.
