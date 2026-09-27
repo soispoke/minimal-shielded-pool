@@ -17,4 +17,14 @@ theorem counterexample : ∃ a : MSP.Assignment,
   unfold MSP.stmtOf MSP.witOf
   exact relation_fails
 
+
+/-- The clause that fails is R5: the first input value is not below `2 ^ 128`. -/
+theorem clause_fails : ∃ a : MSP.Assignment, system.Satisfied a ∧
+    ¬ ((MSP.witOf a).v 0).val < 2 ^ 128 := by
+  refine ⟨table.toAssignment, satisfied, ?_⟩
+  unfold MSP.witOf
+  have := first_value
+  simp only [witness] at this
+  omega
+
 end MSP.Mutations.Range

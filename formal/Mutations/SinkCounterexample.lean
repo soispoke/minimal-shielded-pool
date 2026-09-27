@@ -17,4 +17,15 @@ theorem counterexample : ∃ a : MSP.Assignment,
   unfold MSP.stmtOf MSP.witOf
   exact relation_fails
 
+
+/-- The clause that fails is R7: a zero-value first output whose `inner` is not 1. -/
+theorem clause_fails : ∃ a : MSP.Assignment, system.Satisfied a ∧
+    (MSP.witOf a).ov 0 = 0 ∧ (MSP.witOf a).oi 0 ≠ 1 := by
+  refine ⟨table.toAssignment, satisfied, ?_⟩
+  unfold MSP.witOf
+  refine ⟨first_output_zero, ?_⟩
+  rw [show Artifacts.ConcreteWitness.ofAssignment table.toAssignment = witness from rfl,
+    first_output_inner]
+  decide
+
 end MSP.Mutations.Sink

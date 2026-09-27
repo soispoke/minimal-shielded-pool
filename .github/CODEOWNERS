@@ -1,7 +1,8 @@
 # The reviewed formal statements. A change here needs the owner's review and a
 # matching update of formal/STATEMENTS.lock, which CI checks. The lock also
-# covers every project module that formal/Spec.lean imports, transitively, and
-# formal/Proofs/AxiomAudit.lean, so a change to one of those fails CI until the
+# covers every project module that formal/Spec.lean imports, transitively, the
+# import closure of the Mutations/ modules defining the mutants the audit pins,
+# and formal/Proofs/AxiomAudit.lean, so a change to one of those fails CI until the
 # owner approves a lock update.
 /formal/SPEC.md @soispoke
 /formal/Spec.lean @soispoke

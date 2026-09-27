@@ -206,6 +206,13 @@ theorem pin_membership_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_membership_counterexample
 
+theorem pin_membership_clause : ∃ a : MSP.Assignment, MSP.Mutations.Membership.system.Satisfied a ∧
+    ∃ k, (MSP.witOf a).v k ≠ 0 ∧
+      MSP.MR ((MSP.witOf a).leaf k) ((MSP.witOf a).idx k) ((MSP.witOf a).sib k) ≠ (MSP.stmtOf a).root :=
+  MSP.Mutations.Membership.clause_fails
+
+assert_standard_axioms pin_membership_clause
+
 theorem pin_range_c1_fails : ¬ MSP.Mutations.C1For MSP.Mutations.Range.system :=
   MSP.Mutations.Range.c1_fails
 
@@ -216,6 +223,12 @@ theorem pin_range_counterexample : ∃ a : MSP.Assignment,
   MSP.Mutations.Range.counterexample
 
 assert_standard_axioms pin_range_counterexample
+
+theorem pin_range_clause : ∃ a : MSP.Assignment, MSP.Mutations.Range.system.Satisfied a ∧
+    ¬ ((MSP.witOf a).v 0).val < 2 ^ 128 :=
+  MSP.Mutations.Range.clause_fails
+
+assert_standard_axioms pin_range_clause
 
 theorem pin_duplicate_c1_fails : ¬ MSP.Mutations.C1For MSP.Mutations.Duplicate.system :=
   MSP.Mutations.Duplicate.c1_fails
@@ -228,6 +241,12 @@ theorem pin_duplicate_counterexample : ∃ a : MSP.Assignment,
 
 assert_standard_axioms pin_duplicate_counterexample
 
+theorem pin_duplicate_clause : ∃ a : MSP.Assignment, MSP.Mutations.Duplicate.system.Satisfied a ∧
+    (MSP.stmtOf a).nf1 = (MSP.stmtOf a).nf2 :=
+  MSP.Mutations.Duplicate.clause_fails
+
+assert_standard_axioms pin_duplicate_clause
+
 theorem pin_sink_c1_fails : ¬ MSP.Mutations.C1For MSP.Mutations.Sink.system :=
   MSP.Mutations.Sink.c1_fails
 
@@ -238,6 +257,12 @@ theorem pin_sink_counterexample : ∃ a : MSP.Assignment,
   MSP.Mutations.Sink.counterexample
 
 assert_standard_axioms pin_sink_counterexample
+
+theorem pin_sink_clause : ∃ a : MSP.Assignment, MSP.Mutations.Sink.system.Satisfied a ∧
+    (MSP.witOf a).ov 0 = 0 ∧ (MSP.witOf a).oi 0 ≠ 1 :=
+  MSP.Mutations.Sink.clause_fails
+
+assert_standard_axioms pin_sink_clause
 
 -- Concrete G2 and textbook verifier bindings, separate from bytecode C9.
 assert_standard_axioms MSP.Groth16.cofactorPoint_order

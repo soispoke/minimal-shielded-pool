@@ -17,4 +17,12 @@ theorem counterexample : ∃ a : MSP.Assignment,
   unfold MSP.stmtOf MSP.witOf
   exact relation_fails
 
+
+/-- The clause that fails is R8: the two nullifiers are equal. -/
+theorem clause_fails : ∃ a : MSP.Assignment, system.Satisfied a ∧
+    (MSP.stmtOf a).nf1 = (MSP.stmtOf a).nf2 := by
+  refine ⟨table.toAssignment, satisfied, ?_⟩
+  unfold MSP.stmtOf
+  exact equal_nullifiers
+
 end MSP.Mutations.Duplicate

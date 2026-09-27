@@ -192,9 +192,9 @@ extractor.
 - **P4 Hybrid compression** (eprint 2025/1500). A compression break is an approved spend whose extraction succeeds with a statement `x′` other than the settlement's `x`. It gives `x ≠ x′` with `γ(x, α(x) + β(x′)) = γ(x′, α(x) + β(x′))`. No one is assumed to exhibit such a pair. For these fixed, unkeyed functions that is an assumption about what anyone exhibits, like P1 and P2; with `K` and `H10` as random oracles the paper's Lemma 4 bounds it by about `1.14 · 9q²/p` for `q` queries, the factor covering the bias of `K mod p`.
 - **P5 EIP-8141.** A transaction is valid only if its `chain_id` is the chain's. Frames run in order. A VERIFY frame changes nothing but through `APPROVE`; if it fails, the transaction is invalid. `APPROVE` reverts the current frame unless `ADDRESS` is the frame's resolved target and the scope is among the frame's flags; `APPROVE` with payment reverts if the payer's balance is below `max_cost`. Approval flags are excluded from atomic batches. `APPROVE(3)` from frame 1 makes `A` sender and payer. A SENDER frame's caller is `sender`, a DEFAULT frame's the entry point. A failed non-VERIFY frame reverts its own effects, or its whole atomic batch's. `TXPARAM`, `FRAMEPARAM` and `SIGPARAM` return the EIP's table values, with EIP-8250's `TXPARAM(0x01) = nonce_seq`, `0x0E` = key count, `0x0F = K(u256(n) ‖ u256(k_1) ‖ … ‖ u256(k_n))`. Frame data read with `FRAMEDATALOAD` or, in the running frame, `CALLDATALOAD` is the frame's data. A `msg` is empty, signing the canonical hash, or a nonzero 32-byte digest, so `SIGPARAM(i, 0x02) = 0` exactly when signature `i` signs the canonical hash, which covers every field except the raw bytes of such signatures. The payer pays at most `max_cost`.
 - **P6 EIP-8250.** Keys are 1 to 16 strictly increasing integers below `2^256`. A nonzero key's sequence for `sender` is the `NONCE_MANAGER` storage word at `K(u256(sender) ‖ u256(key))`. A transaction is valid only if each key's sequence equals `nonce_seq`; approval consumes every key atomically; an invalid transaction consumes nothing; nothing else changes a sequence, since ordinary calls to `NONCE_MANAGER` revert; consuming a key for the first time costs 97,920 state gas.
-- **P7 EIP-8272.** A call from address `a`, with no value, outside a static context and with the 64 data bytes `salt ‖ root`, during slot `S` succeeds given enough gas and stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, with the target, mode, flags, value, state limit and data length A1 gives it, A3's data and enough execution gas, succeeds exactly when, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. Entries change otherwise only through a reorg; the model follows the canonical chain.
+- **P7 EIP-8272.** A call from address `a`, with no value, outside a static context and with the 64 data bytes `salt ‖ root`, during slot `S` succeeds given enough gas and stores the entry hash of `(K(addr20(a) ‖ salt), S, root)` at the storage key of that source and ring index `S mod 8192`; nothing else writes. Frame 0, with the target, mode, flags, value, state limit and data length A1 gives it, A3's data and enough execution gas, succeeds exactly when, for its tuple, the slot is strictly before the current slot and within 8,191 slots of it and the stored word at the tuple's storage key is the tuple's entry hash. The contract's storage is empty when EIP-8272 activates, as its Activation section requires, including on a chain that activates it at genesis; entries change otherwise only through a reorg, and the model follows the canonical chain.
 - **P8 Gas schedule and fork.** A pinned gas schedule `G`: the schedule ethrex 247e2dd2 applies at the pinned fork, with EIP-8037 state gas, EIP-2929's warm and cold access sets priced as EIP-8038 sets them (EIP-8037 requires EIP-8038; how EIP-8038 applies at EIP-8141's frame entry is not settled in the EIPs, and the measured constants follow ethrex), and EIP-150's 63/64 rule. The claims hold while the chain keeps `G` and the pinned EIP revisions; a fork that changes them ends them.
-- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No Lean proof checks the setup. The deployment script checks the deployment and the artifact hashes the activation manifest pins, which do not include `spend_vkey.json`. The activation gate on this branch (added in `6735e3e` and `870dd58`; at `8835be7` it compares only the manifest's hashes, profile and contribution count) additionally checks the zkey's sizes and A/B coefficient metadata against `spend.r1cs`, and binds both the Solidity constants and every verifier-used field of `spend_vkey.json` to that key. C/IC/L and key-point consistency with the complete constraint system remain unchecked without the original phase-1 powers of tau (§8). No tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment.
+- **P9 Deployment.** The pool is deployed as in D12 with the committed artifacts, by a plain contract-creation transaction from an externally owned account; the committed zkey is snarkjs's Groth16 setup of the committed `spend.r1cs`, and `spend_vkey.json` is that zkey's verification key. No Lean proof checks the setup. The deployment script checks the deployment and the artifact hashes the activation manifest pins, which do not include `spend_vkey.json`. The activation gate on this branch (added in `6735e3e` and `870dd58`; at `8835be7` it compares only the manifest's hashes, profile and contribution count) additionally checks the zkey's sizes and A/B coefficient metadata against `spend.r1cs`, and binds both the Solidity constants and every verifier-used field of `spend_vkey.json` to that key. C/IC/L and key-point consistency with the complete constraint system remain unchecked without the original phase-1 powers of tau (§8). No tool checks D12's conditions that no code ran at `A` and no frame transaction had sender `A` before deployment, or P7's condition that the recent-root contract's storage was empty at activation.
 - **P10 EVM model.** The Lean EVM and Yul semantics, extended with EIP-8141 frames, EIP-8250 and EIP-8272, match the client, and every chain-level declaration in `Spec/Evm.lean` is defined from it.
 - **P11 Chain identity.** The chain ID never changes on a chain that carries the pool's state.
 - **P12 Signatures.** secp256k1 low-s ECDSA applied to EIP-8141's canonical signature hash is unforgeable as a scheme on transactions: no efficient party without the key outputs a valid transaction whose scheme-1 signature resolves to that key's address, other than one the holder signed or one that differs from it only in that signature's bytes. ECDSA on bare digests is forgeable, so collision resistance of the hash alone does not give this; Brown (2005) argues it in the generic group model from collision resistance and uniformity of the hash, pseudorandom signing nonces, and a condition on the conversion from `R` to `r`. Used only to read C3's signature conclusion as "only the holder of `auth`'s key authorized this transaction".
@@ -435,7 +435,8 @@ caller other than the pool has a valid environment there. The 2026-09-25 run
 of the `position-notes-v2` deployment recorded in `SECURITY.md` (pool and block
 in `devnet/deploy_config.json`) is informal evidence.
 
-**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements. The first four, the circuit rows, have kernel-checked counterexamples over the complete compiled mutants (§7), whose binding to their source and binaries is external to Lean; no other row has been checked formally. As tests, not proofs, `wallet/test_occurrence.py` (run in CI's `test` job) builds three circuits, each without the range check on one output value or the fee (not those on the input values or the public amount), and one without the membership, sink, distinctness and other listed constraints together, and shows each admits a complete witness violating R5, R3, R7 or R8 that the pinned R1CS rejects.
+**Mutations.** Each change must make some claim false, or the row names the premise it violates. These rows are requirements. The first four, the circuit rows, have kernel-checked counterexamples over the complete compiled mutants (§7), whose binding to their source and binaries is external to Lean and rests on
+an archived compilation (§7); no other row has been checked formally. As tests, not proofs, `wallet/test_occurrence.py` (run in CI's `test` job) builds three circuits, each without the range check on one output value or the fee (not those on the input values or the public amount), and one without the membership, sink, distinctness and other listed constraints together, and shows each admits a complete witness violating R5, R3, R7 or R8 that the pinned R1CS rejects.
 
 | Mutation | Claim that must fail |
 |---|---|
@@ -547,8 +548,11 @@ complete compiled mutant, a kernel-checked assignment satisfies every
 constraint while its canonical projections violate R3, R5, R7 or R8,
 respectively; the corresponding C1 is false. The exporter checks the frozen
 artifacts, exact source mutations, independent constraint decodings and
-projection wire positions. This binary/source binding is external to Lean,
-as for the original R1CS. See `Mutations/README.md` for the reproduction commands
+projection wire positions. This binary/source binding is external to Lean.
+Unlike the original R1CS, which CI recompiles and compares, the mutants were
+compiled once by `tools/circuit_mutations.py`, which CI does not run; CI reruns
+only the exporter, against the archived artifacts and their recorded decoding
+digest in `evidence/2026-09-27-0350/circuit-mutations/`. See `Mutations/README.md` for the reproduction commands
 and precise boundary. All other §6 mutation rows remain open.
 
 CI checks this project on every push in two jobs. The `formal` job runs no
@@ -579,19 +583,21 @@ that rewrote a checked file fails; and finally the differential test of the
 executable model against `wallet/wallet.py`. The `formal-artifacts` job runs
 the R1CS import checks above, with the circuit recompiled, and every generator
 of checked-in Lean data under `tools/`, `Poseidon/` and `Keccak/`, rerun
-against the pinned R1CS, symbol file, key and hash constants; the W1 Keccak
+against the pinned R1CS, symbol file, key and hash constants (the mutation
+exporter reruns against the archived mutant artifacts instead); the W1 Keccak
 traces in `Proofs/NonVacuityKeccak*Data.lean` and the W1 query tables in
 `Proofs/NonVacuityPoseidonTableData.lean` and `Proofs/NonVacuityKeccakTable.lean`
 have no generator check, and Lean re-checks the traces round by round and
 every table value. The statement files are this file,
 `Proofs/AxiomAudit.lean`, the audit command it uses (`Proofs/AuditCommand.lean`,
-which imports only core Lean) and every project module that `Spec` imports,
-transitively: besides `Spec.lean` and `Spec/`, the modules of `Artifacts/`,
+which imports only core Lean), every project module that `Spec` imports,
+transitively (besides `Spec.lean` and `Spec/`, the modules of `Artifacts/`,
 `Groth16/`, `Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` from which the
 concrete hashes, the circuit, its projections and `Groth16Accepts` are built,
-including lemma modules such as `Proofs/CircuitGadgets.lean`, and the
-modules of `Mutations/` that define the four circuit mutants and `C1For`,
-which the audit's mutation pins refer to. `.github/CODEOWNERS` assigns this
+including lemma modules such as `Proofs/CircuitGadgets.lean`), and the import
+closure of `Mutations/Soundness.lean` and the four `Mutations/*Certificate.lean`
+modules, which define `C1For` and the four mutant systems the audit's mutation
+pins refer to. `.github/CODEOWNERS` assigns this
 file, `Spec.lean`, `Spec/`, the lock and the files that enforce it (CI,
 the tools under `tools/`, including the differential test, the audit and the
 Lake configuration) to the owner, so
@@ -655,6 +661,13 @@ refinement would still need these conditions unless `Obs` counted only logs
 and transfers after deployment and the model accepted the pool's own earlier
 root writes, which `historyEvents` replays as `rootWrite` events that `Step`
 rejects.
+
+Nor is it checked that the recent-root contract's storage was empty when
+EIP-8272 activated (P7). A chain that breaks this, for example a devnet whose
+genesis allocation gives the predeployed contract storage, can plant entries
+under the pool's sources for slots after deployment and drain the pool;
+refinement fails there, and rejecting root slots at or before the deployment
+slot would not prevent it.
 
 Step 5 must define the opaque types `RawTx`, `Env`, `Deployment` and
 `ChainRest`, and `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,

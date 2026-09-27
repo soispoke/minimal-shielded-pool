@@ -2,7 +2,10 @@
 """Step 1 checks for the formal project, run by CI next to `lake build`.
 
   statements  SPEC.md, every project module `Spec` imports, transitively,
-              Proofs/AxiomAudit.lean, which pins the principal theorems' types,
+              the import closure of Mutations/Soundness.lean and the four
+              Mutations/*Certificate.lean modules, which define the mutants
+              the audit pins, Proofs/AxiomAudit.lean, which pins the principal
+              theorems' types,
               and Proofs/AuditCommand.lean, the audit command it uses, match
               formal/STATEMENTS.lock
   pins        every artifact in SPEC.md's §1 table has its full pinned SHA-256
