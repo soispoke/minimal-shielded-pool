@@ -121,6 +121,19 @@ class CheckFormal(unittest.TestCase):
                 os.symlink(root / 'hidden', formal / 'Artifacts' / 'Hidden')
                 self.assertFalse(c.sources())
 
+    def test_driver_may_not_hide_code_in_brace_strings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            formal = root / 'formal'
+            (formal / 'tools').mkdir(parents=True)
+            driver = formal / 'tools' / 'DifferentialModel.lean'
+            subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+            with mock.patch.object(c, 'FORMAL', formal), mock.patch.object(c, 'ROOT', root):
+                driver.write_text('def s : String := r"raw"\n#eval IO.println s!"{1 + 1}"\n')
+                self.assertTrue(c.sources())
+                driver.write_text('#eval IO.println s!"ok"\n#eval println! "{(sorry : Nat)}"\n')
+                self.assertFalse(c.sources())
+
 
 if __name__ == '__main__':
     unittest.main()

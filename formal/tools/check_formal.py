@@ -37,10 +37,12 @@ BANNED = re.compile(r'\b(sorry|sorryAx|admit|native_decide|implemented_by|axiom|
 # Metaprogramming entry points, allowed only in locked (owner-reviewed) files.
 META = re.compile(r'#eval\b|#guard_msgs\b|\beval%|\b(by_elab|run_cmd|run_elab|run_meta|run_tac|initialize|'
                   r'builtin_initialize|macro|macro_rules|syntax|elab|elab_rules|notation|infix|infixl|infixr|'
-                  r'prefix|postfix|declare_syntax_cat|simproc|dsimproc|Lean|__raw_string__)\b'
+                  r'prefix|postfix|declare_syntax_cat|simproc|dsimproc|Lean|__raw_string__|__brace_string__)\b'
                   r'|(?:@\[|\battribute\s*\[)[^\]]*\b(?:builtin_)?init\b')
 # The step-4 driver evaluates the model with #eval; `lake build` never runs it.
 META_EXEMPT = {'tools/DifferentialModel.lean'}
+# A plain string containing `{`, which Lean may interpolate; rejected in the driver too.
+BRACE_STRING = re.compile(r'\b__brace_string__\b')
 IMPORT = re.compile(r'^(?:(?:public|private|meta)\s+)*import\s+(?:all\s+)?(\S+)', re.M)
 
 
@@ -136,9 +138,9 @@ def strip_comments(text):
     keep their code, which is lexed again, nested literals included. Every
     other string is lexed as plain; Lean agrees except after `println!`,
     `dbg_trace`, `throwError` and similar, which interpolate a string without
-    a prefix. So a plain string containing `{` also becomes `__raw_string__`,
-    rejected outside the lock; inside the lock, such a string's code is not
-    scanned. A `«...»` identifier is emitted as its bare name, so an escaped
+    a prefix. So a plain string containing `{` becomes `__brace_string__`,
+    rejected outside the lock, the step-4 driver included; inside the lock,
+    such a string's code is not scanned. A `«...»` identifier is emitted as its bare name, so an escaped
     name such as `debug.«skipKernelTC»` is still seen."""
     out, i, n = [], 0, len(text)
     stack = []  # for each open interpolated string, the enclosing brace depth
@@ -191,7 +193,7 @@ def strip_comments(text):
             start = i = i + 1
             while i < n and text[i] != '"':
                 i += 2 if text[i] == '\\' else 1
-            out.append(' __raw_string__ ' if '{' in text[start:i] else '""')
+            out.append(' __brace_string__ ' if '{' in text[start:i] else '""')
             i += 1
         elif c == '\u00ab':
             j = text.find('\u00bb', i + 1)
@@ -245,8 +247,8 @@ def sources():
         count += 1
         code = strip_comments(path.read_text())
         found = list(BANNED.finditer(code))
-        if path.resolve() not in locked and rel.as_posix() not in META_EXEMPT:
-            found += META.finditer(code)
+        if path.resolve() not in locked:
+            found += (BRACE_STRING if rel.as_posix() in META_EXEMPT else META).finditer(code)
         for m in found:
             line = code.count('\n', 0, m.start()) + 1
             print(f'{path.relative_to(ROOT)}: `{m.group(0)}` near code line {line}')
