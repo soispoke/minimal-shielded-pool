@@ -3,8 +3,8 @@
 This file states what the formal verification must prove about the pool. It is
 the reviewed source of truth for the Lean statements in `formal/Spec/`, which
 typecheck against Lean 4.35.0-rc3 and Mathlib and depend only on Lean's standard
-axioms. C1, C1c, the model claims, C6 and W1 are proved; the chain half (C2,
-C2c, C8, C9, C10 and refinement) and W2 are open (§7). Changing a claim or
+axioms. C1, C1c, the model claims, C6 and W1 are proved; the rest of the
+chain half (C2, C2c, C8, C9, C10 and refinement) and W2 are open (§7). Changing a claim or
 premise, here or in Lean, needs the same review as changing the pool.
 
 ## 1. Scope
@@ -33,7 +33,7 @@ cost can spend and be paid, given inclusion, a recipient that accepts a plain
 payment and returns less than 64 KiB, and that no other party consumes the
 note or its keys first, which §8 argues on paper (§5). Solvency, single consumption, real roots and
 that a spend's extracted witness carries its note's key are claimed under §3
-(proved for the model; their chain form awaits the chain half, §7); that only a note's holder can spend it is argued on
+(proved for the model; their chain form awaits the rest of the chain half, §7); that only a note's holder can spend it is argued on
 paper under §8. Not in scope: privacy,
 inclusion and mempool policy, the wallet, CLI and disclosure tooling, client
 correctness, fee economics, and the trusted setup: its honesty (P3) and that
@@ -430,7 +430,8 @@ in `devnet/deploy_config.json`) is informal evidence.
 
 **Model mutants.** Refinement certifies any code that matches `Step`, so the
 model claims must also reject a wrong `Step`. Each variant below makes the named
-claim force a bad event at every step of the stated shape, which ordinary
+claim false outright (C5d, C5m, C5n and C5k's first conjunct allow no bad
+event) or force a bad event at every step of the stated shape, which ordinary
 hashes do not produce (argued during review):
 
 | `Step` variant | Claim that fails |
@@ -504,7 +505,7 @@ zero constants. `K` is concrete Ethereum Keccak-256, with kernel-checked
 source/domain fixtures. `Proofs.NonVacuityFixtureVerified` proves W1 using
 an actual satisfying circuit assignment, the specified ideal verifier, an
 encoded accepted spend and the complete finite bad-event query support.
-W2 and the chain half of `MainTheorem` remain open: C2, C2c, C8, C9, C10 and
+W2 and the rest of the chain half of `MainTheorem` (C6 is proved) remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 `MainTheorem` and `ChainCorollary` from exactly those obligations.
 
@@ -581,14 +582,15 @@ Step 5's definitions of the opaque types `RawTx`, `Env`, `Deployment` and
 `verifierOf`, `libHash2`, `libHash3`, `addrOf`, `chainOf`, `NONCE_MANAGER`,
 `RawTx.view`, `Groth16Accepts` and `Honest`, are checked against their
 docstrings and D12 by review only.
-A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep`,
-`EnvValid` or `Honest`, or a wrong `chainInit`, leaves
-states uncovered by refinement, C2, C2c and C10. A looser `eventsOf` or
+A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep` or
+`Honest`, or a wrong `chainInit`, leaves states uncovered by refinement, C2,
+C2c and C10, and a narrower `EnvValid` leaves environments uncovered by C10. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
 weakens C2 and a looser one weakens C2c and W2, a stronger `PreValid` weakens
-C2c, a looser `callPool` or `firstPayout` weakens C10, and a `verifierOf`,
-`libHash2` or `libHash3` not defined by running the linked bytecode makes C9 or
-C8 vacuous and weakens C2 and C2c. A `Groth16Accepts` other than textbook
+C2c, a looser `callPool` or `firstPayout` weakens C10, a `verifierOf` not defined
+by running the linked verifier makes C9 vacuous and weakens C2 and C2c, and a
+`libHash2` or `libHash3` not defined by running the linked libraries makes C8
+vacuous. A `Groth16Accepts` other than textbook
 verification for the committed key makes C9 and P3 refer to the wrong
 predicate.
 

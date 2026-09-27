@@ -206,7 +206,7 @@ committed key accepts. -/
 def C9 : Prop :=
   ∀ d, Honest d → ∀ π pub, π.length = 256 → (verifierOf d π pub ↔ Groth16Accepts π pub)
 
-/-- `hash2` and `hash3` of the linked libraries: the returned word and the gas used. -/
+/-- `hash2` of the linked library: the returned word and the gas used. -/
 opaque libHash2 : Deployment → F → F → Option (ℕ × ℕ)
 /-- `hash3` of the linked library, as for `libHash2`. -/
 opaque libHash3 : Deployment → F → F → F → Option (ℕ × ℕ)

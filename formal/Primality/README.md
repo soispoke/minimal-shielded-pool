@@ -9,8 +9,8 @@ import path is changed to this local `Primality` library.
 The certificate proves primality through Mathlib's Lucas theorem. The search
 tactic generates proof terms; its factoring or primality heuristics are not
 trusted oracles. The Lean kernel checks the resulting certificate. This
-provides the field property needed by circuit gadget proofs, independently of
-the still-open circuit and bytecode bindings.
+provides the field property needed by the circuit gadget proofs (C1, C1c),
+independently of the still-open bytecode bindings.
 
 
 `BN254Base.lean` adds an explicit Pratt certificate for the distinct BN254
