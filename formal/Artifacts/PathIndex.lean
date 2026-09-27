@@ -64,7 +64,7 @@ theorem testBit_true_iff (w : Assignment) (h : Spend.system.Satisfied w)
   cases ((ConcreteWitness.ofAssignment w).idx k).testBit l.val <;> simp
 
 /-- The canonical Merkle fold uses the same orientation as the raw bit wires.
-This is a statement about `MR`, not yet a proof of the circuit's mux recurrence. -/
+This is a statement about `MR`; the circuit's mux recurrence is `PathGates.root_eq_MR`. -/
 theorem MR_eq_raw_fold (w : Assignment) (h : Spend.system.Satisfied w)
     (k : Fin 2) (leaf : F) :
     MR leaf ((ConcreteWitness.ofAssignment w).idx k) ((ConcreteWitness.ofAssignment w).sib k) =

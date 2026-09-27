@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Step 1 checks for the formal project, run by CI next to `lake build`.
 
-  statements  the reviewed statement files match formal/STATEMENTS.lock
+  statements  SPEC.md and every project module `Spec` imports, transitively,
+              match formal/STATEMENTS.lock
   pins        every artifact in SPEC.md's §1 table has its pinned SHA-256
-  sources     no Lean file admits a proof (sorry, admit, native_decide) or adds
-              an axiom, unsafe code or implemented_by, outside comments
+  sources     no Lean file admits a proof (sorry, admit, native_decide), skips
+              the kernel (debug.skipKernelTC) or uses axiom, unsafe or
+              implemented_by, outside comments; this is a
+              textual check, and Proofs/AxiomAudit.lean is the binding one
 
 `statements --update` rewrites the lock after a reviewed change to the spec.
 """
@@ -18,16 +21,29 @@ from pathlib import Path
 FORMAL = Path(__file__).resolve().parents[1]
 ROOT = FORMAL.parent
 LOCK = FORMAL / 'STATEMENTS.lock'
-LEAN_DIRS = ['Spec', 'Proofs', 'Sanity', 'Artifacts', 'Poseidon', 'Keccak', 'Groth16', 'Primality']
-BANNED = re.compile(r'\b(sorry|admit|native_decide|implemented_by)\b|^\s*(private\s+|protected\s+)?(axiom|unsafe)\s', re.M)
+BANNED = re.compile(r'\b(sorry|admit|native_decide|implemented_by|axiom|unsafe|skipKernelTC)\b')
 
 
 def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def module_path(name):
+    return FORMAL / (name.replace('.', '/') + '.lean')
+
+
 def statement_files():
-    return [FORMAL / 'SPEC.md', FORMAL / 'Spec.lean'] + sorted((FORMAL / 'Spec').glob('*.lean'))
+    """SPEC.md and the import closure of `Spec` within this project: every
+    module that fixes what a claim means, including the concrete hashes and
+    circuit."""
+    seen, stack = set(), ['Spec']
+    while stack:
+        name = stack.pop()
+        if name in seen or not module_path(name).exists():
+            continue
+        seen.add(name)
+        stack += re.findall(r'^import\s+(\S+)', module_path(name).read_text(), re.M)
+    return [FORMAL / 'SPEC.md'] + sorted(module_path(n) for n in seen)
 
 
 def statements(update):
@@ -96,14 +112,15 @@ def strip_comments(text):
 
 def sources():
     ok, count = True, 0
-    for d in LEAN_DIRS:
-        for path in sorted((FORMAL / d).rglob('*.lean')):
-            count += 1
-            code = strip_comments(path.read_text())
-            for m in BANNED.finditer(code):
-                line = code.count('\n', 0, m.start()) + 1
-                print(f'{path.relative_to(ROOT)}: `{m.group(0).strip()}` near code line {line}')
-                ok = False
+    for path in sorted(FORMAL.rglob('*.lean')):
+        if '.lake' in path.relative_to(FORMAL).parts:
+            continue
+        count += 1
+        code = strip_comments(path.read_text())
+        for m in BANNED.finditer(code):
+            line = code.count('\n', 0, m.start()) + 1
+            print(f'{path.relative_to(ROOT)}: `{m.group(0)}` near code line {line}')
+            ok = False
     if ok:
         print(f'sources: {count} Lean files admit nothing and add no axiom')
     return ok

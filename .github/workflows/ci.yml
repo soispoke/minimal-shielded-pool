@@ -166,6 +166,7 @@ jobs:
       - name: Check the Lean R1CS and its symbols against the pinned artifact
         run: |
           npm ci --prefix tooling
+          python -m pip install --requirement requirements.txt
           mkdir -p "$RUNNER_TEMP/circuit"
           tooling/node_modules/.bin/circom2 circuits/spend.circom \
             --r1cs --sym -l tooling/node_modules -o "$RUNNER_TEMP/circuit"
@@ -191,6 +192,12 @@ jobs:
           done
           python formal/tools/hash_instances.py --node-modules tooling/node_modules --sym "$sym"
           python formal/tools/assignment_plan.py --node-modules tooling/node_modules --sym "$sym"
+          python formal/Poseidon/generate.py --check
+          python formal/Poseidon/optimized_generate.py --check
+          python formal/Poseidon/small_optimized_generate.py --check
+          python formal/Keccak/vector_generator.py --node-modules tooling/node_modules
+          python -m unittest discover -s formal/Poseidon -p 'test_*.py'
+          python -m unittest discover -s formal/Keccak -p 'test_*.py'
       - name: Install Lean
         run: |
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \

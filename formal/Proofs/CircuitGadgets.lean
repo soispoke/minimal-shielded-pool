@@ -4,7 +4,7 @@ import Mathlib.Tactic
 
 /-! Algebraic helpers for the pinned circomlib IsZero and Boolean constraints.
 These describe the constraints themselves, not trusted witness generation.
-Connecting them to every optimized R1CS gadget remains part of C1/C1c. -/
+The `Artifacts` gate proofs apply them to the pinned R1CS for C1 and C1c. -/
 
 namespace MSP
 
