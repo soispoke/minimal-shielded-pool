@@ -48,8 +48,10 @@ preserves all private witness fields and works for every alpha.
 
 Remaining completion gates include C2/C2c/C8/C9/C10 and refinement,
 the required concrete key/verifier/library/bytecode bindings, W2, and the
-semantic mutation failures in `SPEC.md`. The decoder's negative tests do not
-discharge those mutation gates. End-to-end formal verification is incomplete.
+remaining semantic mutation failures in `SPEC.md`. The four circuit gates
+(R3/R5/R7/R8) have full kernel-checked counterexamples in `../Mutations/`;
+these go beyond the decoder's negative tests. End-to-end formal verification
+is incomplete.
 
 
 `NonVacuityBytes` proves the concrete big-endian word round trips.
@@ -60,8 +62,10 @@ accepted run, no bad event or any chain-level non-vacuity claim.
 
 The specification's `K` is now the concrete Ethereum Keccak definition in
 `Keccak/`. Its fixed source/domain digests have kernel certificates.
-The key and strict proof-decoding layer in `Groth16/` is also checked; pairing,
-subgroup and deployed-bytecode binding remain separate obligations.
+The key and strict proof-decoding layer in `Groth16/` is also checked, as are
+all pinned key-point orders and the full G1 cardinality and scalar-group
+correspondence. Full G2 subgroup characterization, pairing and deployed-bytecode
+binding remain separate obligations.
 
 
 `NonVacuityFixtureVerified.lean` proves `MSP.w1 : W1` with no hypotheses.

@@ -67,4 +67,3 @@ canonical spec explicitly retains setup consistency and ceremony honesty as
 P9 and P3 premises. Existing A/B metadata and key-coordinate comparisons do not
 derive C/IC/L setup consistency, and neither these certificates nor a successful
 full transcript check would establish ceremony honesty.
-

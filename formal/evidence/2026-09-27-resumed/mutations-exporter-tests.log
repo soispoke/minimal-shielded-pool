@@ -1,0 +1,8 @@
+test_all_archives_and_complete_decodings (test_mutation_certificates.MutationCertificates.test_all_archives_and_complete_decodings) ... ok
+test_changed_binary_or_wrong_case_rejected_before_normalization (test_mutation_certificates.MutationCertificates.test_changed_binary_or_wrong_case_rejected_before_normalization) ... ok
+test_changed_canonical_source_rejected (test_mutation_certificates.MutationCertificates.test_changed_canonical_source_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.460s
+
+OK

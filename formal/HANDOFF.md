@@ -6,8 +6,8 @@ The user requested immediate continuation from Claude and explicitly left the
 two-hour automation paused. Claude stopped at `b1a15ef`, with round 37 fixes
 complete; the user interrupted its next review launch at 20:05 UTC. Codex now
 owns this checkout on `codex/formal-continuation`. The round-37 specification
-and checking harness are being reconciled with `7f670d6` and its checked proof
-increments. The older ownership notes below are historical. No scheduler was
+and checking harness were reconciled with `7f670d6` and its checked proof
+increments in `640c260`. The older ownership notes below are historical. No scheduler was
 reactivated. Claude’s baseline `lake build` passed 3,640 jobs; its statement,
 artifact-pin and source checks passed before continuation.
 
@@ -26,7 +26,7 @@ all checked Codex increments. It passes 3,662 build jobs; all 30 statement
 locks, 12 artifact pins and 515 Lean source checks pass, as do the ten harness
 tests. Canonical `Spec/` and `SPEC.md` match Claude's checkpoint exactly.
 
-`Groth16/Cardinality.lean` now proves the full G1 group cardinality `p`, that
+Checkpoint `eecdead`, `Groth16/Cardinality.lean`, proves the full G1 group cardinality `p`, that
 `(1,2)` generates it, a scalar-field additive isomorphism, and exact order `p`
 for every finite on-curve point. Its standalone and integrated standard-axiom
 audits pass. The former pending file is replaced by this checked module.
@@ -34,12 +34,17 @@ A cardinality argument over `Nat.card` avoids the previous kernel reduction
 of an enormous concrete finite enumeration; no mathematical premise changed.
 See `evidence/2026-09-27-resumed/` for the checked outputs.
 
-Full kernel certificates for the four circuit mutants are the current work.
-The generic checker now accepts a binary witness table, and its exporter
-independently decodes the archived exact R1CS/WTNS and compares every constraint
-with the previous JS decoder. It checks every reused signal projection against
-the original symbol map. Completion is recorded only after every constraint,
-relation failure and whole-mutant C1 refutation checks.
+Full kernel certificates for all four circuit mutants now pass, including
+every constraint, the actual canonical relation failure and whole-mutant C1
+refutation. The integrated axiom audit passes 3,780 jobs, with explicit type
+pins for all four existential counterexamples. `Mutations/README.md` records
+the exact counts, commands and external binary/source binding. The exporter
+checks every reused projection against the original symbol map; its three
+negative/decoding tests pass. The old incomplete array pilot is superseded.
+The remaining model/chain mutation gates remain open. The complete build
+passes 3,796 jobs; all four exporters reproduce exactly, and a changed
+constraint is correctly rejected. Evidence is saved in
+`evidence/2026-09-27-resumed/`.
 
 ## Ownership transfer, 2026-09-27 05:52 UTC
 

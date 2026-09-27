@@ -40,6 +40,10 @@ import Groth16.SubgroupKey
 import Groth16.Cardinality
 import Chain.Dispatcher
 import Mutations.Check
+import Mutations.MembershipCounterexample
+import Mutations.RangeCounterexample
+import Mutations.DuplicateCounterexample
+import Mutations.SinkCounterexample
 import Proofs.AuditCommand
 
 /-! Fail the build if a checked theorem starts depending on an admission or
@@ -183,3 +187,35 @@ assert_standard_axioms pin_composes
 assert_standard_axioms pin_circuit_model
 assert_standard_axioms pin_main_theorem_of_chain
 assert_standard_axioms pin_chain_corollary_of_chain
+
+assert_standard_axioms MSP.Mutations.Membership.c1_fails
+
+theorem pin_membership_counterexample : ∃ a : MSP.Assignment,
+    MSP.Mutations.Membership.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=
+  MSP.Mutations.Membership.counterexample
+
+assert_standard_axioms pin_membership_counterexample
+
+assert_standard_axioms MSP.Mutations.Range.c1_fails
+
+theorem pin_range_counterexample : ∃ a : MSP.Assignment,
+    MSP.Mutations.Range.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=
+  MSP.Mutations.Range.counterexample
+
+assert_standard_axioms pin_range_counterexample
+
+assert_standard_axioms MSP.Mutations.Duplicate.c1_fails
+
+theorem pin_duplicate_counterexample : ∃ a : MSP.Assignment,
+    MSP.Mutations.Duplicate.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=
+  MSP.Mutations.Duplicate.counterexample
+
+assert_standard_axioms pin_duplicate_counterexample
+
+assert_standard_axioms MSP.Mutations.Sink.c1_fails
+
+theorem pin_sink_counterexample : ∃ a : MSP.Assignment,
+    MSP.Mutations.Sink.system.Satisfied a ∧ ¬ MSP.R (MSP.stmtOf a) (MSP.witOf a) :=
+  MSP.Mutations.Sink.counterexample
+
+assert_standard_axioms pin_sink_counterexample

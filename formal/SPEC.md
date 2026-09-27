@@ -5,8 +5,8 @@ the reviewed source of truth for the Lean statements in `formal/Spec/`, which
 typecheck against Lean 4.35.0-rc3 and Mathlib and depend only on Lean's standard
 axioms. C1, C1c, the model claims, C6 (over the transcribed tree code) and W1
 are proved; the rest of the
-chain half (C2, C2c, C8, C9, C10 and refinement), W2 and the §6 mutation
-checks are open (§7). Changing a claim or
+chain half (C2, C2c, C8, C9, C10 and refinement), W2 and the remaining §6
+mutation checks are open (§7). The four circuit mutation gates are proved. Changing a claim or
 premise, here or in Lean, needs the same review as changing the pool.
 
 ## 1. Scope
@@ -537,13 +537,16 @@ an actual satisfying circuit assignment, the specified ideal verifier, an
 encoded accepted spend and the complete finite bad-event query support.
 W2 and the rest of the chain half of `MainTheorem` (C6 is proved) remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
-`MainTheorem` and `ChainCorollary` from exactly those obligations. No row of
-§6's mutation table has been checked formally; for R3, R5, R7 and R8 only
-the tests §6 names exist, besides fragment-level tests of single pinned
-constraints that build no mutated complete circuit, such as
-`tools/test_sink_gates.py` for R7's six controls and `tools/test_path_gates.py`
-for R3's path selectors and value-gated root check, both run in
-`formal-artifacts`.
+`MainTheorem` and `ChainCorollary` from exactly those obligations.
+The four circuit rows of §6 now have formal counterexamples in
+`Mutations/{Membership,Range,Sink,Duplicate}Counterexample.lean`. For each
+complete compiled mutant, a kernel-checked assignment satisfies every
+constraint while its canonical projections violate R3, R5, R7 or R8,
+respectively; the corresponding C1 is false. The exporter checks the frozen
+artifacts, exact source mutations, independent constraint decodings and
+projection wire positions. This binary/source binding is external to Lean,
+as for the original R1CS. See `Mutations/README.md` for the reproduction commands
+and precise boundary. All other §6 mutation rows remain open.
 
 CI checks this project on every push in two jobs. The `formal` job runs no
 unowned repository code before the proofs are checked. It trusts elan's
