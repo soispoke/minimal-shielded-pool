@@ -47,7 +47,7 @@ open Lean Elab Command in
 elab "assert_standard_axioms " n:ident : command => do
   let name ← liftCoreM <| Lean.Elab.realizeGlobalConstNoOverloadWithInfo n
   let axioms ← Lean.collectAxioms name
-  let allowed : List Name := [`propext, `choice, `Classical.choice, `Quot.sound]
+  let allowed : List Name := [`propext, `Classical.choice, `Quot.sound]
   let extra := axioms.filter fun ax => !allowed.contains ax
   unless extra.isEmpty do
     throwError "{n} depends on nonstandard axioms: {extra}"

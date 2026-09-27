@@ -259,9 +259,11 @@ key the run never hashed, the canonical full withdrawal of it satisfies `R` and
 its keys are nonzero and unconsumed, or the run has a bad event among its
 hashes and the spend's.
 
-**C6 Tree.** The contract's zero constants are `Z_l`, its `EMPTY_ROOT` is
-`Z_20`, and inserting up to `2^20` leaves from empty, then computing the root,
-yields `TR` of the inserted leaves.
+**C6 Tree.** The contract's zero constants and `EMPTY_ROOT`, as transcribed
+in `ZEROS` and `EMPTY_ROOT_CONST`, are `Z_l` and `Z_20`, and its insertion and
+root algorithm, as transcribed in `LogicTree`, run from empty on up to `2^20`
+leaves, yields `TR` of the inserted leaves. Step 5 proves the bytecode matches
+the transcription (§7).
 
 **C7 Gas** is part of refinement: whenever the model's settlement passes
 `SettlePre`, the chain's succeeds, so it never runs out of gas. The exception is
@@ -546,8 +548,10 @@ changing any statement file needs the owner's review of the lock. That binds
 only if branch protection requires both code owner review and a passing
 `formal` job; `main` had no branch protection on 2026-09-27. The metaprogram
 ban is what stops an unowned proof file from adding a declaration the kernel
-never checked or rewriting the audit mid-build; it is textual, so it raises
-the cost of a hostile change but does not exclude one. Replaying every project
+never checked or rewriting the audit mid-build. It is a textual check with its
+own approximation of Lean's lexer, so it catches accidental and careless
+metaprograms and raises the cost of a hostile one, but only review of unowned
+proof files excludes a hostile metaprogram. Replaying every project
 declaration with `leanchecker` would close that gap, but a local run had used
 76 GB of memory and 99 CPU minutes without finishing
 (`evidence/2026-09-27-claude/leanchecker.log`), so CI does not run it. Neither job has yet run on GitHub's runners.

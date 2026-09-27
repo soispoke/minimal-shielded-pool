@@ -56,6 +56,12 @@ class CheckFormal(unittest.TestCase):
         # interpolation keeps its code: a banned word inside the braces is still seen
         self.assertTrue(c.BANNED.search(c.strip_comments('def s := s!"x {sorry} y"')))
         self.assertFalse(c.BANNED.search(c.strip_comments('def s := s!"sorry {1 + 1} axiom"')))
+        # unprefixed interpolation and guillemet identifiers
+        for code in ('#check println! "{ "\\"" }"\nopen Lean in\nrun_cmd pure ()',
+                     'def \u00abx"\u00bb : Nat := 0\n#eval 1\ndef \u00aby"\u00bb : Nat := 1'):
+            self.assertTrue(c.META.search(c.strip_comments(code)), code)
+        self.assertTrue(c.BANNED.search(c.strip_comments(
+            'def \u00abx"\u00bb : Nat := 0\naxiom choice : False\ndef \u00aby"\u00bb : Nat := 1')))
 
     def test_metaprograms(self):
         for code in ('#eval IO.FS.writeFile "a" "b"', 'macro_rules | `(x) => `(y)', 'run_cmd pure ()',

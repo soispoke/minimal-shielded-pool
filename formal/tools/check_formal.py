@@ -124,7 +124,10 @@ def strip_comments(text):
     Plain strings honour escapes; raw strings (`r"..."`, `r#"..."#`) have
     none and become the token `__raw_string__`, which `META` rejects outside
     the lock; interpolated strings (`s!"...{code}..."`) keep their code, which
-    is lexed again, nested literals included."""
+    is lexed again, nested literals included. A plain string containing `{`
+    also becomes `__raw_string__`, since `println!`, `dbg_trace` and
+    `throwError` take interpolated strings without a prefix, and a `«...»`
+    identifier is skipped whole."""
     out, i, n = [], 0, len(text)
     stack = []  # for each open interpolated string, the enclosing brace depth
     mode, depth = 'code', 0
@@ -172,11 +175,15 @@ def strip_comments(text):
             mode = 'istr'
             i += 1
         elif c == '"':
-            i += 1
+            start = i = i + 1
             while i < n and text[i] != '"':
                 i += 2 if text[i] == '\\' else 1
-            out.append('""')
+            out.append(' __raw_string__ ' if '{' in text[start:i] else '""')
             i += 1
+        elif c == '\u00ab':
+            j = text.find('\u00bb', i + 1)
+            out.append('\u00ab\u00bb')
+            i = n if j < 0 else j + 1
         elif char:
             out.append("' '")
             i = char.end()
