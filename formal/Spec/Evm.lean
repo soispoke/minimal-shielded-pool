@@ -70,7 +70,8 @@ is either empty or opens a block with any header the consensus rules allow
 start-of-block system calls. -/
 opaque ChainStep : Deployment → ChainState → ChainState → Prop
 
-/-- The model state `s` is what the chain state shows, up to ghost fields. Every
+/-- The model state `s` is what the chain state shows, up to the ghost fields
+`vals`, `spent` and `credited`. Every
 clause about a hash-indexed storage slot names only keys the model holds, so no
 collision with a key nobody hashed can falsify it. -/
 def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=

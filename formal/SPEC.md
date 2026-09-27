@@ -124,7 +124,8 @@ consumed for sender `A`; the current slot. The model starts from the
 deployment: the chain's history before it, as slots and foreign root writes,
 then the pool's balance at deployment. Ghost fields, not on chain:
 each leaf's value from its opening, the occurrences consumed, and the total
-credited to and paid out to each recipient.
+credited to each recipient. The total paid out to each recipient is not in
+the pool's storage either, but refinement reads it from the ETH the pool sent.
 
 **D14. Occurrence.** A pair `(e, i)` with `i < |Leaves[e]|`.
 

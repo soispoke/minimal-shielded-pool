@@ -45,7 +45,9 @@ structure Occ where
 deriving DecidableEq
 
 /-- D13. Ghost fields are not on chain: they record openings, consumed
-occurrences and cumulative credits and payouts, so that claims can name them. -/
+occurrences and cumulative credits, so that claims can name them. `paid`, the
+cumulative payouts, is not in the pool's storage, but `Obs` reads it from the
+ETH the pool sent (`sentTo`). -/
 structure PoolState where
   leaves : ℕ → List F
   /-- ghost: each leaf's value, from its opening -/
@@ -60,8 +62,9 @@ structure PoolState where
   keys : List ℕ
   /-- ghost: occurrences consumed as nonzero-value inputs -/
   spent : List Occ
-  /-- ghost: total ever credited to, and paid out to, each recipient -/
+  /-- ghost: total ever credited to each recipient -/
   credited : ℕ →₀ ℕ
+  /-- total ever paid out to each recipient, which `Obs` equates with `sentTo` -/
   paid : ℕ →₀ ℕ
   slot : ℕ
 
