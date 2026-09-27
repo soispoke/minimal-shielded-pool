@@ -85,6 +85,17 @@ class CheckFormal(unittest.TestCase):
             self.assertFalse(c.META.search(c.strip_comments(code)), code)
 
 
+    def test_malformed_pin_rows_fail(self):
+        good = c.FORMAL.joinpath('SPEC.md').read_text()
+        row = next(l for l in good.splitlines() if l.startswith('| `build/spend.r1cs`'))
+        bad = good.replace(row, row[:-3] + ' |')  # drop one hex digit of the hash
+        with tempfile.TemporaryDirectory() as tmp:
+            formal = Path(tmp) / 'formal'
+            formal.mkdir()
+            (formal / 'SPEC.md').write_text(bad)
+            with mock.patch.object(c, 'FORMAL', formal):
+                self.assertFalse(c.pins())
+
     def test_escaped_names_are_seen(self):
         for code in ('set_option debug.\u00abskipKernelTC\u00bb true in', 'exact \u00absorryAx\u00bb _ false',
                      '@[\u00abimplemented_by\u00bb foo] def f := 0'):

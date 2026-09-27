@@ -317,9 +317,10 @@ recent-root entry of each of the pool's sources in the usable window, the ETH
 paid to each address by plain calls with empty calldata (so a payout that runs
 code of the pool's choosing at the recipient breaks refinement), that the pool
 made no call or creation other than those plain payouts and zero-value 64-byte
-root writes to `0x8272`, each of which the model's publication also makes (its
-static calls and its `DELEGATECALL` into `L` aside, so it sets no state
-elsewhere that could redirect a later payout), and the slot. Refinement does
+root writes to `0x8272`, each of which the model's publication also makes
+(static and delegate calls aside: code it delegates to runs with the pool's
+address, so its calls are counted too, and the pool sets no state elsewhere
+that could redirect a later payout), and the slot. Refinement does
 not constrain what the pool returns to calls that produce no event, or how it
 splits a payout into plain calls, so a recipient that decides where a payout
 goes by calling back into the pool is outside the guarantee. Otherwise the run has a bad event, or, if
@@ -649,10 +650,10 @@ docstrings and D12 by review only, and so are `ZEROS`, `EMPTY_ROOT_CONST` and
 A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep` or
 a wrong `chainInit` leaves states uncovered by refinement, C2, C2c and C10, a
 narrower `Honest` leaves deployments uncovered by those claims and by C8 and
-C9, and a narrower `EnvValid` leaves environments uncovered by C10. A looser `eventsOf` or
+C9, and a narrower `EnvValid` leaves environments uncovered by C10 and a looser one weakens W2. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
 weakens C2 and a looser one weakens C2c and W2, a stronger `PreValid` weakens
-C2c, a looser `callPool` or `firstPayout` weakens C10, a `verifierOf` not defined
+C2c and a looser one weakens W2, a looser `callPool` or `firstPayout` weakens C10, a `verifierOf` not defined
 by running the linked verifier makes C9 vacuous and weakens C2, C2c and
 refinement, whose spend step checks `Acc` with it through `poolOf`, and a
 `libHash2` or `libHash3` not defined by running the linked libraries makes C8
@@ -661,7 +662,8 @@ vacuous. A wrong `addrOf` or `chainOf` makes C2, C2c, refinement and, for
 refinement read the wrong nonce storage; and a wrong `RawTx.view` makes C2 and
 C2c check other fields than the transaction carries. A `Groth16Accepts` other than textbook
 verification for the committed key makes C9 and P3 refer to the wrong
-predicate.
+predicate. A looser `Honest` or `ChainStep`, or a wrong `chainInit` or
+`addrOf`, also weakens W2.
 
 Refinement pins the pool's state, value flows, calls and root writes, not
 what it returns to calls that produce no event or how it splits a payout into

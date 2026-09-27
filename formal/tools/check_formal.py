@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Step 1 checks for the formal project, run by CI next to `lake build`.
 
-  statements  SPEC.md, every project module `Spec` imports, transitively, and
+  statements  SPEC.md, every project module `Spec` imports, transitively,
               Proofs/AxiomAudit.lean, which pins the principal theorems' types,
-              match formal/STATEMENTS.lock
+              and Proofs/AuditCommand.lean, the audit command it uses, match
+              formal/STATEMENTS.lock
   pins        every artifact in SPEC.md's §1 table has its full pinned SHA-256
   sources     no Lean file admits a proof (sorry, admit, native evaluation),
               skips the kernel (debug.skipKernelTC) or uses axiom, unsafe or
@@ -54,7 +55,8 @@ def module_path(name):
 def statement_files():
     """SPEC.md, the import closure of `Spec` within this project (every module
     that fixes what a claim means, including the concrete hashes and circuit),
-    and the audit that pins each principal theorem to its claim."""
+    and the audit that pins each principal theorem to its claim, with its
+    audit command."""
     seen, stack = set(), ['Spec']
     while stack:
         name = stack.pop()
@@ -89,8 +91,14 @@ def pins():
         if not line.startswith('| `'):
             continue
         cells = [c.strip() for c in line.strip('|').split('|')]
-        paths = re.findall(r'`([^`]+)`', cells[0])
-        hashes = re.findall(r'`([0-9a-f]{64})`', cells[1])
+        # file names contain '/' or '.', which drops prose such as `compiler`
+        paths = [p for p in re.findall(r'`([^`]+)`', cells[0]) if '/' in p or '.' in p]
+        tokens = re.findall(r'`([^`]+)`', cells[1])
+        hashes = [t for t in tokens if re.fullmatch(r'[0-9a-f]{64}', t)]
+        if not paths or hashes != tokens or len(hashes) != len(paths):
+            print(f'malformed pin row: {line}')
+            ok = False
+            continue
         # a row may pin several files of one directory: `a/B.sol`, `C.sol`
         base = paths[0].rsplit('/', 1)[0] + '/' if '/' in paths[0] else ''
         for i, (name, want) in enumerate(zip(paths, hashes)):
