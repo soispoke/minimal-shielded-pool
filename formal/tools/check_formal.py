@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Step 1 checks for the formal project, run by CI next to `lake build`.
 
-  statements  SPEC.md and every project module `Spec` imports, transitively,
+  statements  SPEC.md, every project module `Spec` imports, transitively, and
+              Proofs/AxiomAudit.lean, which pins the principal theorems' types,
               match formal/STATEMENTS.lock
   pins        every artifact in SPEC.md's §1 table has its pinned SHA-256
   sources     no Lean file admits a proof (sorry, admit, native_decide), skips
@@ -21,7 +22,9 @@ from pathlib import Path
 FORMAL = Path(__file__).resolve().parents[1]
 ROOT = FORMAL.parent
 LOCK = FORMAL / 'STATEMENTS.lock'
-BANNED = re.compile(r'\b(sorry|admit|native_decide|implemented_by|axiom|unsafe|skipKernelTC)\b')
+BANNED = re.compile(r'\b(sorry|admit|native_decide|implemented_by|axiom|unsafe|skipKernelTC|bv_decide)\b'
+                    r'|\+native\b|\bnative\s*:=\s*true')
+IMPORT = re.compile(r'^(?:(?:public|private|meta)\s+)*import\s+(?:all\s+)?(\S+)', re.M)
 
 
 def sha256(path):
@@ -33,17 +36,17 @@ def module_path(name):
 
 
 def statement_files():
-    """SPEC.md and the import closure of `Spec` within this project: every
-    module that fixes what a claim means, including the concrete hashes and
-    circuit."""
+    """SPEC.md, the import closure of `Spec` within this project (every module
+    that fixes what a claim means, including the concrete hashes and circuit),
+    and the audit that pins each principal theorem to its claim."""
     seen, stack = set(), ['Spec']
     while stack:
         name = stack.pop()
         if name in seen or not module_path(name).exists():
             continue
         seen.add(name)
-        stack += re.findall(r'^import\s+(\S+)', module_path(name).read_text(), re.M)
-    return [FORMAL / 'SPEC.md'] + sorted(module_path(n) for n in seen)
+        stack += IMPORT.findall(module_path(name).read_text())
+    return [FORMAL / 'SPEC.md'] + sorted(module_path(n) for n in seen | {'Proofs.AxiomAudit'})
 
 
 def statements(update):

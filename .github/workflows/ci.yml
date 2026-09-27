@@ -208,7 +208,10 @@ jobs:
         run: lake exe cache get
       - name: Build the proofs and audit their axioms
         working-directory: formal
-        run: lake build
+        shell: bash
+        run: |
+          lake build 2>&1 | tee "$RUNNER_TEMP/lake-build.log"
+          if grep -n 'declaration uses .sorry.' "$RUNNER_TEMP/lake-build.log"; then exit 1; fi
       - name: Differential-test the executable model against the wallet
         run: |
           python formal/tools/differential_model.py --seed 20260927 -n 100

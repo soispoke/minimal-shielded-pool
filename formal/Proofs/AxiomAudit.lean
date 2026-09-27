@@ -142,3 +142,17 @@ assert_standard_axioms MSP.Groth16.g1Curve_discriminant_ne_zero
 assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_coordinates
 assert_standard_axioms MSP.Groth16.G1Coordinates.toPoint_injective
 assert_standard_axioms MSP.Groth16.G1Point.coordinates_toPoint
+
+/-! Pin the statement of every principal result to the locked `Spec` claim, so
+weakening a theorem, for example by adding a hypothesis, fails the build. -/
+example : MSP.C1 := MSP.c1
+example : MSP.C1c := MSP.c1c
+example : MSP.ModelTheorem := MSP.model_theorem
+example : MSP.C6 := MSP.c6
+example : MSP.W1 := MSP.w1
+example : MSP.Composes := MSP.composes
+example : MSP.C1 ∧ MSP.C1c ∧ MSP.ModelTheorem := MSP.circuit_model
+example : MSP.C2 → MSP.C2c → MSP.C8 → MSP.C9 → MSP.C10 → MSP.Refines → MSP.MainTheorem :=
+  MSP.main_theorem_of_chain
+example : MSP.C2 → MSP.C2c → MSP.C8 → MSP.C9 → MSP.C10 → MSP.Refines → MSP.ChainCorollary :=
+  MSP.chain_corollary_of_chain

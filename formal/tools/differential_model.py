@@ -183,8 +183,10 @@ def run_lean(source, lake="lake", keep=None):
         elapsed = time.monotonic() - start
     other = [line for line in (result.stdout + result.stderr).splitlines()
              if line.strip() and not line.startswith("R ")]
-    if result.returncode != 0 or any("error" in line for line in other):
-        raise RuntimeError("Lean run failed:\n" + "\n".join(other[:40]))
+    # A clean run prints only result lines; any message, including a warning
+    # that a driver lemma uses `sorry`, fails the run.
+    if result.returncode != 0 or other:
+        raise RuntimeError("Lean run failed or printed messages:\n" + "\n".join(other[:40]))
     return parse_lean_output(result.stdout), elapsed, other
 
 

@@ -507,22 +507,26 @@ W2 and the chain half of `MainTheorem` remain open: C2, C2c, C8, C9, C10 and
 refinement, which need step 5's semantics. `Proofs.CircuitModel` derives
 `MainTheorem` and `ChainCorollary` from exactly those obligations.
 
-CI's `formal` job checks this project on every push: `lake build`, with
-`Proofs/AxiomAudit.lean` rejecting any axiom beyond Lean's standard three for
-the principal results; `tools/check_formal.py`, which textually rejects
-`sorry`, `admit`, `native_decide`, `debug.skipKernelTC`, `axiom`, `unsafe`
+CI's `formal` job checks this project on every push: `lake build`, failing on
+any `sorry` warning, with `Proofs/AxiomAudit.lean` rejecting any axiom beyond
+Lean's standard three for the principal results and pinning each one's type to
+its claim; `tools/check_formal.py`, which textually rejects
+`sorry`, `admit`, native evaluation, `debug.skipKernelTC`, `axiom`, `unsafe`
 and `implemented_by` outside comments in every Lean file of the project, checks the artifact hashes
 of §1, and checks the statement files against `STATEMENTS.lock`; the R1CS
 import checks above, with the circuit recompiled; and every generator of
 checked-in Lean data under `tools/`, `Poseidon/` and `Keccak/`, rerun against
-the pinned R1CS, symbol file, key and hash constants. The statement files are
-this file and every project module that `Spec` imports, transitively: besides
-`Spec.lean` and `Spec/`, the modules of `Artifacts/`, `Poseidon/`, `Keccak/`,
-`Primality/` and `Proofs/` that define the concrete hashes, the circuit and its
-projections. `.github/CODEOWNERS` assigns this file, `Spec.lean`, `Spec/` and
-the lock to the owner, so changing any statement file needs the owner's review
-of the lock, which binds only if branch protection requires code owner
-review.
+the pinned R1CS, symbol file, key and hash constants; and the differential
+test of the executable model against `wallet/wallet.py`. The statement files
+are this file, `Proofs/AxiomAudit.lean` and every project module that `Spec`
+imports, transitively: besides `Spec.lean` and `Spec/`, the modules of
+`Artifacts/`, `Poseidon/`, `Keccak/`, `Primality/` and `Proofs/` that define
+the concrete hashes, the circuit and its projections. `.github/CODEOWNERS`
+assigns this file, `Spec.lean`, `Spec/`, the lock and the files that enforce
+it (CI, `check_formal.py`, the audit and the Lake configuration) to the owner,
+so changing any statement file needs the owner's review of the lock, which
+binds only if branch protection requires code owner review. The job has not
+yet run on GitHub's runners.
 
 ## 8. Limits
 
