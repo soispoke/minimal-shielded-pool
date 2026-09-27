@@ -281,8 +281,6 @@ theorem c5h (P : Pool) (hC1 : C1) : C5h P := by
     cases o; simp only [Occ.mk.injEq]; exact ⟨he, hidx⟩
   rw [ho]; exact hsub _ (mem_inputsOf _ _ k hvk)
 
-#print axioms c5g
-#print axioms c5h
 
 /-! ## Spendable -/
 
@@ -357,19 +355,16 @@ theorem spendable (P : Pool) (hC1 : C1) : Spendable P := by
     rw [stmt_d P tx hG, ← he, ← hsk] at this
     exact this
 
-#print axioms spendable
 
 theorem model_rest (hC1 : C1) (P : Pool) : C5g P ∧ C5h P ∧ Spendable P :=
   ⟨c5g P hC1, c5h P hC1, spendable P hC1⟩
 
-#print axioms model_rest
 
 end
 end MSP
 open MSP in
-example : ModelTheorem := fun hC1 P =>
-  ⟨c3 P hC1, c4 P hC1, c5a P hC1, c5b P hC1, c5c P hC1, c5d P, c5e P, c5g P hC1, c5h P hC1, c5i P hC1, spendable P hC1⟩
-open MSP in
-theorem model_theorem : ModelTheorem := fun hC1 P =>
-  ⟨c3 P hC1, c4 P hC1, c5a P hC1, c5b P hC1, c5c P hC1, c5d P, c5e P, c5g P hC1, c5h P hC1, c5i P hC1, spendable P hC1⟩
-#print axioms model_theorem
+/-- The model half, given C5j and C5k, whose proofs are pending. -/
+theorem model_theorem_of (h5j : ∀ P, C1 → C5j P) (h5k : ∀ P, C1 → C5k P) : ModelTheorem :=
+  fun hC1 P =>
+    ⟨c3 P hC1, c4 P hC1, c5a P hC1, c5b P hC1, c5c P hC1, c5d P, c5e P, c5g P hC1, c5h P hC1,
+     c5i P hC1, h5j P hC1, h5k P hC1, spendable P hC1⟩

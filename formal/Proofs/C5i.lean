@@ -68,7 +68,6 @@ theorem c5i_of (P : Pool) (h5b : C5b P) : C5i P := by
   obtain ⟨-, hsk, -⟩ := h3_inj hNC (inT _ w1) o1 hpk
   exact ⟨hsk, hρ⟩
 
-#print axioms c5i_of
 
 end
 end MSP

@@ -102,7 +102,9 @@ def newCount (sd : SettleData) : ℕ :=
   (if sd.o1 = (SINK 0).val then 0 else 1) + (if sd.o2 = (SINK 1).val then 0 else 1)
 
 /-- Every revert condition of `settle`: its checks, the ABI decoder's range
-checks, and checked arithmetic on the epoch counter and the credit. -/
+checks, and checked arithmetic on the epoch counter and the credit. The decoder
+checks a calldata field only when it is read, and `settle` never reads
+`rootSlot`; the spend step's `Acc` (A3) bounds it anyway. -/
 def SettlePre (s : PoolState) (P : Pool) (sd : SettleData) : Prop :=
   sd.epoch < 2 ^ 64 ∧ sd.rcp < 2 ^ 160 ∧ sd.auth < 2 ^ 160 ∧
   sd.nf1 ≠ 0 ∧ sd.nf2 ≠ 0 ∧ sd.auth ≠ 0 ∧ sd.domain = (D P.c P.A sd.epoch).val ∧ sd.epoch ≤ s.E ∧
@@ -138,7 +140,7 @@ inductive Event
   | rootWrite (a salt root : ℕ)
   /-- `claimWithdrawal(r)`, paying `r` -/
   | claim (r : ℕ)
-  /-- ETH reaching the pool other than by a call to it, or held at deployment -/
+  /-- ETH reaching the pool other than by a call into it (as `eventsOf` defines one), or held at deployment -/
   | receive (v : ℕ)
   /-- a frame transaction whose frame 1 the pool approved, and the gas the pool paid -/
   | spend (tx : FrameTx) (gasPaid : ℕ)
@@ -398,6 +400,35 @@ def C5i (P : Pool) : Prop :=
       (⟨(settleData tx).epoch, (witOf (extOf P tx)).idx k⟩ : Occ) = o →
       BadEventWith P (evs ++ [.spend tx g]) s' (openingQueries P o.e o.i sk ρ v) ∨
       ((witOf (extOf P tx)).sk k = sk ∧ (witOf (extOf P tx)).ρ k = ρ)
+
+/-- C5j. Deposits and settlements do what they should, not only nothing worse:
+a shield adds its value to the balance and inserts its commitment as an unspent
+occurrence holding that value; a settlement that passes its checks credits
+exactly `pub` to `rcp`, lowers what the pool owes by exactly `fee`, and inserts
+each nonzero-value output as an unspent occurrence holding its commitment and
+value. -/
+def C5j (P : Pool) : Prop :=
+  (∀ evs s inr v s', Run P evs s → Step P s (.shield inr v) s' →
+    BadEvent P (evs ++ [.shield inr v]) s' ∨
+    (s'.balance = s.balance + v ∧ ∃ i < (s'.leaves s'.E).length,
+      (s'.leaves s'.E).getD i 0 = cm inr (v : F) ∧ (s'.vals s'.E).getD i 0 = v ∧
+      (⟨s'.E, i⟩ : Occ) ∉ s'.spent)) ∧
+  (∀ evs s tx g s', Run P evs s → Step P s (.spend tx g) s' → SettlePre s P (settleData tx) →
+    BadEvent P (evs ++ [.spend tx g]) s' ∨
+    let sd := settleData tx
+    let w := witOf (extOf P tx)
+    (s'.credit = s.credit + Finsupp.single sd.rcp sd.pub ∧ owed s' + sd.fee = owed s ∧
+     ∀ k : Fin 2, w.ov k ≠ 0 → ∃ i < (s'.leaves s'.E).length,
+       (s'.leaves s'.E).getD i 0 = cm (w.oi k) (w.ov k) ∧
+       (s'.vals s'.E).getD i 0 = (w.ov k).val ∧ (⟨s'.E, i⟩ : Occ) ∉ s'.spent))
+
+/-- C5k. Anyone can publish an existing epoch's full tree root: the current
+epoch's root over all its leaves, or a closed epoch's final root over all of
+its leaves. -/
+def C5k (P : Pool) : Prop :=
+  ∀ evs s, Run P evs s → ∀ e ≤ s.E, e < 2 ^ 64 → BadEvent P evs s ∨
+    ∃ s', Step P s (.publish e) s' ∧
+      s'.roots = s.roots ++ [(sourceId P.A e, s.slot, (TR (s.leaves e)).val)]
 
 /-- The siblings of leaf `i` in the complete tree over `L`: at level `l`, the
 root of the neighboring subtree of height `l`. -/

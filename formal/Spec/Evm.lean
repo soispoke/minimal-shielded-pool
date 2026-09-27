@@ -92,18 +92,19 @@ pool whose calldata begins with the selector of `shield`, `publishEpochRoot` or
 `claimWithdrawal` and that returns successfully and whose effects persist,
 whether or not it changes state, decoded from that call's own calldata and
 `CALLVALUE` (a shield's `inner` is its calldata word and `v` its `CALLVALUE`).
-A call into the pool is a `CALL` whose recipient is the pool or a non-VERIFY
-frame whose target is the pool; not the pool's own `DELEGATECALL` into its
-logic, and not another contract's `DELEGATECALL` or `CALLCODE` to the pool's
-code. Then: each spend, a
+A call into the pool is a message call whose recipient is the pool: the
+top-level call of a non-frame transaction whose `to` is the pool, a `CALL`
+whose recipient is the pool, or a non-VERIFY frame whose resolved target is the
+pool; not the pool's own `DELEGATECALL` into its logic, and not another
+contract's `DELEGATECALL` or `CALLCODE` to the pool's code. Then: each spend, a
 transaction whose frame 1 the pool approved, with the gas the pool paid, placed
 at its settlement, before the events of its later frames; each
 EIP-8272 write by another address; `receive` for ETH credited to the pool other
-than by a call to it or as a gas refund; and `tick` at a new slot. Any other
+than by a call into it (as `eventsOf` defines one) or as a gas refund; and `tick` at a new slot. Any other
 successful call must leave what `Obs` reads unchanged. -/
 opaque eventsOf : Deployment → ChainState → ChainState → List Event
 
-/-- ETH credited to the pool in a step other than by a call to it or a gas refund:
+/-- ETH credited to the pool in a step other than by a call into it (as `eventsOf` defines one) or a gas refund:
 priority fees, `SELFDESTRUCT` beneficiaries, withdrawals. -/
 opaque passiveInflow : Deployment → ChainState → ChainState → ℕ
 
@@ -192,6 +193,8 @@ def C2c : Prop :=
     t.view.maxCost ≤ st.balance (addrOf d) →
     ValidTx st t ∧ (1, 3) ∈ approvalsIn d st t
 
+/-- The result of `callPool`'s transaction: `ok` if the call to the pool returned
+without reverting, `reverted`, or `outOfGas`. -/
 inductive Outcome | ok | reverted | outOfGas
 deriving DecidableEq, Inhabited
 

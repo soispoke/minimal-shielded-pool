@@ -45,6 +45,5 @@ theorem c5d (P : Pool) : C5d P := by
         simp only [Finsupp.add_apply, a1, a2, a3]; have := ih r; omega
       · exact ih r
 
-#print axioms c5d
 end
 end MSP

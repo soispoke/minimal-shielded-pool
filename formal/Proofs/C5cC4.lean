@@ -287,7 +287,6 @@ theorem c5c_of (P : Pool) (hC1 : C1) (h5b : C5b P) : C5c P := by
       · rw [owed_eq, hXc, hXb]
         omega
 
-#print axioms c5c_of
 
 
 /-! ## C4 from C1, C5b and C5c -/
@@ -362,7 +361,6 @@ theorem c4_of (P : Pool) (hC1 : C1) (h5b : C5b P) (h5c : C5c P) : C4 P := by
   · intro h; apply hs0; simp only [SettleData.stmt]; rw [h, ZMod.natCast_zmod_val]
   · have := hB.2; omega
 
-#print axioms c4_of
 
 end
 end MSP
