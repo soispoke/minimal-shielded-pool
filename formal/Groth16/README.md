@@ -1,4 +1,4 @@
-# Pinned Groth16 key and proof encoding
+# Concrete groups and pinned Groth16 verification
 
 `KeyData.lean` contains the exact verification key from the pinned JSON. Its
 kernel certificate checks coordinate bounds, non-infinity and the curve
@@ -30,7 +30,7 @@ No ceremony is rerun and no proving artifact is changed.
 Pratt certificate. `Group.lean` supplies the actual Fq field and Mathlib's
 proved nonsingular Weierstrass group for `y²=x³+3`, with canonical coordinate
 round trips and the conventional base point `(1,2)`. It checks the discriminant
-is nonzero; it does not assert the group's order.
+is nonzero; `Cardinality.lean` proves its order below.
 
 `Quadratic.lean` constructs the quadratic field using the proved nonsquareness
 of `-1` in Fq. `Twist.lean` supplies the actual nonsingular Mathlib curve group
@@ -49,17 +49,34 @@ and excludes 2-torsion with a kernel-checked cubic nonresidue. It assumes
 neither a Hasse bound nor a curve cardinality. The scalar isomorphism is
 mathematical; no efficient discrete-log algorithm is claimed.
 
-Remaining mathematical bindings include the full G2 subgroup characterization
-and the pairing relation. `Spec.Circuit.Groth16Accepts` remains opaque. Its faithful definition
-must combine these obligations with the strict encoding and the equation
-`e(-A,B)·e(alpha,beta)·e(IC0+β·IC1+γ·IC2+α·IC3,gamma)·e(C,delta)=1`.
-The three public scalars are ordered `(β,γ,α)`.
+`Cofactor.lean` supplies a kernel-checked twist point of exact order 10069.
+`TwistCardinality.lean` bounds all twist points by `2q²+1`. If `p²` divided
+that cardinality, the coprime cofactor point would force at least `10069p²`
+points, contradicting the bound. The subgroup killed by `p` therefore has
+exactly `p` points, and the standard EIP-197 generator generates all of it.
+This proves the full G2 membership characterization and scalar-field
+isomorphism without assuming a twist order or Hasse bound.
 
-EIP-197 specifies the pairing check using discrete logarithms in its concrete
-cyclic groups. A declarative version can follow that definition without a
-Miller-loop implementation, but the group and subgroup bridges must still be
-proved. See [EIP-197](https://eips.ethereum.org/EIPS/eip-197) and
-[EIP-196](https://eips.ethereum.org/EIPS/eip-196).
+`Verifier.lean` defines the concrete acceptance predicate for the pinned key.
+The inverse scalar-group isomorphisms implement the mathematical logarithms
+in [EIP-197's normative pairing check](https://eips.ethereum.org/EIPS/eip-197#specification).
+Their values reconstruct every point; bilinearity and nondegeneracy are proved.
+The four terms are `(-A,B)`, `(alpha,beta)`, `(IC0+β·IC1+γ·IC2+α·IC3,gamma)`
+and `(C,delta)`, with public scalars ordered `(β,γ,α)`. Strict decoding enforces
+exact length, canonical coordinates and non-infinity. Curve checks and the
+proved subgroup characterization enforce the complete group conditions.
+`Spec.Circuit.Groth16Accepts` is now this concrete predicate. Its expanded
+checks and exact point orders are audited in `Proofs/Groth16Binding.lean`.
+
+This is a declarative definition using the proved groups, not an efficient
+logarithm algorithm or a Miller-loop implementation. C9 still requires proving
+that execution of the pinned linked verifier implements this predicate within
+its specified gas bound. No deployed execution result follows merely from
+matching the key constants, argument order or pairing expression by inspection.
+
+From `formal/`, `python3 tools/groth16_cofactor.py` reproduces the cofactor
+certificate, and `lake build Groth16 Proofs.AxiomAudit` checks the bindings.
+All numerical certificates use ordinary `decide`, not native evaluation.
 
 The original powers-of-tau file is absent. This blocks the activation gate's
 optional full snarkjs setup check, not this verification-key binding. The

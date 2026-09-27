@@ -1,5 +1,6 @@
 import Spec.Relation
 import Artifacts.Witness
+import Groth16.Verifier
 
 /-!
 # C1 and C1c: the circuit
@@ -47,7 +48,10 @@ def C1c : Prop :=
 `q` of points `A` and `C` of G1 and `B` of G2, in EIP-197's encoding (each G2
 coordinate imaginary part first), on the curves, in the prime-order
 subgroups and none at infinity, and the pairing equation holds for the public
-signals. Step 5 defines it from the key. -/
-opaque Groth16Accepts : List UInt8 → F × F × F → Prop
+signals. EIP-197's normative discrete-log pairing predicate is instantiated
+with the proved concrete groups and the pinned key; C9 still requires running
+the linked verifier bytecode. -/
+@[irreducible] def Groth16Accepts (bytes : List UInt8) (pub : F × F × F) : Prop :=
+  Groth16.Accepts bytes pub
 
 end MSP

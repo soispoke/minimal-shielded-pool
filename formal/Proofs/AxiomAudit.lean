@@ -38,6 +38,7 @@ import Proofs.NonVacuityFixtureVerified
 import Groth16.Group
 import Groth16.SubgroupKey
 import Groth16.Cardinality
+import Proofs.Groth16Binding
 import Chain.Dispatcher
 import Mutations.Check
 import Mutations.MembershipCounterexample
@@ -219,3 +220,33 @@ theorem pin_sink_counterexample : ∃ a : MSP.Assignment,
   MSP.Mutations.Sink.counterexample
 
 assert_standard_axioms pin_sink_counterexample
+
+-- Concrete G2 and textbook verifier bindings, separate from bytecode C9.
+assert_standard_axioms MSP.Groth16.cofactorPoint_order
+assert_standard_axioms MSP.Groth16.twistPoint_card_not_scalar_square
+assert_standard_axioms MSP.Groth16.g2Point_natCard
+assert_standard_axioms MSP.Groth16.g2BasePoint_generates
+assert_standard_axioms MSP.Groth16.g2Point_exists_unique_scalar
+assert_standard_axioms MSP.Groth16.twistPoint_mem_g2_iff
+assert_standard_axioms MSP.Groth16.g1Log_spec
+assert_standard_axioms MSP.Groth16.g2Log_spec
+assert_standard_axioms MSP.Groth16.pairingExponent_nonzero_left
+assert_standard_axioms MSP.Groth16.pairingExponent_nonzero_right
+assert_standard_axioms MSP.Groth16.verificationEquation_iff
+assert_standard_axioms MSP.groth16_accepts_iff
+assert_standard_axioms MSP.groth16_accepts_point_orders
+
+private theorem pin_g2_card : Nat.card (MSP.Groth16.Subgroup.primeTorsion
+    MSP.Groth16.TwistPoint) = MSP.p := MSP.Groth16.g2Point_natCard
+assert_standard_axioms pin_g2_card
+
+private theorem pin_groth16_accepts (bytes : List UInt8) (pub : MSP.F × MSP.F × MSP.F) :
+    MSP.Groth16Accepts bytes pub ↔
+      ∃ π : MSP.Groth16.ProofCoordinates,
+        bytes.length = 256 ∧ MSP.Groth16.fromWords (MSP.Groth16.proofWords bytes) = π ∧
+        π.Canonical ∧ π.Nonzero ∧ ∃ hc : π.OnCurve,
+          ∃ hb : MSP.p • π.b.toTwistPoint hc.2.1 = 0,
+            MSP.Groth16.VerificationEquation (π.a.toPoint hc.1)
+              ⟨π.b.toTwistPoint hc.2.1, hb⟩ (π.c.toPoint hc.2.2) pub :=
+  MSP.groth16_accepts_iff bytes pub
+assert_standard_axioms pin_groth16_accepts

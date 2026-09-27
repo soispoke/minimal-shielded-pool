@@ -27,6 +27,7 @@ Lean's standard logical axioms for the principal results listed below.
 | `CircuitCompleteness.lean` | canonical Boolean witness construction |
 | `../Artifacts/CircuitCompleteness.lean` | `MSP.c1c : C1c`, complete pinned-R1CS assignment construction with exact projections |
 | `CircuitModel.lean` | discharged circuit/model conjunction; the main theorem and chain corollary from the remaining chain obligations |
+| `Groth16Binding.lean` | the concrete acceptance predicate expands to the specified encoding, curve, subgroup and pinned-key pairing checks |
 | `AxiomAudit.lean` | build-time admission checks for the principal proofs, including full-R1CS compression |
 
 `ModelTheorem` is proven: every model claim holds for every pool from C1.
@@ -39,7 +40,9 @@ relation and both compression outputs from the complete pinned R1CS.
 `CircuitSoundness` proves the unchanged C1 statement. All 54 small-hash
 instances, the beta gadget, all range/control/path gates and the private
 projection are connected. Universal optimized/reference Poseidon equivalence
-is proved for all three widths. `Groth16Accepts` remains opaque.
+is proved for all three widths. `Groth16Accepts` now has a concrete definition
+using the pinned key, exact group/subgroup bindings and EIP-197's normative
+pairing check. This does not discharge bytecode equivalence C9.
 
 `CircuitCompleteness` assembles actual complete hash, range, path, control and
 compression witnesses using checked wire ownership and shared-value agreement.
@@ -64,8 +67,8 @@ The specification's `K` is now the concrete Ethereum Keccak definition in
 `Keccak/`. Its fixed source/domain digests have kernel certificates.
 The key and strict proof-decoding layer in `Groth16/` is also checked, as are
 all pinned key-point orders and the full G1 cardinality and scalar-group
-correspondence. Full G2 subgroup characterization, pairing and deployed-bytecode
-binding remain separate obligations.
+correspondence. The full G2 subgroup characterization and textbook pairing predicate are now
+concrete. Equivalence to deployed-bytecode execution remains open.
 
 
 `NonVacuityFixtureVerified.lean` proves `MSP.w1 : W1` with no hypotheses.

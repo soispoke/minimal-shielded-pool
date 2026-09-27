@@ -1,0 +1,8 @@
+'MSP.Groth16.cofactorPoint_order' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g2Point_natCard' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g2BasePoint_generates' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.twistPoint_mem_g2_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g1Log_spec' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.Groth16.g2Log_spec' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.groth16_accepts_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MSP.groth16_accepts_point_orders' depends on axioms: [propext, Classical.choice, Quot.sound]

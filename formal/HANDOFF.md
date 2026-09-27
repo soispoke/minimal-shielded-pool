@@ -46,6 +46,33 @@ passes 3,796 jobs; all four exporters reproduce exactly, and a changed
 constraint is correctly rejected. Evidence is saved in
 `evidence/2026-09-27-resumed/`.
 
+## Concrete G2 and Groth16 continuation
+
+The four circuit mutation gates are committed in `05bee6c`. The next increment
+proves the full G2 subgroup has cardinality `p`, its standard EIP-197 generator
+spans it, and scalar multiplication gives a unique scalar-field representative.
+A checked order-10069 twist point excludes `p²` dividing the ambient cardinality
+using the `2q²+1` coordinate bound. No full twist cardinality is assumed.
+
+`Groth16/Verifier.lean` uses those isomorphisms for the exact normative EIP-197
+pairing check and the committed key's four terms. `Spec.Circuit.Groth16Accepts`
+is now this concrete predicate, with every byte, coordinate, curve, subgroup
+and equation check exposed by `Proofs/Groth16Binding.lean`. C9 remains open:
+matching the pinned Solidity expression by review does not prove bytecode
+execution or gas. The statement lock now includes the complete new definition
+closure (52 files). P3, P3c and P9 are unchanged. The final full build passes
+3,800 jobs and the principal `#print axioms` output contains only standard
+Lean axioms. All 12 artifact pins and 653 Lean source checks pass. The ten
+checking-harness tests pass; changing a cofactor coordinate is correctly
+rejected by the kernel. Logs are in `evidence/2026-09-27-resumed/`.
+
+The next substantive obligation is faithful EVM execution of the linked
+verifier and libraries, starting from the existing dispatcher pilot's explicit
+opcode/exception/jumpdest corrections. Do not substitute the declarative
+predicate for `verifierOf`; that declaration must run the actual linked code.
+Chain C2/C2c/C8/C9/C10, refinement, W2 and non-circuit mutation rows remain open.
+The user requested direct continuation; keep the two-hour automation paused.
+
 ## Ownership transfer, 2026-09-27 05:52 UTC
 
 Thomas asked the Claude session `e9529fa7-10f6-4fd3-a0b1-195641fd261d` to

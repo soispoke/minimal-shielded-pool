@@ -507,10 +507,13 @@ storage layout: slot 21 is the leaf count, 22 the current root, 23 the credits,
 `treeQueries`, `eventQueries` and the Keccak inputs `rrEntryMsg`, `rrKeyMsg`,
 `creditMsg` and `finalRootMsg`. Bad events are `BadEventWith`, over `traceQueries`,
 with `Query.degenerate`, `ExtractionFailure` and `CompressionBreak`.
-Declarations still marked `opaque` are bound to the artifacts in step 5:
-`Groth16Accepts` (textbook Groth16 verification with the key in
-`spend_vkey.json`, not the verifier's code), which only C9 uses, and the EVM
-semantics, where
+`Groth16Accepts` is now textbook verification with the exact pinned key,
+strict EIP-197 encoding and the normative discrete-log pairing predicate.
+`Groth16/` proves the actual G1 and G2 scalar-group correspondences, including
+full G2 subgroup membership; `Proofs.Groth16Binding` exposes and audits all
+acceptance checks. This predicate does not execute the verifier's code, and
+C9 remains open. Declarations still marked `opaque` in the EVM semantics
+are bound to the artifacts in step 5, where
 `ChainStep`, `eventsOf`, `approvalsIn`, `firstPayout` and the
 other chain declarations must
 come from one semantics applied to the pinned bytecode, and where step 5 proves
@@ -655,8 +658,9 @@ Step 5 must define the opaque types `RawTx`, `Env`, `Deployment` and
 `ChainRest`, and `chainInit`, `ChainStep`, `eventsOf`, `passiveInflow`,
 `ValidTx`, `PreValid`, `approvalsIn`, `EnvValid`, `callPool`, `firstPayout`,
 `verifierOf`, `libHash2`, `libHash3`, `addrOf`, `chainOf`, `NONCE_MANAGER`,
-`RawTx.view`, `Groth16Accepts` and `Honest`; only review can check those
-definitions against their docstrings and D12, as it checks `ZEROS`,
+`RawTx.view` and `Honest`; only review can check those
+definitions against their docstrings and D12, as it checks the concrete
+`Groth16Accepts` against textbook verification and `ZEROS`,
 `EMPTY_ROOT_CONST` and `LogicTree` as transcriptions of the logic's tree code.
 A narrower `RawTx` weakens C2 and C2c, and a narrower `Env` weakens C10. A narrower `ChainStep` or
 a wrong `chainInit` leaves states uncovered by refinement, C2, C2c and C10, a

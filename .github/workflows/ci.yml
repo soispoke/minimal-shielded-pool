@@ -185,7 +185,7 @@ jobs:
           for tool in compression_fragment small_hash_gates small_hash_affine \
                       constraint_coverage circuit_assembly_layout \
                       hash_assignment_completeness assignment_recovery \
-                      groth16_key groth16_subgroups nonvacuity_poseidon; do
+                      groth16_key groth16_subgroups groth16_cofactor nonvacuity_poseidon; do
             python "formal/tools/$tool.py"
           done
           python formal/tools/hash_instances.py --node-modules tooling/node_modules --sym "$sym"
