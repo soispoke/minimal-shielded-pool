@@ -43,14 +43,16 @@ import Lean.Elab.Command
 an axiom beyond Lean's standard logical axioms. This audits the named proofs;
 it does not discharge their hypotheses. -/
 
-open Lean Elab Command in
+-- Every name is qualified from the root and nothing is opened, so no
+-- declaration in an imported module can take part in resolving them.
 elab "assert_standard_axioms " n:ident : command => do
-  let name ← liftCoreM <| Lean.Elab.realizeGlobalConstNoOverloadWithInfo n
-  let axioms ← Lean.collectAxioms name
-  let allowed : List Name := [`propext, `Classical.choice, `Quot.sound]
+  let name ← _root_.Lean.Elab.Command.liftCoreM <|
+    _root_.Lean.Elab.realizeGlobalConstNoOverloadWithInfo n
+  let axioms ← _root_.Lean.collectAxioms name
+  let allowed : _root_.List _root_.Lean.Name := [`propext, `Classical.choice, `Quot.sound]
   let extra := axioms.filter fun ax => !allowed.contains ax
   unless extra.isEmpty do
-    throwError "{n} depends on nonstandard axioms: {extra}"
+    _root_.Lean.throwError m!"{n} depends on nonstandard axioms: {extra}"
 
 assert_standard_axioms MSP.model_theorem
 assert_standard_axioms MSP.c5j
