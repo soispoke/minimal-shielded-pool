@@ -240,7 +240,7 @@ def main():
         (args.node_modules/'circomlib/circuits/poseidon_constants.circom').read_bytes())
     if args.write:DESTINATION.write_bytes(expected)
     else:require(DESTINATION.read_bytes()==expected,'assignment plan differs from exact regeneration')
-    print('Covered 14842 wires and 14802 constraints. Disjoint 55 hash blocks; all small affine systems triangular; beta rank 153. Numeric extraction only, C1c unproved.')
+    print('Covered 14842 wires and 14802 constraints. Disjoint 55 hash blocks; all small affine systems triangular; beta rank 153. Numeric extraction; C1c is proved in Artifacts.CircuitCompleteness.')
 
 
 if __name__=='__main__':

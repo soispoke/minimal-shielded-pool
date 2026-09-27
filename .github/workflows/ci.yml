@@ -172,8 +172,25 @@ jobs:
           cmp "$RUNNER_TEMP/circuit/spend.r1cs" build/spend.r1cs
           python formal/tools/r1cs_artifact.py --sym "$RUNNER_TEMP/circuit/spend.sym" \
             --check-lean formal/Artifacts/Spend.lean
+          node formal/tools/crosscheck_r1cs.cjs tooling/node_modules build/spend.r1cs \
+            formal/Artifacts/spend.manifest.json
           MSP_SPEND_SYM="$RUNNER_TEMP/circuit/spend.sym" \
             python -m unittest discover -s formal/tools -p 'test_*.py'
+      - name: Check every generated Lean data file against the pinned artifacts
+        run: |
+          sym="$RUNNER_TEMP/circuit/spend.sym"
+          for tool in path_bits_fragment path_gates sink_gates range_fragment \
+                      range_address_fragment range_amounts beta_gates; do
+            python "formal/tools/$tool.py" --sym "$sym"
+          done
+          for tool in compression_fragment small_hash_gates small_hash_affine \
+                      constraint_coverage circuit_assembly_layout \
+                      hash_assignment_completeness assignment_recovery \
+                      groth16_key nonvacuity_poseidon; do
+            python "formal/tools/$tool.py"
+          done
+          python formal/tools/hash_instances.py --node-modules tooling/node_modules --sym "$sym"
+          python formal/tools/assignment_plan.py --node-modules tooling/node_modules --sym "$sym"
       - name: Install Lean
         run: |
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \

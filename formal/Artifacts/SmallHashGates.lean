@@ -6,8 +6,9 @@ import Artifacts.SmallHashGatesCertificates
 There are 4,366 retained x⁵ gates in the 54 note, path and output hash instances.
 The theorems below prove their nonlinear equations directly from the full system.
 They also expose complete full/partial-stage interfaces, including source-fixed
-coordinates folded by the compiler. The remaining affine certificates must bind
-these stages and the recorded interface forms to Optimized3/Optimized4 hashes.
+coordinates folded by the compiler. `SmallHashGatesBinding` and
+`SmallHashGatesComplete` bind these stages and the recorded interface forms to
+Optimized3/Optimized4 hashes.
 -/
 
 namespace MSP.Artifacts.SmallHashGates

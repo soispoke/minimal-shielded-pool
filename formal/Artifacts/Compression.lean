@@ -18,7 +18,7 @@ open CompressionData
 
 /-- Candidate statement projection determined by the actual compression prefix.
 The optimized circuit eliminated `fee`, whose field expression occurs in c1.
-Consistency with all other circuit gadgets remains to be established. -/
+`Spec.Circuit` uses this projection as `stmtOf`. -/
 def statement (w : Assignment) : Statement :=
   ⟨w 99, w 100, w 101, w 102, w 4, w 5, w 96,
    w 10 + w 11 - w 94 - w 95 - w 96, w 97, w 98⟩

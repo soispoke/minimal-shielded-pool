@@ -11,7 +11,8 @@ The five additional 128-bit gates below are bound to exact slices of the full
 pinned constraint list. Field coefficient permutation certificates reconstruct
 the eliminated high bits, including the optimized and reordered fee gate.
 The fee uses the same concrete projection as the checked compression theorem.
-These are circuit fragments; whole C1/C1c and statement/witness binding remain open.
+These are circuit fragments; `CircuitSoundness` and `CircuitCompleteness` use them
+to prove C1 and C1c.
 -/
 
 namespace MSP.Artifacts.RangeAmounts

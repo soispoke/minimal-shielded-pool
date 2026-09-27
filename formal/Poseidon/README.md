@@ -72,7 +72,6 @@ concrete statement. `Optimized3.hash2_eq_reference` and
 `Optimized4.hash3_eq_reference` prove the two smaller widths universally by
 the same checked method. All 54 note/path/output hash instances are bound
 in `Artifacts.SmallHashGatesComplete`; `Artifacts.CircuitSoundness` proves C1. These results do not prove
-Poseidon security, R1CS soundness/completeness, or the EVM libraries' behavior
-and gas bounds. Those remain separate bindings. `Spec.Hash` marks the concrete
+Poseidon security, or the EVM libraries' behavior and gas bounds (C8, step 5). `Spec.Hash` marks the concrete
 hash wrappers irreducible to prevent accidental expansion during symbolic
 proofs; their bodies remain available for explicit unfolding and kernel checks.

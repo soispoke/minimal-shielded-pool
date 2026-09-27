@@ -31,8 +31,8 @@ theorem compression_constraints_mem {c : Constraint}
   exact first_chunks_mem (List.mem_of_mem_take hc)
 
 /-- Every satisfying assignment of the complete pinned R1CS has the canonical
-polynomial gamma under the concrete partial statement projection. Beta and the
-remaining relation/witness bindings are still separate obligations. -/
+polynomial gamma under the concrete partial statement projection. Beta is
+`PublicSignals.beta_of_pinned_r1cs`. -/
 theorem gamma_of_pinned_r1cs (w : Assignment) (h : Spend.system.Satisfied w) :
     w 2 = MSP.γ (Compression.statement w) (w 3 + w 1) :=
   Compression.gamma_of_system w (fun _ hc => compression_constraints_mem hc) h

@@ -493,9 +493,10 @@ note/path hash and both compression outputs. `Artifacts.CircuitCompleteness`
 proves C1c by constructing and checking the complete assignment, including
 exact statement, private witness and public projections for every alpha.
 Both rest on an external binding: `formal/tools/r1cs_artifact.py` decodes
-`build/spend.r1cs` into `Artifacts/Spend.lean` and maps signals to wires
-through the reproduced symbol file, cross-checked by `crosscheck_r1cs.cjs`.
-Lean does not parse the binary.
+`build/spend.r1cs` into `Artifacts/Spend.lean`, whose constraints
+`crosscheck_r1cs.cjs` decodes independently, and the projections' wire indices
+in `Artifacts/PathBitsData.lean` come from the reproduced symbol file, which
+`path_bits_fragment.py` checks. Lean does not parse the binary.
 `formal/Proofs/` proves `ModelTheorem`, every model claim from C1, and `Composes`.
 It also proves C6 for the specified tree algorithm, including kernel-checked
 zero constants. `K` is concrete Ethereum Keccak-256, with kernel-checked
@@ -511,8 +512,9 @@ CI's `formal` job checks this project on every push: `lake build`, with
 the principal results; `tools/check_formal.py`, which rejects `sorry`, `admit`,
 `native_decide`, new axioms and unsafe code in any Lean file, checks the
 artifact hashes of §1, and checks the statement files (this file, `Spec.lean`
-and `Spec/`) against `STATEMENTS.lock`; and the R1CS import check above, with
-the circuit recompiled. `.github/CODEOWNERS` assigns the statement files and
+and `Spec/`) against `STATEMENTS.lock`; the R1CS import checks above, with
+the circuit recompiled; and every generator of checked-in Lean data, rerun
+against the pinned R1CS and symbol file. `.github/CODEOWNERS` assigns the statement files and
 the lock to the owner, which binds only if branch protection requires code
 owner review.
 

@@ -41,7 +41,7 @@ import Lean.Elab.Command
 
 /-! Fail the build if a checked theorem starts depending on an admission or
 an axiom beyond Lean's standard logical axioms. This audits the named proofs;
-it does not discharge their hypotheses or bind the opaque artifact declarations. -/
+it does not discharge their hypotheses. -/
 
 open Lean Elab Command in
 elab "assert_standard_axioms " n:ident : command => do

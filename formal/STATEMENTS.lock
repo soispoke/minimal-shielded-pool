@@ -1,5 +1,5 @@
 {
-  "formal/SPEC.md": "db3365535c5e334eb95e5ac048e0449860e55356ac34cd1fb9ad8ac0c548cbce",
+  "formal/SPEC.md": "95ac06df41aa49f9eae566aee5626ea13749a2255fc01b9979ee133657610865",
   "formal/Spec.lean": "17eb68c9778dc67e4238112341bb6a6a79c14e781df391761a75a2a5ddf4a58a",
   "formal/Spec/Basic.lean": "30abafbf4c76ebc78444e41bf89af4f60f557e5b6f643931207e1c6286652572",
   "formal/Spec/Circuit.lean": "cd6334769ed55dcc7c4e2f74f882c0dcf2e8eff395ff38df156134f9162227b1",

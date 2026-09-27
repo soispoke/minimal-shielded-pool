@@ -8,7 +8,7 @@ import Proofs.CircuitGadgets
 The actual IsZero/IsEqual gadgets and their controlling multiplications imply
 R7 for the retained output-inner and output-value wires. This holds for every
 assignment satisfying the full R1CS, without trusting its witness generator.
-Binding the remaining relation and opaque circuit declarations is separate.
+`RelationFragments` uses this for R7.
 -/
 
 namespace MSP.Artifacts.SinkGates

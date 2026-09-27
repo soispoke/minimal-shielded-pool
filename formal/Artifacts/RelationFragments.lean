@@ -7,8 +7,8 @@ import Artifacts.PathGates
 
 /-! Assemble every non-hash conjunct of the canonical spend relation from the
 complete pinned R1CS. The hash equations and gated Merkle membership are explicit
-remaining premises. This conditional result is not C1 or a binding of the opaque
-`Spec.Circuit` declarations. -/
+remaining premises. `CircuitSoundness` discharges those premises to
+prove C1. -/
 
 namespace MSP.Artifacts.RelationFragments
 
