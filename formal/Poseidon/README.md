@@ -52,8 +52,24 @@ The canonical Python reference and `circomlibjs/src/poseidon_reference.js`
 use the ordinary full matrix at every round. The circuit actually included by
 `spend.circom`, circomlib 2.0.5's `poseidon.circom`, uses optimized sparse rounds,
 transformed constants and transposed matrix indexing. That source and its
-constants are pinned here, but this module does not prove equivalence between
-the optimized circuit and the reference function. It also does not prove
+constants are pinned here. `Optimized.hash10_eq_reference` now proves their
+width-11 schedule equals the reference for every input. `OptimizedCertificates`
+checks the exact constant relocation and all 66 sparse matrix factorizations
+using ordinary kernel `decide`. `OptimizedReference` connects the reference's
+actual round fold to the pre-S-box recurrence, and `OptimizedEquivalence`
+proves the symbolic state invariants across all rounds. Generated basis
+matrices are witnesses checked by multiplication identities; the proof does
+not trust an inverse routine or generation script.
+
+```sh
+python3 Poseidon/optimized_generate.py --check --node-modules /path/to/tooling/node_modules
+lake build Poseidon.OptimizedEquivalence Artifacts.PublicSignals Proofs.AxiomAudit
+```
+
+`Artifacts.PublicSignals.compression_of_pinned_r1cs` connects this universal
+result to the actual beta constraints and combines it with gamma for the same
+concrete statement. Width-3/4 equivalence and the remaining circuit hash
+bindings are still being developed. These results do not prove
 Poseidon security, R1CS soundness/completeness, or the EVM libraries' behavior
 and gas bounds. Those remain separate bindings. `Spec.Hash` marks the concrete
 hash wrappers irreducible to prevent accidental expansion during symbolic

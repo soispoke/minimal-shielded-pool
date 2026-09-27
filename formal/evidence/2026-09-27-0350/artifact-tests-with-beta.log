@@ -1,0 +1,58 @@
+test_changed_artifact_rejected (test_beta_gates.BetaGateTests) ... ok
+test_exact_data_and_all_affine_stages (test_beta_gates.BetaGateTests) ... ok
+test_wrong_round_constant_rejected (test_beta_gates.BetaGateTests) ... ok
+test_wrong_statement_field_coefficient_rejected (test_beta_gates.BetaGateTests) ... ok
+[32mtemplate instances[0m: 226
+non-linear constraints: 14802
+linear constraints: 0
+public inputs: 1
+public outputs: 2
+private inputs: 96
+private outputs: 0
+wires: 14842
+labels: 46772
+[32mWritten successfully:[0m ../../../../../var/folders/8n/2hfmch651jgb3_1ywycjtpfr0000gn/T/msp-r1cs-y14uk0nz/spend.r1cs
+[32mWritten successfully:[0m ../../../../../var/folders/8n/2hfmch651jgb3_1ywycjtpfr0000gn/T/msp-r1cs-y14uk0nz/spend.sym
+[32mEverything went okay, circom safe[0m
+test_changed_affine_output_rejected_after_local_triple_checks (test_hash_instances.HashInstanceTests) ... ok
+test_exact_inventory (test_hash_instances.HashInstanceTests) ... ok
+test_mutated_constants_rejected (test_hash_instances.HashInstanceTests) ... ok
+test_mutated_r1cs_rejected (test_hash_instances.HashInstanceTests) ... ok
+test_mutated_source_rejected (test_hash_instances.HashInstanceTests) ... ok
+test_mutated_symbols_rejected (test_hash_instances.HashInstanceTests) ... ok
+test_all_forty_constraints_match_saved_pinned_wire_map (test_path_bits_fragment.PathBitsTests) ... ok
+test_mutated_r1cs_is_rejected_before_symbols (test_path_bits_fragment.PathBitsTests) ... ok
+test_required_private_input_may_not_be_eliminated (test_path_bits_fragment.PathBitsTests) ... ok
+test_unpinned_symbol_bytes_are_rejected (test_path_bits_fragment.PathBitsTests) ... ok
+test_all_raw_constraint_literals_match_pinned_bytes (test_path_gates.PathGatesTests) ... ok
+test_changed_artifact_rejected (test_path_gates.PathGatesTests) ... ok
+test_each_selector_rejects_wrong_selected_output (test_path_gates.PathGatesTests) ... ok
+test_gated_root_requires_agreement_only_for_nonzero_value (test_path_gates.PathGatesTests) ... ok
+test_unpinned_symbols_rejected (test_path_gates.PathGatesTests) ... ok
+test_exact_pinned_prefix_is_the_checked_in_data (test_r1cs_artifact.CompressionFragmentTests) ... ok
+test_fragment_rejects_mutated_artifact (test_r1cs_artifact.CompressionFragmentTests) ... ok
+test_bad_header_and_sections (test_r1cs_artifact.ParserTests) ... ok
+test_every_truncation (test_r1cs_artifact.ParserTests) ... ok
+test_export_is_deterministic_and_requires_pinned_provenance (test_r1cs_artifact.ParserTests) ... ok
+test_huge_counts_are_bounded_by_payload (test_r1cs_artifact.ParserTests) ... ok
+test_pin_rejects_structurally_valid_alternative (test_r1cs_artifact.ParserTests) ... ok
+test_pinned_defect_and_mutation (test_r1cs_artifact.ParserTests) ... ok
+test_terms (test_r1cs_artifact.ParserTests) ... ok
+test_valid_and_section_order (test_r1cs_artifact.ParserTests) ... ok
+test_exact_pinned_address_data (test_range_address_fragment.AddressRangeTests) ... ok
+test_mutated_artifact_rejected (test_range_address_fragment.AddressRangeTests) ... ok
+test_two_gate_layouts_and_eliminated_top_coefficients (test_range_address_fragment.AddressRangeTests) ... ok
+test_exact_pinned_amount_data (test_range_amounts.AmountRangeTests) ... ok
+test_five_gate_layout_and_eliminated_fee_coefficients (test_range_amounts.AmountRangeTests) ... ok
+test_mutated_artifact_rejected (test_range_amounts.AmountRangeTests) ... ok
+test_exact_pinned_range_data (test_range_fragment.RangeFragmentTests) ... ok
+test_mutated_source_is_rejected (test_range_fragment.RangeFragmentTests) ... ok
+test_changed_r1cs_rejected (test_sink_gates.SinkGateTests) ... ok
+test_each_control_rejects_its_forbidden_output (test_sink_gates.SinkGateTests) ... ok
+test_exact_data (test_sink_gates.SinkGateTests) ... ok
+test_valid_zero_and_positive_outputs (test_sink_gates.SinkGateTests) ... ok
+
+----------------------------------------------------------------------
+Ran 41 tests in 11.271s
+
+OK

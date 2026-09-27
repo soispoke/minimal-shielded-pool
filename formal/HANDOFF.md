@@ -20,10 +20,12 @@ The separate key/R1CS task finished on September 26. Its unmerged PR 24 commit
 still owns that work. The activation gate has since been strengthened to bind
 the verifier-used JSON key fields to the zkey. It still reports `setup: partial`.
 
-**Current ownership, 04:10 UTC:** this Codex heartbeat owns the durable checkout.
-Its bounded subagents own new optimized Poseidon/reference equivalence, beta
-constraint binding, and path-selector binding files. Completed non-hash proofs
-are being checkpointed. Before taking ownership, inspect fresh task status,
+**Current ownership, September 27 heartbeat:** this Codex heartbeat owns the durable checkout.
+Its bounded subagents own the remaining small-hash constraint bindings,
+semantic note assembly and constructive range witnesses for C1c. The non-hash
+proofs are checkpointed at `870dd58`. Universal optimized/reference equivalence
+for all three widths, complete beta/gamma outputs and actual path selectors
+are now checked and are being checkpointed together. Before taking ownership, inspect fresh task status,
 relevant Claude log timestamps and actual proof processes. A quota reset or
 resident parent process alone does not transfer ownership. Do not edit files
 while another worker is making progress.
@@ -83,8 +85,11 @@ making the C6-local invariant private fixes the aggregate import failure.
 `Artifacts/Spend.lean` contains all 14,802 constraints of the exact pinned R1CS.
 `Artifacts/FullCompression.lean` proves the gamma polynomial from full-system
 satisfaction, including kernel-checked containment of its nine constraints.
-It does not assume containment or the desired polynomial. Beta, the other
-gadgets, reconstructed eliminated signals and the full relation are still open.
+It does not assume containment or the desired polynomial. `BetaGates` now
+checks all 153 retained beta S-boxes and every affine stage. `PublicSignals`
+combines it with universal optimized/reference Poseidon10 equivalence to prove
+both canonical beta and gamma outputs for the same concrete statement.
+The complete private relation remains open.
 `Spec/Circuit.lean` remains opaque pending those complete bindings.
 
 `Proofs/CircuitArithmetic.lean` proves integer conservation from field
@@ -103,9 +108,9 @@ fee, and integer conservation. `RangeAddress` proves both address bounds.
 R9 conditions to their actual gates. `Witness`, `PathBits` and `PathIndex`
 provide one concrete witness projection, both bounded indices and agreement of
 all 40 Boolean path wires with the canonical Merkle index digits.
-`RelationFragments.relation_of_hash_bindings` assembles R1 and R5–R9, with the
-remaining nullifier, output-commitment and gated Merkle equations explicit as
-premises. It does not assert C1. These results use only standard Lean axioms.
+`PathGates` binds all 80 selectors and both root checks. The strengthened
+`RelationFragments.relation_of_gadget_hashes` assembles the relation with only
+individual note and path hash equations still explicit as premises. It does not assert C1. These results use only standard Lean axioms.
 
 The artifact parser records a reproducible compiler format defect: the exact
 R1CS header says five sections although it contains three complete sections.
@@ -144,15 +149,36 @@ fragment tests, full-data and fragment regeneration,
 independent decoding, constant generation and 202 Poseidon comparisons passed.
 These parser and differential tests are not the spec's semantic mutation gates.
 
+## Latest checked proof batch
+
+`evidence/2026-09-27-0350/` contains the current target and test outputs.
+`lake build Artifacts.PublicSignals Artifacts.RelationFragments Proofs.AxiomAudit`
+passes 3,202 jobs, auditing the complete theorem dependency closures. All 41
+artifact/provenance/fragment tests and seven optimized-data provenance tests
+pass. The activation gate rejects eight malformed/self-certified manifest
+cases, two unpinned/wrong ptau cases and thirteen key/setup mutations. Its
+accepted pinned testbed still reports partial setup verification.
+
+Exact beta, all optimized constants, path-selector and 54-instance map
+regeneration checks pass against pinned compiler symbols and sources. These
+checks retain the distinction between decoder/fragment mutations and the
+specification's required complete semantic mutation gates. The old full build
+and 202 differential comparisons above remain earlier evidence; the growing
+new batch is currently checked by explicit targets while subagents edit new
+modules.
+
 ## Remaining obligations and next action
 
-The active proof frontier is optimized Poseidon/reference equivalence and
-binding beta and all note/path hash gadgets. The non-hash relation fragments
-are discharged for the concrete projections; path selection and membership
-are being connected with explicit per-node hash premises. Then instantiate
+The active proof frontier is the 54 remaining note/path hash gadgets. All
+three optimized/reference equivalences are now proved universally, beta and
+gamma are bound, and actual path selectors/root gates are checked. The exact
+instance map (`Artifacts/hash-instance-map.json`) records 46 H2 and 8 H3 calls,
+including every affine input and retained output wire. Its generator checks
+all numeric stages, but the map is not itself a Lean proof. SmallHashGates is
+binding those stages in Lean while NoteBindings assembles the relation. Then instantiate
 `Assignment`/`Satisfied`/projections and prove C1 and C1c, including assignment
-construction for every valid relation and alpha. Differential tests do not
-replace the optimized/reference equivalence proof.
+construction for every valid relation and alpha. The optimized/reference theorems use exact kernel-checked matrix/constant
+certificates and symbolic fold invariants, not differential tests.
 
 C2/C2c/C8/C9/C10 and refinement still need one faithful chain semantics, real
 bytecode, custom instructions and both gas dimensions. W1/W2 and required

@@ -1,0 +1,12 @@
+test_changed_optimized_source_rejected (test_optimized_generate.OptimizedProvenanceTests) ... ok
+test_changed_reference_source_rejected (test_optimized_generate.OptimizedProvenanceTests) ... ok
+test_committed_data_is_exact_export (test_optimized_generate.OptimizedProvenanceTests) ... ok
+test_all_committed_files_are_exact_exports (test_small_optimized_generate.SmallOptimizedProvenanceTests) ... ok
+test_changed_optimized_source_rejected (test_small_optimized_generate.SmallOptimizedProvenanceTests) ... ok
+test_changed_reference_source_rejected (test_small_optimized_generate.SmallOptimizedProvenanceTests) ... ok
+test_unlisted_width_rejected (test_small_optimized_generate.SmallOptimizedProvenanceTests) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.061s
+
+OK

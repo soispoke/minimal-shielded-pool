@@ -32,13 +32,14 @@ refinement of the actual bytecode to that algorithm remains open.
 [The artifact proofs](../Artifacts/README.md) establish gamma, all six amount
 bounds, integer conservation, both address bounds, positive input value,
 sink and distinctness rules, and both path index bounds from the complete
-pinned R1CS. The conditional `relation_of_hash_bindings` assembles those results
-for one concrete witness and statement projection, retaining the hash and
-Merkle equations as explicit premises. The proofs do not yet establish beta,
-the complete spend relation, or C1/C1c. The arithmetic and gadget
+pinned R1CS. The conditional `relation_of_gadget_hashes` assembles those results
+with actual path selectors and root gates, retaining individual note and Merkle
+hash equations as explicit premises. `PublicSignals` proves both beta and gamma
+against the canonical reference, using universal optimized/reference Poseidon10
+equivalence. The complete private relation and C1/C1c remain open. The arithmetic and gadget
 lemmas above are reusable proof components, not a substitute for that binding.
 [The concrete Poseidon definitions](../Poseidon/README.md) still require a
-proof of equivalence with the optimized circuit and deployed libraries.
+width-3/4 circuit equivalence and deployed-library bindings.
 
 Remaining completion gates include C1/C1c, C2/C2c/C8/C9/C10 and refinement,
 the required concrete key/verifier/library/bytecode bindings, W1/W2, and the

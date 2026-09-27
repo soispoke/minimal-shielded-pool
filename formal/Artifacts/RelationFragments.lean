@@ -3,6 +3,7 @@ import Artifacts.RangeAmounts
 import Artifacts.RangeAddress
 import Artifacts.BasicGates
 import Artifacts.SinkGates
+import Artifacts.PathGates
 
 /-! Assemble every non-hash conjunct of the canonical spend relation from the
 complete pinned R1CS. The hash equations and gated Merkle membership are explicit
@@ -61,7 +62,23 @@ theorem relation_of_hash_bindings (a : Assignment) (h : Spend.system.Satisfied a
     R (statementOf a) (ofAssignment a) :=
   ⟨ConcreteWitness.R1 a h, hnf1, hnf2, hpath, hout1, hout2, non_hash_checks a h⟩
 
+/-- Use the checked selector and root gates to reduce the remaining Merkle
+premise to leaf and individual node hash equations on actual wires. -/
+theorem relation_of_gadget_hashes (a : Assignment) (h : Spend.system.Satisfied a)
+    (hnf1 : (statementOf a).nf1 = nf (statementOf a).d
+      ((ofAssignment a).sk 0) ((ofAssignment a).leaf 0) ((ofAssignment a).idx 0))
+    (hnf2 : (statementOf a).nf2 = nf (statementOf a).d
+      ((ofAssignment a).sk 1) ((ofAssignment a).leaf 1) ((ofAssignment a).idx 1))
+    (hleaf : ∀ k, a (PathGatesData.curStart k) = (ofAssignment a).leaf k)
+    (hnodes : ∀ k, PathGates.NodeHashes a k)
+    (hout1 : (statementOf a).o1 = cm ((ofAssignment a).oi 0) ((ofAssignment a).ov 0))
+    (hout2 : (statementOf a).o2 = cm ((ofAssignment a).oi 1) ((ofAssignment a).ov 1)) :
+    R (statementOf a) (ofAssignment a) :=
+  relation_of_hash_bindings a h hnf1 hnf2
+    (fun k hv => PathGates.membership_of_hashes a h k (hleaf k) (hnodes k) hv) hout1 hout2
+
 #print axioms non_hash_checks
 #print axioms relation_of_hash_bindings
+#print axioms relation_of_gadget_hashes
 
 end MSP.Artifacts.RelationFragments

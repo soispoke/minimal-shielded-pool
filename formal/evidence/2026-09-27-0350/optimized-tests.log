@@ -1,0 +1,8 @@
+test_changed_optimized_source_rejected (test_optimized_generate.OptimizedProvenanceTests) ... ok
+test_changed_reference_source_rejected (test_optimized_generate.OptimizedProvenanceTests) ... ok
+test_committed_data_is_exact_export (test_optimized_generate.OptimizedProvenanceTests) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.044s
+
+OK

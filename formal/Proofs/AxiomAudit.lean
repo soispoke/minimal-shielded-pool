@@ -10,6 +10,9 @@ import Artifacts.RangeAddress
 import Artifacts.BasicGates
 import Artifacts.RelationFragments
 import Artifacts.PathIndex
+import Artifacts.PublicSignals
+import Poseidon.Optimized3Equivalence
+import Poseidon.Optimized4Equivalence
 import Lean.Util.CollectAxioms
 import Lean.Elab.Command
 
@@ -62,3 +65,8 @@ assert_standard_axioms MSP.Artifacts.ConcreteWitness.index_cast
 assert_standard_axioms MSP.Artifacts.ConcreteWitness.public_gamma
 assert_standard_axioms MSP.Artifacts.RelationFragments.relation_of_hash_bindings
 assert_standard_axioms MSP.Artifacts.PathIndex.MR_eq_raw_fold
+assert_standard_axioms MSP.Artifacts.RelationFragments.relation_of_gadget_hashes
+assert_standard_axioms MSP.Poseidon.Optimized.hash10_eq_reference
+assert_standard_axioms MSP.Artifacts.PublicSignals.compression_of_pinned_r1cs
+assert_standard_axioms MSP.Poseidon.Optimized3.hash2_eq_reference
+assert_standard_axioms MSP.Poseidon.Optimized4.hash3_eq_reference

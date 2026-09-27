@@ -109,8 +109,8 @@ requires only that the raw assignment satisfies the complete `Spend.system`;
 it has no unproved containment premise. The byte-for-byte regeneration check
 connects the full Lean data to the pinned binary outside Lean. No kernel-checked
 binary parser is claimed.
-The theorem does not yet show `w[1] = β(statement(w))`, agreement with
-all remaining hash gadgets, C1, or C1c. The code leaves
+Beta is now proved separately below. The gamma theorem alone does not
+establish the remaining hash gadgets, C1, or C1c. The code leaves
 `Spec.Circuit`'s opaque definitions unchanged.
 
 `lake build Artifacts` checks the fragment and full-system compression theorems. Their
@@ -118,6 +118,21 @@ all remaining hash gadgets, C1, or C1c. The code leaves
 no admissions.
 The Python test suite also checks exact fragment reproduction and rejects a
 one-byte artifact mutation and a mutated generated Lean constraint.
+
+## Concrete beta and complete compression outputs
+
+`BetaGates.beta_of_system` proves beta equals optimized Poseidon10 of the same
+ten-field statement. It checks all 153 retained S-box triples in constraints
+9–467 and all affine stages against the complete pinned system. A proved
+sparse-affine normalizer gives semantic meaning to the finite coefficient
+certificates. The constant first capacity S-box uses wire zero equals one.
+
+`PublicSignals.beta_of_pinned_r1cs` composes that result with the universal
+optimized/reference Poseidon10 equivalence. `compression_of_pinned_r1cs`
+therefore establishes both canonical beta and gamma from full-system
+satisfaction, with no hash equation as a premise. Its dependency closure uses
+only standard Lean logical axioms. Keccak, the private relation, completeness
+and verifier/chain bindings remain separate.
 
 ## Amount and address range proofs
 
@@ -161,8 +176,11 @@ lake build Artifacts.RangeAmounts Artifacts.RangeAddress
 
 `Witness.lean` defines the private projection from the exact reproduced symbol
 map. `PathBits` proves all 40 path wires Boolean and both reconstructed indices
-less than `2^DEPTH`. Their field casts equal the weighted raw wires. This does
-not yet bind path selection or optimized hash inputs.
+less than `2^DEPTH`. Their field casts equal the weighted raw wires.
+`PathIndex` proves every raw bit equals the digit used by the canonical Merkle
+walk. `PathGates` binds all 80 selectors and both root checks to actual
+constraints. Its membership theorem retains explicit leaf and per-node hash
+equations, rather than assuming the final Merkle-root equation.
 
 `InputNonzero` derives positive input value from the actual inverse constraint.
 `BasicGates` proves nonzero authorization, distinct nullifiers and outputs,
@@ -175,7 +193,9 @@ assignments for mutated complete circuits.
 `RelationFragments.relation_of_hash_bindings` assembles R1 and R5–R9 for those
 same statement and witness projections. The nullifier, output commitment and
 gated Merkle membership equations remain explicit premises. It is therefore a
-conditional relation theorem, not C1. `Proofs/AxiomAudit.lean` checks its full
+conditional relation theorem, not C1. `relation_of_gadget_hashes` further
+reduces the Merkle premise to those individual hash equations.
+`Proofs/AxiomAudit.lean` checks its full
 dependency closure for admissions and nonstandard axioms.
 
 ```sh
@@ -217,13 +237,14 @@ These are decoder tests, **not** SPEC.md's required semantic circuit mutations.
 
 ## Remaining proof frontier
 
-1. Prove beta and all optimized Poseidon gadgets agree with the reference hash.
+1. Prove the remaining optimized Poseidon gadgets agree with the reference hash.
    The fee projection is now tied to its actual range gate, integer accounting
-   and gamma. Its beta use and all other hash inputs still need checked binding.
+   and gamma. Its beta use is also proved. The remaining note and path hashes need binding.
    A symbol hash or source-level alias alone does not establish a semantic
    connection to the optimized constraints.
 2. Establish the complete constraints-to-semantics connection, including
-   optimized Poseidon gadgets, path selection, membership gating and beta.
+   optimized Poseidon note and path gadgets. The actual path selectors and
+   membership gates are bound, conditional on those individual hash equations.
    The exported constraints are data; compiling them alone does
    not prove their equivalence to the intended circuit.
 3. Instantiate `Assignment`, `Satisfied`, `stmtOf`, `witOf` and `publicOf` from
