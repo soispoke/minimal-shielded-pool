@@ -122,6 +122,7 @@ assert_standard_axioms MSP.Artifacts.AssignmentAssembly.satisfied
 assert_standard_axioms MSP.c1c
 
 assert_standard_axioms MSP.circuit_model
+assert_standard_axioms MSP.main_theorem_of_chain
 assert_standard_axioms MSP.chain_corollary_of_chain
 
 assert_standard_axioms MSP.K_lt

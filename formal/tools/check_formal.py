@@ -5,10 +5,14 @@
               Proofs/AxiomAudit.lean, which pins the principal theorems' types,
               match formal/STATEMENTS.lock
   pins        every artifact in SPEC.md's §1 table has its pinned SHA-256
-  sources     no Lean file admits a proof (sorry, admit, native_decide), skips
-              the kernel (debug.skipKernelTC) or uses axiom, unsafe or
-              implemented_by, outside comments; this is a
-              textual check, and Proofs/AxiomAudit.lean is the binding one
+  sources     no Lean file admits a proof (sorry, admit, native evaluation),
+              skips the kernel (debug.skipKernelTC) or uses axiom, unsafe or
+              implemented_by; no Lean file outside the lock runs or defines
+              metaprograms (#eval, run_cmd, macros, syntax, elaborators, the
+              `Lean` namespace), which could rewrite files or the audit during
+              the build; and no lakefile.lean overrides lakefile.toml. These
+              are textual checks outside comments and string literals;
+              Proofs/AxiomAudit.lean is the binding one
 
 `statements --update` rewrites the lock after a reviewed change to the spec.
 """
@@ -24,6 +28,12 @@ ROOT = FORMAL.parent
 LOCK = FORMAL / 'STATEMENTS.lock'
 BANNED = re.compile(r'\b(sorry|admit|native_decide|implemented_by|axiom|unsafe|skipKernelTC|bv_decide)\b'
                     r'|\+native\b|\bnative\s*:=\s*true')
+# Metaprogramming entry points, allowed only in locked (owner-reviewed) files.
+META = re.compile(r'#eval\b|#guard_msgs\b|\beval%|\b(by_elab|run_cmd|run_elab|run_meta|run_tac|initialize|'
+                  r'builtin_initialize|macro|macro_rules|syntax|elab|elab_rules|notation|infix|infixl|infixr|'
+                  r'prefix|postfix|declare_syntax_cat|simproc|dsimproc|Lean)\b')
+# The step-4 driver evaluates the model with #eval; `lake build` never runs it.
+META_EXEMPT = {'tools/DifferentialModel.lean'}
 IMPORT = re.compile(r'^(?:(?:public|private|meta)\s+)*import\s+(?:all\s+)?(\S+)', re.M)
 
 
@@ -95,6 +105,8 @@ def pins():
 
 
 def strip_comments(text):
+    """The code outside comments, with every string and character literal
+    emptied, so a literal can neither hide code nor open a fake comment."""
     out, i, depth = [], 0, 0
     while i < len(text):
         if text.startswith('/-', i):
@@ -103,24 +115,44 @@ def strip_comments(text):
         elif depth and text.startswith('-/', i):
             depth -= 1
             i += 2
-        elif not depth and text.startswith('--', i):
+        elif depth:
+            i += 1
+        elif text.startswith('--', i):
             j = text.find('\n', i)
             i = len(text) if j < 0 else j
+        elif text[i] == '"':
+            i += 1
+            while i < len(text) and text[i] != '"':
+                i += 2 if text[i] == '\\' else 1
+            out.append('""')
+            i += 1
+        elif text[i] == "'" and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] in "_'.!?")) \
+                and re.match(r"'(\\.[^']*|[^\\'])'", text[i:]):
+            m = re.match(r"'(\\.[^']*|[^\\'])'", text[i:])
+            out.append("' '")
+            i += m.end()
         else:
-            if not depth:
-                out.append(text[i])
+            out.append(text[i])
             i += 1
     return ''.join(out)
 
 
 def sources():
     ok, count = True, 0
+    if (FORMAL / 'lakefile.lean').exists():
+        print('formal/lakefile.lean exists; Lake would use it instead of the owned lakefile.toml')
+        ok = False
+    locked = {p.resolve() for p in statement_files()}
     for path in sorted(FORMAL.rglob('*.lean')):
-        if '.lake' in path.relative_to(FORMAL).parts:
+        rel = path.relative_to(FORMAL)
+        if '.lake' in rel.parts:
             continue
         count += 1
         code = strip_comments(path.read_text())
-        for m in BANNED.finditer(code):
+        found = list(BANNED.finditer(code))
+        if path.resolve() not in locked and rel.as_posix() not in META_EXEMPT:
+            found += META.finditer(code)
+        for m in found:
             line = code.count('\n', 0, m.start()) + 1
             print(f'{path.relative_to(ROOT)}: `{m.group(0)}` near code line {line}')
             ok = False

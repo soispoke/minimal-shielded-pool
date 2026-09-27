@@ -13,5 +13,6 @@
 /formal/tools/check_formal.py @soispoke
 /formal/Proofs/AxiomAudit.lean @soispoke
 /formal/lakefile.toml @soispoke
+/formal/lakefile.lean @soispoke
 /formal/lean-toolchain @soispoke
 /formal/lake-manifest.json @soispoke

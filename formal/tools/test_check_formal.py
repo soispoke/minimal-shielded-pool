@@ -36,5 +36,22 @@ class CheckFormal(unittest.TestCase):
             self.assertFalse(c.BANNED.search(c.strip_comments(code)), code)
 
 
+    def test_literals_cannot_hide_code(self):
+        for code in ('def s := "/-"\naxiom bad : False\ndef t := "-/"',
+                     "def c := '\"'\naxiom bad : False", 'def s := "a\\"b"\naxiom bad : False'):
+            self.assertTrue(c.BANNED.search(c.strip_comments(code)), code)
+        self.assertFalse(c.BANNED.search(c.strip_comments('def s := "sorry, axiom"')))
+        self.assertEqual(c.strip_comments("theorem h' : x' = x'"), "theorem h' : x' = x'")
+
+    def test_metaprograms(self):
+        for code in ('#eval IO.FS.writeFile "a" "b"', 'macro_rules | `(x) => `(y)', 'run_cmd pure ()',
+                     'open Lean in', '#guard_msgs in example : False := sorry', 'syntax "x" : term',
+                     'elab "x" : term => pure default', 'initialize foo : IO.Ref Nat ← IO.mkRef 0',
+                     'def x := eval% 1 + 1', 'local notation "q" => 1'):
+            self.assertTrue(c.META.search(c.strip_comments(code)), code)
+        for code in ('theorem elaborate_ok : True := trivial', 'def prefix_len := 0', '-- #eval 1'):
+            self.assertFalse(c.META.search(c.strip_comments(code)), code)
+
+
 if __name__ == '__main__':
     unittest.main()

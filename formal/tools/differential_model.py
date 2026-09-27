@@ -258,17 +258,15 @@ def expectations(cases, direct_levels):
         elif kind == "tree":
             t = wallet_tree(a["L"])
             root = t.root()
-            sibs, bits = t.auth_path(a["i"])
+            sibs, _ = t.auth_path(a["i"])
             e = {"TR": root, "MRwallet": root, "MRmodel": root, "logicRoot": root}
             for l in range(DEPTH):
                 e[f"sib{l}"] = sibs[l]
-                e[f"bit{l}"] = bits[l]
                 if l < direct_levels:
                     e[f"sibDirect{l}"] = sibs[l]
         elif kind == "compression":
             xs = a["xs"]
-            e = {f"x{j}": x for j, x in enumerate(xs)}
-            e.update(alpha=W.compression_alpha(xs), beta=W.compression_beta(xs),
+            e = dict(alpha=W.compression_alpha(xs), beta=W.compression_beta(xs),
                      gamma=W.fingerprint(a["s"], xs))
         elif kind in ("spend", "spenddirect"):
             e = expect_spend(a)

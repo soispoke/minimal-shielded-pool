@@ -120,8 +120,8 @@ def smallTreeCase (cid : String) (h : ℕ) (L : List ℕ) : IO Unit :=
   outF cid "treeRoot" (treeRoot h (fs L))
 
 /-- D7 on a leaf list and an index: `TR`, `siblingsOf` (the first `direct`
-levels also straight from `Spec`), the index bits, `MR` over the wallet's
-siblings and over the model's, and C6's incremental `LogicTree` root. -/
+levels also straight from `Spec`), `MR` over the wallet's siblings and over the
+model's, and C6's incremental `LogicTree` root. -/
 def treeCase (cid : String) (L : List ℕ) (i : ℕ) (walletSibs : List ℕ) (direct : ℕ) :
     IO Unit := do
   let L := fs L
@@ -129,15 +129,18 @@ def treeCase (cid : String) (L : List ℕ) (i : ℕ) (walletSibs : List ℕ) (di
   let sib := siblingsOfFast L i
   for l in List.finRange DEPTH do
     outF cid s!"sib{l.val}" (sib l)
-    out cid s!"bit{l.val}" (if i.testBit l.val then 1 else 0)
     if l.val < direct then outF cid s!"sibDirect{l.val}" (siblingsOf L i l)
   outF cid "MRwallet" (MR (L.getD i 0) i (fun l => ((walletSibs.getD l.val 0 : ℕ) : F)))
   outF cid "MRmodel" (MR (L.getD i 0) i sib)
   outF cid "logicRoot" (L.foldl LogicTree.insert LogicTree.empty).root
 
-/-- D9 on an arbitrary statement. -/
-def compressionCase (cid : String) (xs : List ℕ) (s : ℕ) : IO Unit :=
-  printStmt cid (stmtOfList xs) s
+/-- D9 on an arbitrary statement: `α`, `β` and `γ` (the statement itself is
+the input, so it is not compared). -/
+def compressionCase (cid : String) (xs : List ℕ) (s : ℕ) : IO Unit := do
+  let x := stmtOfList xs
+  outF cid "alpha" (α x)
+  outF cid "beta" (β x)
+  outF cid "gamma" (γ x ((s : ℕ) : F))
 
 def printSpend (cid : String) (xw : Statement × Witness) (s : F) : IO Unit := do
   let (x, w) := xw
