@@ -276,8 +276,13 @@ collision with a key nobody hashed cannot falsify it. The deployment's events
 are the chain's EIP-8272 writes and slots up to deployment, then the pool's
 balance. A step's events are the calls to `shield`, `publishEpochRoot` and
 `claimWithdrawal` that return successfully and whose effects persist, whether
-or not they change state, decoded from the call (a shield's `inner` is its calldata
-word and its value the `CALLVALUE`); each spend, meaning a transaction whose
+or not they change state. Decode these from the original message call entering
+`A`, using its calldata and value before delegation: an ordinary transaction's
+call, a non-VERIFY frame call or a `CALL` to `A`. Exclude execution within VERIFY
+and calls that merely execute the pool's code at another address, and do not
+decode a second event from `A`'s `DELEGATECALL` into its logic contract. A shield's
+`inner` is the original call's calldata word and its value the `CALLVALUE`.
+Other events are each spend, meaning a transaction whose
 frame 1 the pool approved, with the gas the pool paid, whether or not its
 settlement succeeds; each foreign EIP-8272 write; and the slots. A chain step is any valid transaction, the end of a block with its
 withdrawals, or the next slot, empty or opening a block with any header the
@@ -377,6 +382,7 @@ deposit `0x9c8c1e19…399a`, transfer `0x21b51a52…ec4f`, tailless withdrawal
 | Dispatcher: drop the domain check | C2 (A5), C5b |
 | Dispatcher: allow flags on frame 2, or a SENDER fourth frame | C2 (A1) |
 | Dispatcher: reject every withdrawal | C2c |
+| Dispatcher: rewrite a shield's `inner` or a publication's epoch before delegating | refinement |
 | Logic: skip rollover before insertion | refinement |
 | Logic: pay a claim to `msg.sender`, or less than the credit | refinement |
 | Logic: shield without inserting the leaf, or hashing a different `inner` | refinement |
@@ -412,8 +418,8 @@ storage layout: slot 21 is the leaf count, 22 the current root, 23 the credits,
 `treeQueries`, `eventQueries` and the Keccak inputs `rrEntryMsg`, `rrKeyMsg`,
 `creditMsg` and `finalRootMsg`. Bad events are `BadEventWith`, over `traceQueries`,
 with `Query.degenerate`, `ExtractionFailure` and `CompressionBreak`.
-Declarations marked `opaque` are bound to the artifacts in later steps: the
-hashes, the constraint system and `Groth16Accepts` (textbook Groth16
+Declarations marked `opaque` are bound to the artifacts in later steps:
+Keccak, the constraint system and `Groth16Accepts` (textbook Groth16
 verification with the key in `spend_vkey.json`, not the verifier's code) in
 step 3, and the EVM semantics in step 5, where
 `ChainStep`, `eventsOf`, `approvalsIn`, `firstPayout` and the
@@ -422,8 +428,11 @@ come from one semantics applied to the pinned bytecode, and where step 5 proves
 the bytecode's `_zeros`, `EMPTY_ROOT`, `_insert` and `_computeRoot` equal
 `ZEROS`, `EMPTY_ROOT_CONST`, `LogicTree.insert` and `LogicTree.root`. `formal/Sanity/` holds
 proofs, written during review, that parts of the specification mean what they
-should. `formal/Proofs/` proves `ModelTheorem` with the hashes kept opaque: every
-model claim follows from C1.
+should. `Spec.Hash` uses concrete reference Poseidon functions generated from
+the pinned D2 constants; equivalence with the optimized circuit remains open.
+`formal/Proofs/` proves `ModelTheorem`: every model claim follows from C1. It
+also proves `Composes` and C6 for the specified tree algorithm, including
+kernel-checked zero constants. The bytecode refinement remains open.
 
 ## 8. Limits
 
@@ -464,6 +473,9 @@ A narrower `ChainStep`, `EnvValid` or `Honest`, or a wrong `chainInit`, leaves
 states uncovered by refinement, C2, C2c and C10. A looser `eventsOf` or
 `passiveInflow` weakens refinement, a narrower `ValidTx` or `approvalsIn`
 weakens C2, a stronger `PreValid` weakens C2c, and a looser `callPool` or
-`firstPayout` weakens C10.
+`firstPayout` weakens C10. Review of `eventsOf` must check that function events
+decode the original message entering `A`, not the delegated call. Otherwise a
+dispatcher that rewrites a shield's `inner` or a publication's epoch can pass
+refinement by having the model follow the rewritten input.
 
 Privacy and inclusion are outside this specification.

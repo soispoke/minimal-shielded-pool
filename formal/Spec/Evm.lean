@@ -87,10 +87,15 @@ def Obs (d : Deployment) (st : ChainState) (s : PoolState) : Prop :=
   (∀ r, st.sentTo A r = s.paid r) ∧
   st.slot = s.slot
 
-/-- The model events of a chain step, in execution order: each call to
-`shield`, `publishEpochRoot` or `claimWithdrawal` that returns successfully and
-whose effects persist, whether or not it changes state, decoded (a shield's
-`inner` is its calldata word and `v` its `CALLVALUE`); each spend, a
+/-- The model events of a chain step, in execution order: each original message
+call entering the pool whose calldata selects `shield`, `publishEpochRoot` or
+`claimWithdrawal`, which returns successfully and whose effects persist,
+whether or not it changes state. Include ordinary transaction calls, non-VERIFY
+frame calls and `CALL`s to the pool; exclude execution within VERIFY and calls
+that merely execute the pool's code at another address. Decode the original
+entry's calldata and value before any delegation (a shield's `inner` is its
+calldata word and `v` its `CALLVALUE`); do not decode a second event from the
+pool's `DELEGATECALL` into its logic contract. Each spend, a
 transaction whose frame 1 the pool approved, with the gas the pool paid, placed
 at its settlement, before the events of its later frames; each
 EIP-8272 write by another address; `receive` for ETH credited to the pool other

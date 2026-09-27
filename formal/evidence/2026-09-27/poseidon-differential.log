@@ -1,0 +1,22 @@
+ℹ [1212/1213] Replayed Poseidon.Audit
+info: Poseidon/Audit.lean:5:0: 'MSP.Poseidon.hash2' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:6:0: 'MSP.Poseidon.hash3' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:7:0: 'MSP.Poseidon.hash10' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:8:0: 'MSP.Poseidon.zeroHash' depends on axioms: [propext, Quot.sound]
+Build completed successfully (1213 jobs).
+{
+  "result": "pass",
+  "lean_python_comparisons": 202,
+  "categories": {
+    "committed direct vectors": 48,
+    "pool chain": 11,
+    "sinks": 2,
+    "zero chain": 20,
+    "recursive zero function": 21,
+    "incremental tree": 40,
+    "boundary reductions": 12,
+    "additional deterministic vectors": 48
+  },
+  "c6_constants_checked_by_evaluation": 21,
+  "scope": "Executable tests; not a circuit-equivalence or kernel proof"
+}

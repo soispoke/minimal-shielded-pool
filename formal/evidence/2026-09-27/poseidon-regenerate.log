@@ -1,0 +1,4 @@
+$ python3 formal/Poseidon/generate.py --check --node-modules /Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules
+Poseidon constants, source pins and manifest match
+
+exit=0

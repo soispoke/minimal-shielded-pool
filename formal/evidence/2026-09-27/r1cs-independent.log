@@ -1,0 +1,4 @@
+$ node formal/tools/crosscheck_r1cs.cjs /Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules build/spend.r1cs formal/Artifacts/spend.manifest.json
+Independent r1csfile decode matches all 14802 constraints, 185677 terms and 14842 labels.
+
+exit=0

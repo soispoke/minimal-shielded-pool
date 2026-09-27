@@ -1,0 +1,174 @@
+ℹ [3120/3168] Replayed Proofs.CircuitArithmetic
+info: Proofs/CircuitArithmetic.lean:47:0: 'MSP.nat_eq_of_field_eq' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:48:0: 'MSP.value_conservation_iff' depends on axioms: [propext, Quot.sound]
+info: Proofs/CircuitArithmetic.lean:49:0: 'MSP.input_sum_pos' depends on axioms: [propext, Quot.sound]
+ℹ [3125/3168] Replayed Proofs.CircuitGadgets
+info: Proofs/CircuitGadgets.lean:83:0: 'MSP.scalar_prime' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:84:0: 'MSP.boolean_constraint' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:85:0: 'MSP.isZero_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:86:0: 'MSP.isZero_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:87:0: 'MSP.bitsValue_cast' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:88:0: 'MSP.bitsValue_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/CircuitGadgets.lean:89:0: 'MSP.num2Bits_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3130/3168] Built Poseidon.Hash (1.0s)
+✔ [3131/3168] Built Spec.Hash (1.1s)
+✔ [3132/3168] Built Poseidon.Evaluate (1.1s)
+ℹ [3133/3168] Built Poseidon.Audit (1.0s)
+info: Poseidon/Audit.lean:5:0: 'MSP.Poseidon.hash2' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:6:0: 'MSP.Poseidon.hash3' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:7:0: 'MSP.Poseidon.hash10' depends on axioms: [propext, Quot.sound]
+info: Poseidon/Audit.lean:8:0: 'MSP.Poseidon.zeroHash' depends on axioms: [propext, Quot.sound]
+✔ [3135/3168] Built Spec.Relation (1.1s)
+✔ [3136/3168] Built Spec.FrameTx (1.2s)
+✔ [3137/3168] Built Spec.Tree (1.1s)
+✔ [3138/3168] Built Artifacts.Compression (1.4s)
+✔ [3139/3168] Built Spec.Circuit (1.1s)
+✔ [3140/3168] Built Artifacts.FullCompression (1.2s)
+✔ [3142/3168] Built Spec.System (1.3s)
+✔ [3143/3168] Built Spec.Evm (1.0s)
+✔ [3144/3168] Built Spec.Main (936ms)
+✔ [3145/3168] Built Spec (867ms)
+ℹ [3147/3168] Built Proofs.PoseidonConstants (5.5s)
+info: Proofs/PoseidonConstants.lean:273:0: 'MSP.poseidon_zero_constants' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/PoseidonConstants.lean:274:0: 'MSP.poseidon_zero_constants_lt' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Proofs/PoseidonConstants.lean:275:0: 'MSP.poseidon_empty_root' depends on axioms: [propext, Quot.sound]
+⚠ [3148/3168] Built Sanity.Mono (1.7s)
+warning: Sanity/Mono.lean:97:30: This simp argument is unused:
+  List.mem_append
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_flatMap, List.mem_range] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Sanity/Mono.lean:97:47: This simp argument is unused:
+  List.mem_flatMap
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_append, List.mem_range] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Sanity/Mono.lean:97:65: This simp argument is unused:
+  List.mem_range
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [List.mem_cons, List.mem_append, List.mem_flatMap] at hq ⊢
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Sanity/Mono.lean:126:0: 'MSP.grows_step' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/Mono.lean:127:0: 'MSP.bad_mono' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3149/3168] Built Sanity.Capacity (1.7s)
+warning: Sanity/Capacity.lean:26:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Sanity/Capacity.lean:33:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Sanity/Capacity.lean:64:0: 'MSP.capInv_run' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3150/3168] Built Sanity.TreeLemma (1.8s)
+info: Sanity/TreeLemma.lean:107:0: 'MSP.MR_siblingsOf' depends on axioms: [propext, choice, Quot.sound]
+info: Sanity/TreeLemma.lean:121:0: 'MSP.spendable_R3' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3151/3168] Built Sanity.C4Sinks (1.8s)
+info: Sanity/C4Sinks.lean:65:0: 'MSP.o2_ne_sink0' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/C4Sinks.lean:66:0: 'MSP.o1_ne_sink1' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Sanity/C4Sinks.lean:67:0: 'MSP.out_queries_in_trace' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3152/3168] Built Sanity.SpendableR (1.8s)
+warning: Sanity/SpendableR.lean:25:44: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+info: Sanity/SpendableR.lean:43:0: 'MSP.mkSpend_R' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [3153/3168] Built Sanity.C9Guard (1.8s)
+info: Sanity/C9Guard.lean:22:0: 'MSP.acc_groth16' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3154/3168] Built Sanity.History (1.8s)
+info: Sanity/History.lean:74:0: 'MSP.historyEvents_run' depends on axioms: [propext, choice, Quot.sound]
+⚠ [3155/3168] Built Proofs.C5d (1.8s)
+warning: Proofs/C5d.lean:30:35: This simp argument is unused:
+  Finsupp.single_apply
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [Finsupp.erase_ne hr, Ne.symm hr]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Proofs/C5d.lean:48:0: 'MSP.c5d' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3156/3168] Built Proofs.Composition (1.2s)
+info: Proofs/Composition.lean:83:0: 'MSP.spent_nodup_of_c5b' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/Composition.lean:84:0: 'MSP.composes' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3157/3168] Built Proofs.C5a (1.2s)
+info: Proofs/C5a.lean:139:0: 'MSP.c5a' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3158/3168] Built Sanity.C6Proof (1.6s)
+info: Sanity/C6Proof.lean:186:0: 'MSP.C6_third' depends on axioms: [propext, choice, Quot.sound]
+⚠ [3160/3168] Built Proofs.C3 (1.8s)
+warning: Proofs/C3.lean:53:19: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/C3.lean:54:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C3.lean:57:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C3.lean:58:19: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/C3.lean:59:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Proofs/C3.lean:220:0: 'MSP.c5e' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/C3.lean:221:0: 'MSP.c3' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3161/3168] Built Proofs.C6 (889ms)
+info: Proofs/C6.lean:31:0: 'MSP.c6' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [3162/3168] Built Proofs.C5cC4 (1.5s)
+warning: Proofs/C5cC4.lean:62:51: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C5cC4.lean:63:51: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Proofs/C5cC4.lean:93:57: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Proofs/C5cC4.lean:104:45: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Proofs/C5cC4.lean:260:25: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+info: Proofs/C5cC4.lean:290:0: 'MSP.c5c_of' depends on axioms: [propext, choice, Quot.sound]
+warning: Proofs/C5cC4.lean:349:21: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+info: Proofs/C5cC4.lean:365:0: 'MSP.c4_of' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3163/3168] Built Proofs.Path (886ms)
+info: Proofs/Path.lean:178:0: 'MSP.path_walk' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3164/3168] Built Proofs.C5i (901ms)
+info: Proofs/C5i.lean:71:0: 'MSP.c5i_of' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3165/3168] Built Proofs.C5b (2.3s)
+info: Proofs/C5b.lean:347:0: 'MSP.c5b' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/C5b.lean:348:0: 'MSP.c5i' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/C5b.lean:349:0: 'MSP.c4' depends on axioms: [propext, choice, Quot.sound]
+ℹ [3166/3168] Built Proofs.Model (1.2s)
+info: Proofs/Model.lean:284:0: 'MSP.c5g' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/Model.lean:285:0: 'MSP.c5h' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/Model.lean:360:0: 'MSP.spendable' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/Model.lean:365:0: 'MSP.model_rest' depends on axioms: [propext, choice, Quot.sound]
+info: Proofs/Model.lean:375:0: 'model_theorem' depends on axioms: [propext, Classical.choice, Quot.sound]
+✔ [3167/3168] Built Proofs.AxiomAudit (1.5s)
+Build completed successfully (3168 jobs).

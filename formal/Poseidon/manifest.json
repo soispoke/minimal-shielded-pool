@@ -1,0 +1,49 @@
+{
+  "format": 1,
+  "scope": "Concrete ordinary Poseidon reference function; no optimized-circuit equivalence or security proof",
+  "prime": "21888242871839275222246405745257275088548364400416034343698204186575808495617",
+  "parameters": {
+    "3": {
+      "inputs": 2,
+      "full_rounds": 8,
+      "partial_rounds": 57,
+      "round_constants": 195,
+      "matrix_entries": 9
+    },
+    "4": {
+      "inputs": 3,
+      "full_rounds": 8,
+      "partial_rounds": 56,
+      "round_constants": 256,
+      "matrix_entries": 16
+    },
+    "11": {
+      "inputs": 10,
+      "full_rounds": 8,
+      "partial_rounds": 66,
+      "round_constants": 814,
+      "matrix_entries": 121
+    }
+  },
+  "repository_sha256": {
+    "reference/poseidon_bn254.py": "22e6d2d7fd6984f387ee78215415489b996b77564859bb84a2967a3873cebde7",
+    "reference/poseidon_bn254_constants.json": "aa4ff490f85bd66cdee8a926e24471d854f3e575d4fed354e0dbd550c77a59a2",
+    "vectors/poseidon_bn254_vectors.json": "594b4c9441fe305f17b7706997802536ba55afced9ddd2813ad6d81da4c41a21",
+    "tooling/export_vectors.js": "a7dfac04e66922c5ca30510edb56d2f1c84b52a9b46d3967c2b8085de7b5a977",
+    "tooling/package-lock.json": "f64e99f822cfc5f09a047a79b7495432aef20a0f2b3d2f5b72d2d8f49b54b3db",
+    "circuits/spend.circom": "97c24b754549fd576c1e3d1e70345eba5570143895a0a9cceeb7e22176cdf8af"
+  },
+  "node_modules_sha256": {
+    "circomlib/package.json": "79ed553f89b67cce3aff5ae30027ce1683cbe8b3f8e822be4354ec25b5d7808a",
+    "circomlib/circuits/poseidon.circom": "2582464669b69827164bd08ee0337997e1957f2ab4f00cdd86d533ca5e9d9234",
+    "circomlib/circuits/poseidon_constants.circom": "94c9e4b5ea891ab4d1ba626f1d719f8c661014d9b628f6096c803f75f39e3eee",
+    "circomlibjs/package.json": "9c7e866ba70ada882020b7fd1d644a761149c50f59817f981d7bc347af1d30d7",
+    "circomlibjs/src/poseidon_reference.js": "c7053f631e987b982c644ebfd505f83aa3baf220864926b17f393ee88ae56996",
+    "circomlibjs/src/poseidon_constants.json": "354f31bbed9d9a8b884d8f2181e339cb425b6e3e4cc7240bd3dd22f0070f3f2c",
+    "circomlibjs/src/poseidon_constants.js": "05158e0b3fab993603d5bb2eaffffc66bfa068f2188d0e75cd596afad263d7b0"
+  },
+  "generator_sha256": "a341e641a40f1a40a8ecb156f6a3cb54a957511bb248749eb5bc874c09a8ace7",
+  "generated_sha256": {
+    "Constants.lean": "a520856f658fccf7cafe6c736a0408da6394d5b9f9fafb619c01a3577d17e9a5"
+  }
+}

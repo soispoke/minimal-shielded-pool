@@ -1,4 +1,4 @@
-import Spec.Basic
+import Poseidon.Hash
 import Mathlib.Algebra.BigOperators.Fin
 
 /-!
@@ -7,12 +7,13 @@ import Mathlib.Algebra.BigOperators.Fin
 
 namespace MSP
 
-/-- D2. circomlib Poseidon over BN254 with 2, 3 and 10 inputs. Step 3 replaces
-these declarations by the concrete permutation generated from
-`reference/poseidon_bn254.py`; no statement changes. -/
-opaque H2 : F → F → F
-opaque H3 : F → F → F → F
-opaque H10 : (Fin 10 → F) → F
+/-- D2. Concrete circomlib reference Poseidon over BN254. The irreducibility
+attribute keeps symbolic proofs from expanding the rounds accidentally; the
+definitions remain available for explicit unfolding and kernel checking.
+Equivalence with the optimized circuit and deployed libraries remains open. -/
+@[irreducible] def H2 (a b : F) : F := Poseidon.hash2 a b
+@[irreducible] def H3 (a b c : F) : F := Poseidon.hash3 a b c
+@[irreducible] def H10 (x : Fin 10 → F) : F := Poseidon.hash10 x
 
 /-- D2. Keccak-256, read as a big-endian number below `2 ^ 256`. Step 3 binds it
 to a verified implementation. -/

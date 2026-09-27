@@ -1,0 +1,4 @@
+$ python3 formal/tools/r1cs_artifact.py --check-lean formal/Artifacts/Spend.lean
+{"constraints": 14802, "lean_checked": true, "pinned_section_count_exception": true, "result": "artifact checked; C1/C1c and projections remain unproved", "sha256": "e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf", "symbols_checked": false, "terms": 185677, "wires": 14842}
+
+exit=0

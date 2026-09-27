@@ -125,9 +125,11 @@ def newLeaves (sd : SettleData) (w : Witness) : List (F × ℕ) :=
 def inputsOf (sd : SettleData) (w : Witness) : List Occ :=
   ((List.finRange 2).filter fun k => w.v k ≠ 0).map fun k => ⟨sd.epoch, w.idx k⟩
 
-/-- Calls into the pool that return successfully and whose effects persist,
-whether or not they change state, and the other chain actions the pool observes.
-A reverted call has no event. -/
+/-- Original message calls entering the pool that return successfully and whose
+effects persist, whether or not they change state, and the other chain actions
+the pool observes. Function events use the entry's calldata and value before
+delegation, as specified by `eventsOf`; internal delegation does not add another
+event. A reverted call or execution within VERIFY has no function-call event. -/
 inductive Event
   /-- `shield(inner)` with `msg.value = v` -/
   | shield (inner : F) (v : ℕ)

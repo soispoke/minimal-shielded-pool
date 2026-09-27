@@ -1,0 +1,4 @@
+$ python3 formal/tools/compression_fragment.py
+CompressionData.lean matches exact pinned constraints 0..8; full C1/C1c remains open.
+
+exit=0

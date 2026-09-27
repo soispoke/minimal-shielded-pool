@@ -1,0 +1,22 @@
+Case: custom axiom
+Command: lake env lean --stdin
+Input:
+import Proofs.AxiomAudit
+axiom forbiddenForAudit : False
+assert_standard_axioms forbiddenForAudit
+
+<stdin>:3:0: error: forbiddenForAudit depends on nonstandard axioms: [forbiddenForAudit]
+
+exit=1
+
+Case: admitted theorem
+Command: lake env lean --stdin
+Input:
+import Proofs.AxiomAudit
+theorem admittedForAudit : False := by sorry
+assert_standard_axioms admittedForAudit
+
+<stdin>:2:8: warning: declaration uses `sorry`
+<stdin>:3:0: error: admittedForAudit depends on nonstandard axioms: [sorryAx]
+
+exit=1

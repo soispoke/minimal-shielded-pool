@@ -1,4 +1,4 @@
-import Spec
+import Sanity.TreeLemma
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 
@@ -11,17 +11,6 @@ namespace MSP
 noncomputable section
 open Classical
 
-def blk (L : List F) (l m : ℕ) : List F := (L.drop (m * 2 ^ l)).take (2 ^ l)
-
-theorem treeRoot_take (h : ℕ) (L : List F) : treeRoot h (L.take (2 ^ h)) = treeRoot h L := by
-  induction h generalizing L with
-  | zero => cases L <;> rfl
-  | succ h ih =>
-    simp only [treeRoot]
-    congr 1
-    · rw [List.take_take, Nat.min_eq_left (Nat.pow_le_pow_right (by norm_num) (Nat.le_succ h))]
-    · rw [List.drop_take, pow_succ, show 2 ^ h * 2 - 2 ^ h = 2 ^ h by omega, ih]
-
 theorem treeRoot_nil (h : ℕ) : treeRoot h [] = Z h := by
   induction h with
   | zero => rfl
@@ -33,13 +22,6 @@ theorem blk_split (L : List F) (l j : ℕ) :
   rw [Nat.min_eq_left (Nat.pow_le_pow_right (by norm_num) (Nat.le_succ l)), pow_succ,
       show 2 ^ l * 2 - 2 ^ l = 2 ^ l by omega]
   congr 4 <;> ring
-
-theorem headD_drop_take (L : List F) (i : ℕ) : ((L.drop i).take 1).headD 0 = L.getD i 0 := by
-  induction L generalizing i with
-  | nil => simp
-  | cons a t ih => cases i with
-    | zero => rfl
-    | succ i => simpa using ih i
 
 /-- A block inside `L` is unchanged by appending. -/
 theorem blk_append (L M : List F) (l k : ℕ) (h : (k + 1) * 2 ^ l ≤ L.length) :
@@ -71,7 +53,7 @@ theorem prev_blk_le (n m : ℕ) (hodd : n / 2 ^ m % 2 = 1) : (n / 2 ^ m - 1 + 1)
   have h1 : 1 ≤ n / 2 ^ m := by generalize n / 2 ^ m = x at hodd ⊢; omega
   rw [Nat.sub_add_cancel h1]; exact Nat.div_mul_le_self n (2 ^ m)
 
-def Inv (L : List F) (t : LogicTree) : Prop :=
+private def Inv (L : List F) (t : LogicTree) : Prop :=
   t.next = L.length ∧
   ∀ m, (L.length / 2 ^ m) % 2 = 1 → t.filled m = treeRoot m (blk L m (L.length / 2 ^ m - 1))
 

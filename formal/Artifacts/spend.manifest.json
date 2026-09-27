@@ -1,0 +1,591 @@
+{
+  "artifact": "build/spend.r1cs",
+  "bytes": 6980844,
+  "circuit_sha256": "97c24b754549fd576c1e3d1e70345eba5570143895a0a9cceeb7e22176cdf8af",
+  "constraints_sha256": "146aafc4fb293138a305520bd08b72c09080a0ed8d4eb04d7e3e679269a96a74",
+  "declared_sections": 5,
+  "field_bytes": 32,
+  "field_order": "21888242871839275222246405745257275088548364400416034343698204186575808495617",
+  "header": {
+    "constraints": 14802,
+    "labels": 46772,
+    "private_inputs": 96,
+    "public_inputs": 1,
+    "public_outputs": 2,
+    "wires": 14842
+  },
+  "schema": 1,
+  "section_count_defect": true,
+  "sections": [
+    {
+      "offset": 24,
+      "sha256": "41679a72cee33c7df44661053e08cecf457ff936213bc207c7aab289517e7317",
+      "size": 6861996,
+      "type": 2
+    },
+    {
+      "offset": 6862032,
+      "sha256": "9785f47edf35019a46935c17a5fddf20a7c1955465e2e9d6256c95572832eb04",
+      "size": 64,
+      "type": 1
+    },
+    {
+      "offset": 6862108,
+      "sha256": "1d51a360b3990f0c0c7e5649a76f5e3ad13c0af98c2c477d4f52421a9d806747",
+      "size": 118736,
+      "type": 3
+    }
+  ],
+  "sha256": "e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf",
+  "signals": {
+    "main.alpha": {
+      "component": 225,
+      "label": 3,
+      "wire": 3
+    },
+    "main.authorizer": {
+      "component": 225,
+      "label": 99,
+      "wire": 98
+    },
+    "main.beta": {
+      "component": 225,
+      "label": 1,
+      "wire": 1
+    },
+    "main.domain": {
+      "component": 225,
+      "label": 5,
+      "wire": 5
+    },
+    "main.fee": {
+      "component": 225,
+      "label": 97,
+      "wire": null
+    },
+    "main.gamma": {
+      "component": 225,
+      "label": 2,
+      "wire": 2
+    },
+    "main.in_bits[0][0]": {
+      "component": 225,
+      "label": 52,
+      "wire": 52
+    },
+    "main.in_bits[0][10]": {
+      "component": 225,
+      "label": 62,
+      "wire": 62
+    },
+    "main.in_bits[0][11]": {
+      "component": 225,
+      "label": 63,
+      "wire": 63
+    },
+    "main.in_bits[0][12]": {
+      "component": 225,
+      "label": 64,
+      "wire": 64
+    },
+    "main.in_bits[0][13]": {
+      "component": 225,
+      "label": 65,
+      "wire": 65
+    },
+    "main.in_bits[0][14]": {
+      "component": 225,
+      "label": 66,
+      "wire": 66
+    },
+    "main.in_bits[0][15]": {
+      "component": 225,
+      "label": 67,
+      "wire": 67
+    },
+    "main.in_bits[0][16]": {
+      "component": 225,
+      "label": 68,
+      "wire": 68
+    },
+    "main.in_bits[0][17]": {
+      "component": 225,
+      "label": 69,
+      "wire": 69
+    },
+    "main.in_bits[0][18]": {
+      "component": 225,
+      "label": 70,
+      "wire": 70
+    },
+    "main.in_bits[0][19]": {
+      "component": 225,
+      "label": 71,
+      "wire": 71
+    },
+    "main.in_bits[0][1]": {
+      "component": 225,
+      "label": 53,
+      "wire": 53
+    },
+    "main.in_bits[0][2]": {
+      "component": 225,
+      "label": 54,
+      "wire": 54
+    },
+    "main.in_bits[0][3]": {
+      "component": 225,
+      "label": 55,
+      "wire": 55
+    },
+    "main.in_bits[0][4]": {
+      "component": 225,
+      "label": 56,
+      "wire": 56
+    },
+    "main.in_bits[0][5]": {
+      "component": 225,
+      "label": 57,
+      "wire": 57
+    },
+    "main.in_bits[0][6]": {
+      "component": 225,
+      "label": 58,
+      "wire": 58
+    },
+    "main.in_bits[0][7]": {
+      "component": 225,
+      "label": 59,
+      "wire": 59
+    },
+    "main.in_bits[0][8]": {
+      "component": 225,
+      "label": 60,
+      "wire": 60
+    },
+    "main.in_bits[0][9]": {
+      "component": 225,
+      "label": 61,
+      "wire": 61
+    },
+    "main.in_bits[1][0]": {
+      "component": 225,
+      "label": 72,
+      "wire": 72
+    },
+    "main.in_bits[1][10]": {
+      "component": 225,
+      "label": 82,
+      "wire": 82
+    },
+    "main.in_bits[1][11]": {
+      "component": 225,
+      "label": 83,
+      "wire": 83
+    },
+    "main.in_bits[1][12]": {
+      "component": 225,
+      "label": 84,
+      "wire": 84
+    },
+    "main.in_bits[1][13]": {
+      "component": 225,
+      "label": 85,
+      "wire": 85
+    },
+    "main.in_bits[1][14]": {
+      "component": 225,
+      "label": 86,
+      "wire": 86
+    },
+    "main.in_bits[1][15]": {
+      "component": 225,
+      "label": 87,
+      "wire": 87
+    },
+    "main.in_bits[1][16]": {
+      "component": 225,
+      "label": 88,
+      "wire": 88
+    },
+    "main.in_bits[1][17]": {
+      "component": 225,
+      "label": 89,
+      "wire": 89
+    },
+    "main.in_bits[1][18]": {
+      "component": 225,
+      "label": 90,
+      "wire": 90
+    },
+    "main.in_bits[1][19]": {
+      "component": 225,
+      "label": 91,
+      "wire": 91
+    },
+    "main.in_bits[1][1]": {
+      "component": 225,
+      "label": 73,
+      "wire": 73
+    },
+    "main.in_bits[1][2]": {
+      "component": 225,
+      "label": 74,
+      "wire": 74
+    },
+    "main.in_bits[1][3]": {
+      "component": 225,
+      "label": 75,
+      "wire": 75
+    },
+    "main.in_bits[1][4]": {
+      "component": 225,
+      "label": 76,
+      "wire": 76
+    },
+    "main.in_bits[1][5]": {
+      "component": 225,
+      "label": 77,
+      "wire": 77
+    },
+    "main.in_bits[1][6]": {
+      "component": 225,
+      "label": 78,
+      "wire": 78
+    },
+    "main.in_bits[1][7]": {
+      "component": 225,
+      "label": 79,
+      "wire": 79
+    },
+    "main.in_bits[1][8]": {
+      "component": 225,
+      "label": 80,
+      "wire": 80
+    },
+    "main.in_bits[1][9]": {
+      "component": 225,
+      "label": 81,
+      "wire": 81
+    },
+    "main.in_rho[0]": {
+      "component": 225,
+      "label": 8,
+      "wire": 8
+    },
+    "main.in_rho[1]": {
+      "component": 225,
+      "label": 9,
+      "wire": 9
+    },
+    "main.in_siblings[0][0]": {
+      "component": 225,
+      "label": 12,
+      "wire": 12
+    },
+    "main.in_siblings[0][10]": {
+      "component": 225,
+      "label": 22,
+      "wire": 22
+    },
+    "main.in_siblings[0][11]": {
+      "component": 225,
+      "label": 23,
+      "wire": 23
+    },
+    "main.in_siblings[0][12]": {
+      "component": 225,
+      "label": 24,
+      "wire": 24
+    },
+    "main.in_siblings[0][13]": {
+      "component": 225,
+      "label": 25,
+      "wire": 25
+    },
+    "main.in_siblings[0][14]": {
+      "component": 225,
+      "label": 26,
+      "wire": 26
+    },
+    "main.in_siblings[0][15]": {
+      "component": 225,
+      "label": 27,
+      "wire": 27
+    },
+    "main.in_siblings[0][16]": {
+      "component": 225,
+      "label": 28,
+      "wire": 28
+    },
+    "main.in_siblings[0][17]": {
+      "component": 225,
+      "label": 29,
+      "wire": 29
+    },
+    "main.in_siblings[0][18]": {
+      "component": 225,
+      "label": 30,
+      "wire": 30
+    },
+    "main.in_siblings[0][19]": {
+      "component": 225,
+      "label": 31,
+      "wire": 31
+    },
+    "main.in_siblings[0][1]": {
+      "component": 225,
+      "label": 13,
+      "wire": 13
+    },
+    "main.in_siblings[0][2]": {
+      "component": 225,
+      "label": 14,
+      "wire": 14
+    },
+    "main.in_siblings[0][3]": {
+      "component": 225,
+      "label": 15,
+      "wire": 15
+    },
+    "main.in_siblings[0][4]": {
+      "component": 225,
+      "label": 16,
+      "wire": 16
+    },
+    "main.in_siblings[0][5]": {
+      "component": 225,
+      "label": 17,
+      "wire": 17
+    },
+    "main.in_siblings[0][6]": {
+      "component": 225,
+      "label": 18,
+      "wire": 18
+    },
+    "main.in_siblings[0][7]": {
+      "component": 225,
+      "label": 19,
+      "wire": 19
+    },
+    "main.in_siblings[0][8]": {
+      "component": 225,
+      "label": 20,
+      "wire": 20
+    },
+    "main.in_siblings[0][9]": {
+      "component": 225,
+      "label": 21,
+      "wire": 21
+    },
+    "main.in_siblings[1][0]": {
+      "component": 225,
+      "label": 32,
+      "wire": 32
+    },
+    "main.in_siblings[1][10]": {
+      "component": 225,
+      "label": 42,
+      "wire": 42
+    },
+    "main.in_siblings[1][11]": {
+      "component": 225,
+      "label": 43,
+      "wire": 43
+    },
+    "main.in_siblings[1][12]": {
+      "component": 225,
+      "label": 44,
+      "wire": 44
+    },
+    "main.in_siblings[1][13]": {
+      "component": 225,
+      "label": 45,
+      "wire": 45
+    },
+    "main.in_siblings[1][14]": {
+      "component": 225,
+      "label": 46,
+      "wire": 46
+    },
+    "main.in_siblings[1][15]": {
+      "component": 225,
+      "label": 47,
+      "wire": 47
+    },
+    "main.in_siblings[1][16]": {
+      "component": 225,
+      "label": 48,
+      "wire": 48
+    },
+    "main.in_siblings[1][17]": {
+      "component": 225,
+      "label": 49,
+      "wire": 49
+    },
+    "main.in_siblings[1][18]": {
+      "component": 225,
+      "label": 50,
+      "wire": 50
+    },
+    "main.in_siblings[1][19]": {
+      "component": 225,
+      "label": 51,
+      "wire": 51
+    },
+    "main.in_siblings[1][1]": {
+      "component": 225,
+      "label": 33,
+      "wire": 33
+    },
+    "main.in_siblings[1][2]": {
+      "component": 225,
+      "label": 34,
+      "wire": 34
+    },
+    "main.in_siblings[1][3]": {
+      "component": 225,
+      "label": 35,
+      "wire": 35
+    },
+    "main.in_siblings[1][4]": {
+      "component": 225,
+      "label": 36,
+      "wire": 36
+    },
+    "main.in_siblings[1][5]": {
+      "component": 225,
+      "label": 37,
+      "wire": 37
+    },
+    "main.in_siblings[1][6]": {
+      "component": 225,
+      "label": 38,
+      "wire": 38
+    },
+    "main.in_siblings[1][7]": {
+      "component": 225,
+      "label": 39,
+      "wire": 39
+    },
+    "main.in_siblings[1][8]": {
+      "component": 225,
+      "label": 40,
+      "wire": 40
+    },
+    "main.in_siblings[1][9]": {
+      "component": 225,
+      "label": 41,
+      "wire": 41
+    },
+    "main.in_spend_key[0]": {
+      "component": 225,
+      "label": 6,
+      "wire": 6
+    },
+    "main.in_spend_key[1]": {
+      "component": 225,
+      "label": 7,
+      "wire": 7
+    },
+    "main.in_value[0]": {
+      "component": 225,
+      "label": 10,
+      "wire": 10
+    },
+    "main.in_value[1]": {
+      "component": 225,
+      "label": 11,
+      "wire": 11
+    },
+    "main.out_inner[0]": {
+      "component": 225,
+      "label": 92,
+      "wire": 92
+    },
+    "main.out_inner[1]": {
+      "component": 225,
+      "label": 93,
+      "wire": 93
+    },
+    "main.out_value[0]": {
+      "component": 225,
+      "label": 94,
+      "wire": 94
+    },
+    "main.out_value[1]": {
+      "component": 225,
+      "label": 95,
+      "wire": 95
+    },
+    "main.public_amount": {
+      "component": 225,
+      "label": 96,
+      "wire": 96
+    },
+    "main.recipient": {
+      "component": 225,
+      "label": 98,
+      "wire": 97
+    },
+    "main.root": {
+      "component": 225,
+      "label": 4,
+      "wire": 4
+    },
+    "main.stmt[0]": {
+      "component": 225,
+      "label": 100,
+      "wire": 99
+    },
+    "main.stmt[1]": {
+      "component": 225,
+      "label": 101,
+      "wire": 100
+    },
+    "main.stmt[2]": {
+      "component": 225,
+      "label": 102,
+      "wire": 101
+    },
+    "main.stmt[3]": {
+      "component": 225,
+      "label": 103,
+      "wire": 102
+    },
+    "main.stmt[4]": {
+      "component": 225,
+      "label": 104,
+      "wire": null
+    },
+    "main.stmt[5]": {
+      "component": 225,
+      "label": 105,
+      "wire": null
+    },
+    "main.stmt[6]": {
+      "component": 225,
+      "label": 106,
+      "wire": null
+    },
+    "main.stmt[7]": {
+      "component": 225,
+      "label": 107,
+      "wire": null
+    },
+    "main.stmt[8]": {
+      "component": 225,
+      "label": 108,
+      "wire": null
+    },
+    "main.stmt[9]": {
+      "component": 225,
+      "label": 109,
+      "wire": null
+    }
+  },
+  "symbols_sha256": "10342e79bcec6e19ff64cb1ae34b433ab1780f926686e08828af1af78b1115f7",
+  "terms": 185677,
+  "toolchain_lock_sha256": "f64e99f822cfc5f09a047a79b7495432aef20a0f2b3d2f5b72d2d8f49b54b3db",
+  "version": 1
+}

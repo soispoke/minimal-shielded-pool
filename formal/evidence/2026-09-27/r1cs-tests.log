@@ -1,0 +1,18 @@
+$ python3 -m unittest discover -s formal/tools -p test_*.py -v
+test_exact_pinned_prefix_is_the_checked_in_data (test_r1cs_artifact.CompressionFragmentTests) ... ok
+test_fragment_rejects_mutated_artifact (test_r1cs_artifact.CompressionFragmentTests) ... ok
+test_bad_header_and_sections (test_r1cs_artifact.ParserTests) ... ok
+test_every_truncation (test_r1cs_artifact.ParserTests) ... ok
+test_export_is_deterministic_and_requires_pinned_provenance (test_r1cs_artifact.ParserTests) ... ok
+test_huge_counts_are_bounded_by_payload (test_r1cs_artifact.ParserTests) ... ok
+test_pin_rejects_structurally_valid_alternative (test_r1cs_artifact.ParserTests) ... ok
+test_pinned_defect_and_mutation (test_r1cs_artifact.ParserTests) ... ok
+test_terms (test_r1cs_artifact.ParserTests) ... ok
+test_valid_and_section_order (test_r1cs_artifact.ParserTests) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 2.328s
+
+OK
+
+exit=0

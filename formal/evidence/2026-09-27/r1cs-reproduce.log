@@ -1,0 +1,16 @@
+$ python3 formal/tools/r1cs_artifact.py --reproduce /Volumes/PrivateAI/WorkRepos/minimal-shielded-pool/tooling/node_modules
+[32mtemplate instances[0m: 226
+non-linear constraints: 14802
+linear constraints: 0
+public inputs: 1
+public outputs: 2
+private inputs: 96
+private outputs: 0
+wires: 14842
+labels: 46772
+[32mWritten successfully:[0m ../../../../../var/folders/8n/2hfmch651jgb3_1ywycjtpfr0000gn/T/msp-r1cs-zsab684y/spend.r1cs
+[32mWritten successfully:[0m ../../../../../var/folders/8n/2hfmch651jgb3_1ywycjtpfr0000gn/T/msp-r1cs-zsab684y/spend.sym
+[32mEverything went okay, circom safe[0m
+{"constraints": 14802, "lean_checked": false, "pinned_section_count_exception": true, "result": "artifact checked; C1/C1c and projections remain unproved", "sha256": "e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf", "symbols_checked": true, "terms": 185677, "wires": 14842}
+
+exit=0
