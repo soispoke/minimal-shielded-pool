@@ -25,6 +25,27 @@ PINS = {
     'duplicate': 'ee86ff80bb161e71894de9fe3d576469bab5ad56aded622804dffbddf26318df',
     'sink': '1051e2912a70a5063df35b98069c3caee2877164aafab05c838ab22b8662147a',
 }
+# Hashes of each archived run, pinned here rather than read from the unowned
+# evidence directory: the archive, the symbol file that names the projection
+# wires, the witness, and the independent JS decoding digest.
+RECORD_PINS = {
+    'membership': {'archive': 'fb5a38bf2800a55c0396363e717b8733a5b44af19d7e0a3ead52400b3fdf2333',
+                  'spend.sym': '10342e79bcec6e19ff64cb1ae34b433ab1780f926686e08828af1af78b1115f7',
+                  'witness.wtns': 'e26e3ddfba36774f5b9c19d080cc8b5a31580972da1045b7774392d6ed5d844b',
+                  'decoded': '91ce72fa3fbc89d321338d6c7ffcc015a5483c62226bfd4d086bd4fbc8b413b9'},
+    'range': {'archive': '5bb68f8fea2b816c0606202c5d06a4c737c107c85e9a294b78a93bdd54e7c7c1',
+             'spend.sym': 'b17c0904207dea20d994486f99d20f676164fd3627f9ac572c434ca484983c55',
+             'witness.wtns': 'bb77cffbdda58e311171f957809556a78614e1fe79e3347c00622ff282984cce',
+             'decoded': '19410bf2b20ef4f4fc0ae1ceb5206a7eac48dd38a3ddbcba344a6a08f9665ecc'},
+    'duplicate': {'archive': '63a61b2705faea1468979cbfbbf857e1d572ef7b16c83987b2826ea7848db23c',
+                 'spend.sym': 'a636690db77104d2dc6dd16bda7591742eff7faa87dc258a44fe5f673bbe99e9',
+                 'witness.wtns': '456dce5c0d5c1be1ac943fd8bb291bc281f12fb1e050bea4144305da527db035',
+                 'decoded': '15eae9b64ed0d396a7540e377da7361082f38a7d1b5f392d5fdc7802f164e868'},
+    'sink': {'archive': '84da0a06a924c7a1ce8dcd1c51c0d553e362402f6848eddfaeb4224ded2cf1f8',
+            'spend.sym': '10342e79bcec6e19ff64cb1ae34b433ab1780f926686e08828af1af78b1115f7',
+            'witness.wtns': 'd870b1c73770add827567429099cf1c8a41e3808f5d6e03ee18f348d4650f596',
+            'decoded': 'e1cef9d22a21fb5114fa596dadd104625ff618cccaf03c787fb49034a793eb57'},
+}
 CHUNK = 512
 
 
@@ -45,6 +66,12 @@ def decode_mutant(name, raw, expected_digest):
 def load(name):
     directory = EVIDENCE / name
     result = json.loads((directory / 'result.json').read_text())
+    pin = RECORD_PINS[name]
+    r.require(result['archive_sha256'] == pin['archive'] and
+              result['artifact']['spend.sym']['sha256'] == pin['spend.sym'] and
+              result['artifact']['witness.wtns']['sha256'] == pin['witness.wtns'] and
+              result['decoded_constraints_sha256'] == pin['decoded'],
+              'archived record differs from the owned pins')
     archive = directory / 'artifacts.tar.gz'
     r.require(sha(archive.read_bytes()) == result['archive_sha256'], 'archive hash mismatch')
     with tarfile.open(archive) as t:

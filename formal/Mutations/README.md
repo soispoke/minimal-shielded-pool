@@ -34,9 +34,9 @@ done
 python3 -m unittest discover -s tools -p test_mutation_certificates.py
 ```
 
-The exporter checks the full archived R1CS and WTNS hashes, exact source
-mutation, independent JS constraint digest, and all 109 reused signal wire
-positions. Add `--write` to regenerate each table and all constraint blocks.
+The exporter checks the archive, R1CS, symbol-file and WTNS hashes and the
+independent JS constraint digest against values pinned in the owned tool, the
+exact source mutation, and all 109 reused signal wire positions. Add `--write` to regenerate each table and all constraint blocks.
 The frozen artifacts and original compiler/witness runs are in
 `../evidence/2026-09-27-0350/circuit-mutations/`.
 
