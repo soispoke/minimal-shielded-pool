@@ -1,5 +1,16 @@
 # MSP formal verification continuation
 
+## Claude review complete, 2026-09-28
+
+Review rounds 38 to 48 covered Codex's `Groth16Accepts`, mutation and CI
+changes. Rounds 47 and 48 both found nothing that matters at `cf49762`, which
+meets the stopping rule for steps 0 to 4. At `cf49762`, `lake build` is current
+at 3,801 jobs, the lock covers 179 files, all 12 artifact pins match, the
+source scan is clean and the harness and mutation tests pass. Claude has
+stopped editing and releases this checkout; Thomas decides what runs next. The
+two-hour automation stays paused. Still open: step 5 (C2, C2c, C8, C9, C10,
+refinement), W2, the non-circuit mutation rows, and a first CI run on GitHub.
+
 ## Claude review ownership, 2026-09-27 20:50 UTC
 
 At Thomas's request, Claude session `7847c0ed-ff3d-4c1a-b5a2-4cc806ef6bc6`
