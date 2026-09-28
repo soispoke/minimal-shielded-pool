@@ -224,4 +224,10 @@ run real proofs through the pinned ethrex VM. They cover duplicate notes,
 replay, a reorg simulated by database rollback, settlement gas and the fourth-frame rules, but not networking,
 other clients or FOCIL.
 
+A Lean formal verification of this pool at `8835be7` lives in
+[verified-shielded-pool](https://github.com/soispoke/verified-shielded-pool),
+with its own CI. It is checked out as `formal/` inside a pool checkout, which
+git ignores here. CI's `formal-pins` job warns, without failing, when a change
+touches a file those proofs pin (`python3 tooling/check_formal_pins.py`).
+
 See [SECURITY.md](SECURITY.md) for trust and failure boundaries.

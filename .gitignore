@@ -12,3 +12,5 @@ wallet/artifacts/
 # The archived profile's initcode is a deployment record, tracked like the live one.
 !devnet/vectors/*/build/
 !devnet/vectors/*/build/shielded_pool_dispatcher_init.hex
+# The formal verification repository, checked out here to run its checks.
+/formal/
