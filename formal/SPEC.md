@@ -111,14 +111,15 @@ zero except slot 22, which holds `EMPTY_ROOT`. It is deployed once the pinned
 EIPs are active, and `A` is created by a contract-creation transaction (empty
 `to`) sent by an externally owned account, so the committed initcode is the
 only code that runs in that transaction. Before deployment no code ran at `A`
-and no frame transaction had sender `A` (§8), and the recent-root contract's
-storage was empty when EIP-8272 activated (P7). Neither follows from the
+and no frame transaction had sender `A` (§8). Neither follows from the
 creation: code created at `A` through an address collision can destroy itself
 in its creation transaction (EIP-6780), and EIP-8250's keyed nonces let a frame
 transaction from `A` leave `A`'s nonce, code and storage unchanged. Either
 could write roots under `A`'s sources, emit logs or send ETH from `A`. Its
 balance at deployment may be nonzero, since anyone can fund the address in
-advance.
+advance. The recent-root contract's storage was empty when EIP-8272 activated
+(P7); a chain that breaks this can plant entries under the pool's sources for
+any slot (§8).
 
 **D13. Pool state** (the model). Per epoch `e` an append-only leaf list
 `Leaves[e]`; the current epoch `E`; `finalRoot[e]` for `e < E`; credits; the
@@ -379,7 +380,7 @@ unless the run has a bad event, so P7 makes frame 0 succeed for a spend 1 to
 8,191 slots after the root's slot; P5, C2 and refinement make every key consumed for `A` one that a spend event added to the
 model's keys, which spendability shows its keys are not, and P6 makes their
 sequences 0 unless an EIP-8250 slot collides with a consumed one. C5c gives `max_cost ≤ fee < v ≤ balance`, so C2c
-approves the spend; C4 and refinement settle it, C5l credits `pub` to the
+approves the spend; C4 (with P13) and refinement settle it, C5l credits `pub` to the
 chosen recipient, and C10 pays the credit, which C5c covers, to any recipient that accepts a plain payment and returns less
 than 64 KiB. This assumes the
 publication and the spend are included, with the spend 1 to 8,191 slots after
@@ -513,8 +514,9 @@ with `Query.degenerate`, `ExtractionFailure` and `CompressionBreak`.
 `Groth16Accepts` is now textbook verification with the exact pinned key,
 strict EIP-197 encoding and the normative discrete-log pairing predicate.
 `Groth16/` proves the actual G1 and G2 scalar-group correspondences, including
-full G2 subgroup membership; `Proofs.Groth16Binding` exposes and audits all
-acceptance checks. This predicate does not execute the verifier's code, and
+full G2 subgroup membership; `Proofs.Groth16Binding` exposes all acceptance
+checks, and `Proofs/AxiomAudit.lean` audits them and pins their statements
+through `Proofs/PinClaims.lean`. This predicate does not execute the verifier's code, and
 C9 remains open. Declarations still marked `opaque` in the EVM semantics
 are bound to the artifacts in step 5, where
 `ChainStep`, `eventsOf`, `approvalsIn`, `firstPayout` and the
@@ -553,8 +555,9 @@ respectively; the corresponding C1 is false. The exporter checks the frozen
 artifacts, exact source mutations, independent constraint decodings and
 projection wire positions. This binary/source binding is external to Lean.
 Unlike the original R1CS, which CI recompiles and compares, the mutants were
-compiled once by `tools/circuit_mutations.py`, which CI does not run; CI reruns
-only the exporter, against the archived artifacts and their recorded decoding
+compiled once by `tools/circuit_mutations.py`, whose compile step CI does not
+run (CI uses only its source-mutation and validator functions, through the
+exporter and its unit tests); CI reruns the exporter against the archived artifacts and their recorded decoding
 digest in `evidence/2026-09-27-0350/circuit-mutations/`. See `Mutations/README.md` for the reproduction commands
 and precise boundary. All other §6 mutation rows, and the range row for the
 other five checks, remain open.
@@ -582,7 +585,10 @@ with `.lake` removed (so every project module, but not Mathlib, is built from so
 warning, with `Proofs/AxiomAudit.lean` rejecting any axiom beyond Lean's
 standard three for the principal results and pinning each one's type to its
 claim with a theorem whose own axioms it audits, so a coercion elaboration
-inserts to fit a weaker proof must itself be proved; then the audit, `check_formal.py` and `git diff` again, so a build
+inserts to fit a weaker proof must itself be proved (supporting results in
+unlocked files, such as `groth16_accepts_point_orders`, the optimized
+Poseidon equivalences and the Keccak fixtures, are audited for axioms but not
+type-pinned); then the audit, `check_formal.py` and `git diff` again, so a build
 that rewrote a checked file fails; and finally the differential test of the
 executable model against `wallet/wallet.py`. The `formal-artifacts` job runs
 the R1CS import checks above, with the circuit recompiled, and every generator

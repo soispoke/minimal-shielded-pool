@@ -66,7 +66,9 @@ and `(C,delta)`, with public scalars ordered `(β,γ,α)`. Strict decoding enfor
 exact length, canonical coordinates and non-infinity. Curve checks and the
 proved subgroup characterization enforce the complete group conditions.
 `Spec.Circuit.Groth16Accepts` is now this concrete predicate. Its expanded
-checks and exact point orders are audited in `Proofs/Groth16Binding.lean`.
+checks and exact point orders are stated in `Proofs/Groth16Binding.lean`;
+`Proofs/AxiomAudit.lean` audits both and pins the expanded checks, not the
+point orders.
 
 This is a declarative definition using the proved groups, not an efficient
 logarithm algorithm or a Miller-loop implementation. C9 still requires proving
