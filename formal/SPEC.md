@@ -593,8 +593,11 @@ that rewrote a checked file fails; and finally the differential test of the
 executable model against `wallet/wallet.py`. The `formal-artifacts` job runs
 the R1CS import checks above, with the circuit recompiled, and every generator
 of checked-in Lean data under `tools/`, `Poseidon/` and `Keccak/`, rerun
-against the pinned R1CS, symbol file, key and hash constants (the mutation
-exporter reruns against the archived mutant artifacts instead); the W1 Keccak
+against the pinned R1CS, symbol file, key, hash constants and dispatcher
+initcode (the mutation exporter reruns against the archived mutant artifacts
+instead, and `tools/dispatcher_pilot.py` regenerates `Chain/DispatcherData.lean`
+for a sender-mismatch pilot the audit checks for axioms, which proves no chain
+claim); the W1 Keccak
 traces in `Proofs/NonVacuityKeccak*Data.lean` and the W1 query tables in
 `Proofs/NonVacuityPoseidonTableData.lean` and `Proofs/NonVacuityKeccakTable.lean`
 have no generator check, and Lean re-checks the traces round by round and
