@@ -304,8 +304,8 @@ allow, can call
 below `2^64`, and the call succeeds (`Obs` reads `E` as a whole storage word,
 which exceeds the contract's `uint64` counter only through a degenerate storage
 key, a bad event refinement accounts for); and they can call `claimWithdrawal(r)` for every recipient `r < 2^160` with a nonzero credit that the balance
-covers, and the call succeeds unless the first `CALL`, `CALLCODE` or
-`STATICCALL` made by code running at `A` (the dispatcher's `DELEGATECALL` into
+covers, and the call succeeds unless the first `CALL`, `CALLCODE`,
+`STATICCALL`, `CREATE` or `CREATE2` made by code running at `A` (the dispatcher's `DELEGATECALL` into
 `L` does not count) is a plain `CALL` paying the credit to `r` with at least
 15,000,000 gas and the recipient (its code, its
 EIP-7702 delegate or a precompile) rejects it or returns at least 64 KiB. Each

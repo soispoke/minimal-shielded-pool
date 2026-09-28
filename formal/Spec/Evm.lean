@@ -251,9 +251,10 @@ opaque EnvValid : ChainState → ℕ → Env → Prop
 /-- The outcome of that transaction's call to the pool with the calldata. -/
 opaque callPool : Deployment → ChainState → Env → ℕ → List UInt8 → Outcome
 
-/-- The first `CALL`, `CALLCODE` or `STATICCALL` made during a `callPool` by code
-whose `ADDRESS` is the pool's (a `DELEGATECALL` does not count): whether it is a
-`CALL`, recipient, value, calldata, the execution gas the recipient's call frame
+/-- The first `CALL`, `CALLCODE`, `STATICCALL`, `CREATE` or `CREATE2` made during a
+`callPool` by code whose `ADDRESS` is the pool's (a `DELEGATECALL` does not count),
+so that a creation whose initcode changes the recipient's state comes first:
+whether it is a `CALL`, recipient or created address, value, calldata or initcode, the execution gas the recipient's call frame
 starts with (after EIP-150's 63/64 cap and including any value stipend, not the
 gas operand), whether the value was transferred and execution at the recipient began (its
 code, its EIP-7702 delegate's code, or a precompile), whether it succeeded, and
@@ -274,7 +275,7 @@ opaque firstPayout : Deployment → ChainState → Env → ℕ → List UInt8 �
 def publishCalldata (e : ℕ) : List UInt8 := [0xd0, 0x38, 0x70, 0xb3] ++ u256 e
 def claimCalldata (r : ℕ) : List UInt8 := [0xa3, 0x06, 0x6a, 0xab] ++ u256 r
 
-/-- The pool's first `CALL`, `CALLCODE` or `STATICCALL` is a plain payment of `v`
+/-- The pool's first `CALL`, `CALLCODE`, `STATICCALL`, `CREATE` or `CREATE2` is a plain payment of `v`
 to `r` with at least 15,000,000 gas, and `r` rejected it or returned at least 64 KiB,
 which the pool copies and which can exhaust its gas. A reentrancy guard in the
 pool may make a recipient that calls back reject; that is allowed. -/
