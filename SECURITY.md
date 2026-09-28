@@ -202,6 +202,15 @@ other spends:
   nothing at the testnet's base fee.
 - Fees, gas limits, fee caps and fourth-frame choices differ between wallets
   and make their spends recognizable.
+- A disclosure receipt reveals the links and amounts it covers to whoever
+  holds it, and they can pass it on. Disclosing both inputs of a spend and one
+  output also reveals the other output's value by conservation. If that note
+  is later withdrawn in full, the amount links the withdrawal to it, even when
+  the note belongs to someone else. A nullifier key shows when any note of the
+  same spend key is spent in that epoch, including another deposit of the
+  same commitment, so the wallet makes a fresh spend key for each note. The
+  receipt also reveals each note's `inner`, which links any other note paid to
+  the same `inner`.
 
 ## Assumptions and remaining gates
 
