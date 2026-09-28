@@ -55,3 +55,5 @@ python3 patch_verifier.py
 ( cd ../contracts && forge fmt src/Groth16Verifier.sol )
 
 echo "==> done: build/spend_final.zkey (proving), contracts/src/Groth16Verifier.sol (on-chain)"
+echo "    keep build/pot_final.ptau; pin this as ceremony.phase1_ptau_sha256 for check_activation.py --ptau:"
+shasum -a 256 "$BUILD/pot_final.ptau"

@@ -222,7 +222,15 @@ other spends:
 - A production setup: a public multi-party phase 1, and a multi-party phase-2
   ceremony with destroyed contributions and independent transcript
   verification. The activation gate counts only phase-2 contributions, so
-  phase-1 provenance must be checked separately.
+  phase-1 provenance must be checked separately. The gate also checks that
+  the proving key's sizes and A and B terms match the committed R1CS and that
+  the verifier's constants are the key's verification key. That catches a
+  stale key. The C terms exist only inside the IC and L points, though, and
+  every key point is a combination of the phase-1 powers of tau, so only
+  `snarkjs zkey verify` against the phase-1 file checks them. The gate runs it
+  when given `--ptau` and the manifest pins that file's SHA-256 as
+  `ceremony.phase1_ptau_sha256`. The committed key's phase 1 is not recorded,
+  so for it these remain unchecked.
 - Correct ethrex v23 implementations of EIP-8141, EIP-8250, EIP-8272 and
   EIP-7843. The activation manifest records the EIP-8250 and EIP-8272
   revisions, and the native suite pins ethrex `247e2dd2`.
