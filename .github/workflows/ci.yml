@@ -8,6 +8,19 @@ permissions:
   contents: read
 
 jobs:
+  formal-pins:
+    # Reports, never fails: the proofs in soispoke/verified-shielded-pool cover
+    # one pinned commit, and this lists the pinned files a change touches.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Report changes to formally verified files
+        run: python tooling/check_formal_pins.py
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -73,6 +86,7 @@ jobs:
             wallet/gen_nonce_race.py wallet/gen_smoke.py wallet/wallet.py \
             reference/gen_poseidon_sol.py reference/poseidon_bn254.py \
             tooling/check_activation.py tooling/check_forge_config.py tooling/check_gas_profile.py \
+            tooling/check_formal_pins.py \
             tooling/test_check_activation.py \
             tooling/patch_verifier.py
           python devnet/frametx.py
