@@ -65,9 +65,14 @@ constructors = [artifact("PoseidonT3", True), artifact("PoseidonT4", True), arti
 setup = [save(f"deploy-{name}", ordinary(i, None, code)) for i, (name, code) in enumerate(zip(NAMES, constructors))]
 w.set_seed(20260921)
 
-def note(value):
-    sk, rho = w.new_note()
-    return {"sk": sk, "rho": rho, "value": value, "inner": w.inner(sk, rho), "cm": w.commitment(sk, rho, value)}
+# One software spending key owns every note here; its signature authorizes each spend.
+OWNER = w.new_signer()
+
+def note(value, signer=OWNER):
+    nk, rho = w.new_note()
+    pub = signer.public_key
+    return {"signer": signer, "nk": nk, "rho": rho, "value": value, "inner": w.inner(pub, nk, rho),
+            "cm": w.commitment(pub, nk, rho, value)}
 
 NA, NB, NC, ND = note(ETH), note(95 * ETH // 100), note(70 * ETH // 100), note(60 * ETH // 100)
 
@@ -95,15 +100,16 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
     public = n["value"] - FEE - sum(v for _, v in outputs)
     assert public >= 0
     if not public: recipient = 0
-    inputs = [{key: n[key] for key in ("sk", "rho", "value")} | {"idx": index}, w.dummy_input()]
+    inputs = [{key: n[key] for key in ("nk", "rho", "value")} | {"idx": index}, w.dummy_input()]
     private_key, authorizer = w.new_authorizer()
     domain = w.domain_scalar(CHAIN, addr(POOL), epoch)
-    witness = w.build_witness(tree, inputs, outputs, domain, authorizer=authorizer, public_amount=public, fee=FEE, recipient=addr(recipient))
+    signer = n["signer"]
+    witness = w.build_witness(tree, inputs, outputs, domain, signer=signer, authorizer=authorizer, public_amount=public, fee=FEE, recipient=addr(recipient))
     if alias is not None:
         # An honest witness proved against alpha over an aliased word: the
         # statement value plus p. gamma reduces the word modulo p, so only the
         # pool's range checks can tell the two encodings apart.
-        words = w.statement(*w.input_nullifiers(domain, inputs), *w.output_commitments(outputs),
+        words = w.statement(*w.input_nullifiers(domain, signer.public_key, inputs), *w.output_commitments(outputs),
                             tree.root(), domain, public, FEE, recipient, authorizer)
         words[alias] += w.P
         witness["alpha"] = str(int.from_bytes(keccak(b"".join(x.to_bytes(32, "big") for x in words)), "big") % w.P)
@@ -118,18 +124,19 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
         cache.write_text(json.dumps({"witness_hash": digest, "publics": publics, "proof": proof}, indent=2) + "\n")
     if alias is not None:
         honest = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer,
-                                   private_key, prove_publics_honest(inputs, outputs, tree, domain, public, recipient,
-                                                                     authorizer, publics), proof, root_slot=str(root_slot))
+                                   private_key, prove_publics_honest(signer, inputs, outputs, tree, domain, public,
+                                                                     recipient, authorizer, publics), proof,
+                                   signer=signer, root_slot=str(root_slot))
         entries[name] = honest
         return honest
-    entry = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer, private_key, publics, proof, root_slot=str(root_slot))
+    entry = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer, private_key, publics, proof, signer=signer, root_slot=str(root_slot))
     entries[name] = entry
     return entry
 
-def prove_publics_honest(inputs, outputs, tree, domain, public, recipient, authorizer, publics):
+def prove_publics_honest(signer, inputs, outputs, tree, domain, public, recipient, authorizer, publics):
     """The (beta, gamma, alpha) an honest statement would have, so spend_entry's
     wallet checks pass for an entry whose proof actually binds an aliased alpha."""
-    stmt = w.statement(*w.input_nullifiers(domain, inputs), *w.output_commitments(outputs),
+    stmt = w.statement(*w.input_nullifiers(domain, signer.public_key, inputs), *w.output_commitments(outputs),
                        tree.root(), domain, public, FEE, recipient, authorizer)
     beta = publics[0]
     alpha = w.compression_alpha(stmt)

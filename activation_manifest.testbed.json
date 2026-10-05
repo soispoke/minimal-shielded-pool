@@ -3,11 +3,12 @@
   "ceremony": {
     "phase2_contributions": 1,
     "independent_verification": null,
-    "label": "local test-only setup, one phase-2 contribution, occurrence prototype"
+    "label": "local test-only setup, one phase-2 contribution, signed-spends prototype",
+    "phase1_ptau_sha256": "d0de62f1fe35f9155892388ea9cf42a31eeb19b1f6300244e09af0d03836474f"
   },
   "profile": {
-    "wire_profile": "position-notes-v2",
-    "pool_profile": "position-notes-v2",
+    "wire_profile": "signed-spends-v1",
+    "pool_profile": "signed-spends-v1",
     "eip_8250_merge": "f3079a09e8c606afcb0e5e1a309ff228b88dc067",
     "eip_8272_carrier": "canonical-verifier-frame",
     "eip_8272_pin": "824cbc0b0e",
@@ -30,19 +31,19 @@
     "conservative_settle_state_bound": 489600
   },
   "artifacts": {
-    "build/spend.r1cs": "e2f6fc89bc0e478231935d7dab10fb07316f2c6dab4303e95da1a390ce84f9bf",
-    "build/spend_final.zkey": "587c048b06d68c61dcb0a9a57b51229def97b219b11827042f4a8faa49499376",
-    "build/spend_js/spend.wasm": "9066dcaae1f8a215fc5adb0bfdf6c1e117fbcb09e22e5a80df33aa582346c1db",
-    "circuits/spend.circom": "97c24b754549fd576c1e3d1e70345eba5570143895a0a9cceeb7e22176cdf8af",
+    "build/spend.r1cs": "9b5e43ede46b66d66d93aa1d6b7d7e3e9e23b822ce3fd6c7223f8fe30a92897d",
+    "build/spend_final.zkey": "0806fe44582b5ad2545170939dd5142fc5f3f62c4d2584a377d7d6742cd4bb05",
+    "build/spend_js/spend.wasm": "8f402639bbcbdcfae684dbb614f75047851f0e3f7a1b882cb9a3423e9a2fb38d",
+    "circuits/spend.circom": "12622eacb3692d70cce73b4be461358f54a5131f7ef047f0b68a1b8bd7c015b9",
     "contracts/foundry.toml": "af279592ce45b3be466ff10f0d20c4b3107ba47776259a738176fc789d59b817",
-    "contracts/src/Groth16Verifier.sol": "5bcda629ac9fa4317d52aef102281b12419c1c385abfe0fa991c5ed22e906676",
+    "contracts/src/Groth16Verifier.sol": "44178296e3e050cad97bc6b737567b6fc72524b08c7e7f31c3a3cf6159ce75a4",
     "contracts/src/PoseidonT3.sol": "f353af63ac124e51a37e78dc5278bcb2e93c19e44aa8dd13a4ecb4c54212720b",
     "contracts/src/PoseidonT4.sol": "2384b8f71a2ed09f3b16c6b0d135bedcd293cb1c862e8a3c893d0ac79eae0960",
     "contracts/src/ShieldedPoolLogic.sol": "fa9d7b1fc5fdca83c3a78cdd81cd3856dbfc9e18d20095054c22c6c248ad753b",
     "devnet/ShieldedPoolDispatcher.yul": "32e4701834435d2157cdb1acda219fa16957b5e7b3abae64eede7f2ddd29ea60",
     "devnet/build/shielded_pool_dispatcher_init.hex": "8339dab370f7fc24a7584d48d08df7bd21296b6840a4bc66fbb8165ea35e1bf4",
     "devnet/frametx.py": "ac008480a576bae7543287f7488afb93c1b12c1cdf103f95e0f933b68823d459",
-    "devnet/gas_profile.py": "4771bc7e251a14cc2a0ea806c0d804d6eae8cfdeec11cce8d42aab6c0fd2755a",
+    "devnet/gas_profile.py": "e05371bcbdeb7103f4ec2964ae34145c2c8b13cca5f04683fe40f61f214f8cfd",
     "devnet/pool_frametx.py": "b01aa8b78ef1773ca5b821689e66d61514f4e41811f60d64d70e05da6a9f6f73",
     "tooling/check_gas_profile.py": "e0a9679d2ed26e20103775808d7b2df5b24e0f52db9241e1de0e50609a71531a"
   },

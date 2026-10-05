@@ -12,31 +12,40 @@ pragma circom 2.0.8;
 //     keyed-nonce set (shared nonce_seq = 0, atomic, per-sender domain), the
 //     `nonce_keys` list shape bounded by MAX_NONCE_KEYS = 16;
 //   - native-ETH fee binding: `fee` is in the statement and the pool self-pays;
+//   - spend authorization without the spending key: the input notes commit
+//     to a BabyJubjub public key A, and the circuit checks an EdDSA-Poseidon
+//     signature by A over the statement. The prover holds that signature,
+//     never the private key, which can stay on a hardware wallet;
 //   - complete intent authorization: the proof chooses a fresh one-time
 //     secp256k1 signer. EIP-8141 verifies that signer over the complete frame
 //     transaction after the proof has been generated.
 //
-// What it proves (hiding keys, secrets, values, and both Merkle paths):
+// What it proves (hiding keys, secrets, values, signatures, and both Merkle
+// paths):
 //
-//     I own the input notes committed in the pool's tree at the anchored
-//     root (or they are zero-value dummies), their value equals the output
-//     notes' value plus the public amount plus the fee, every value is a
-//     128-bit integer, and my statement is exactly the two nullifiers, two
-//     output commitments, root, domain, public amount, fee, recipient, and
-//     one-time authorizer, which the pool checks through three compressed
-//     public signals. The root source, slot, epoch, frame grammar, gas, and
-//     fee fields are bound by that author's canonical EIP-8141 signature.
+//     The holder of A's private key signed this statement; the input notes,
+//     committed in the pool's tree at the anchored root (or zero-value
+//     dummies), are owned by A; their value equals the output notes' value
+//     plus the public amount plus the fee, every value is a 128-bit integer,
+//     and my statement is exactly the two nullifiers, two output
+//     commitments, root, domain, public amount, fee, recipient, and one-time
+//     authorizer, which the pool checks through three compressed public
+//     signals. The root source, slot, epoch, frame grammar, gas, and fee
+//     fields are bound by that authorizer's canonical EIP-8141 signature.
 //
 // Note structure (value-carrying):
-//     owner_pk = Poseidon(TAG_PK,   spend_key, 0)
+//     A        = a * B8                            # spending key; a never
+//                                                  # reaches the prover
+//     owner_pk = Poseidon(TAG_PK, Ax, Ay, nk)      # nk: nullifying key, per note
 //     inner    = Poseidon2(owner_pk, rho)          # what a recipient reveals
 //     cm       = Poseidon(TAG_LEAF, inner, value)  # shield hashes value in
 //                                                  # ON-CHAIN from msg.value
 //     domain   = keccak256(DOMAIN_TAG || chain_id || pool_address || epoch) mod Fr
 //     index    = sum(bits[i] * 2^i)
-//     nf       = Poseidon(4, Poseidon2(domain, spend_key), Poseidon2(cm, index))
-// This is a fresh-deployment prototype; old spent-note identities MUST NOT
-// be migrated by replacing the verifier under an existing pool.
+//     nf       = Poseidon(4, Poseidon2(domain, nk), Poseidon2(cm, index))
+// nk cannot authorize a spend, so the prover may hold it. This is a
+// fresh-deployment prototype; old spent-note identities MUST NOT be migrated
+// by replacing the verifier under an existing pool.
 //
 // A zero-valued output is one of two position-specific canonical sinks. The
 // settlement contract recognises those commitments and does not insert them.
@@ -71,6 +80,12 @@ pragma circom 2.0.8;
 //      duplicate-key rule remains defense in depth.
 //   9. Domain separation: the contract binds the public domain to this chain
 //      immutable pool address and authenticated input epoch before verifying.
+//  10. Spend authorization: both inputs, dummy included, commit to one key A,
+//      and circomlib's EdDSAPoseidonVerifier checks a signature by A over
+//      M = Poseidon2(TAG_AUTH, beta), so a spend needs a signature over its
+//      exact ten statement values. The verifier enforces S below the subgroup
+//      order and refuses an A whose eighth multiple is the identity; it does
+//      not check that A or R8 lie on the curve, so BabyCheck does.
 //
 // The four contract-side VERIFY bindings still apply, with the key-set
 // binding generalised: the consumed nonce-key set must be exactly
@@ -80,12 +95,16 @@ pragma circom 2.0.8;
 include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/bitify.circom";
 include "circomlib/circuits/comparators.circom";
+include "circomlib/circuits/babyjub.circom";
+include "circomlib/circuits/eddsaposeidon.circom";
 
 // One input note: derive nf, walk the path, gate membership on value != 0.
 template InputNote(DEPTH) {
     signal input root;
     signal input domain;
-    signal input spend_key;
+    signal input Ax;             // the spend's BabyJubjub public key
+    signal input Ay;
+    signal input nk;             // this note's nullifying key
     signal input rho;
     signal input value;
     signal input siblings[DEPTH];
@@ -98,10 +117,11 @@ template InputNote(DEPTH) {
         index += bits[i] * (2 ** i);
     }
 
-    component pk = Poseidon(3);
+    component pk = Poseidon(4);
     pk.inputs[0] <== 1;
-    pk.inputs[1] <== spend_key;
-    pk.inputs[2] <== 0;
+    pk.inputs[1] <== Ax;
+    pk.inputs[2] <== Ay;
+    pk.inputs[3] <== nk;
     component inner = Poseidon(2);
     inner.inputs[0] <== pk.out;
     inner.inputs[1] <== rho;
@@ -131,7 +151,7 @@ template InputNote(DEPTH) {
     // funded note's nullifier using the same key and index with value zero.
     component domainKey = Poseidon(2);
     domainKey.inputs[0] <== domain;
-    domainKey.inputs[1] <== spend_key;
+    domainKey.inputs[1] <== nk;
     component occurrence = Poseidon(2);
     occurrence.inputs[0] <== leaf.out;
     occurrence.inputs[1] <== index;
@@ -145,7 +165,9 @@ template InputNote(DEPTH) {
 template Spend(DEPTH) {
     signal input root;
     signal input domain;
-    signal input in_spend_key[2];
+    signal input Ax;
+    signal input Ay;
+    signal input in_nk[2];
     signal input in_rho[2];
     signal input in_value[2];
     signal input in_siblings[2][DEPTH];
@@ -167,7 +189,9 @@ template Spend(DEPTH) {
         note[k] = InputNote(DEPTH);
         note[k].root <== root;
         note[k].domain <== domain;
-        note[k].spend_key <== in_spend_key[k];
+        note[k].Ax <== Ax;
+        note[k].Ay <== Ay;
+        note[k].nk <== in_nk[k];
         note[k].rho <== in_rho[k];
         note[k].value <== in_value[k];
         for (var i = 0; i < DEPTH; i++) {
@@ -258,7 +282,9 @@ template CompressedSpend(DEPTH) {
     signal input alpha;
     signal input root;
     signal input domain;
-    signal input in_spend_key[2];
+    signal input Ax;
+    signal input Ay;
+    signal input in_nk[2];
     signal input in_rho[2];
     signal input in_value[2];
     signal input in_siblings[2][DEPTH];
@@ -269,14 +295,19 @@ template CompressedSpend(DEPTH) {
     signal input fee;
     signal input recipient;
     signal input authorizer;
+    signal input R8x;            // the spending key's signature over the statement
+    signal input R8y;
+    signal input S;
     signal output beta;
     signal output gamma;
 
     component spend = Spend(DEPTH);
     spend.root <== root;
     spend.domain <== domain;
+    spend.Ax <== Ax;
+    spend.Ay <== Ay;
     for (var k = 0; k < 2; k++) {
-        spend.in_spend_key[k] <== in_spend_key[k];
+        spend.in_nk[k] <== in_nk[k];
         spend.in_rho[k] <== in_rho[k];
         spend.in_value[k] <== in_value[k];
         for (var i = 0; i < DEPTH; i++) {
@@ -308,6 +339,28 @@ template CompressedSpend(DEPTH) {
         digest.inputs[i] <== stmt[i];
     }
     beta <== digest.out;
+
+    // 10. The holder of A signed exactly these ten values. Only the signature
+    // reaches the prover; a hardware wallet keeps the private key. The tag is
+    // TAG_AUTH = keccak256("minimal-shielded-pool:spend-auth:v1") mod p, so a
+    // signature over this pool's statements is never one over a bare digest.
+    component authMessage = Poseidon(2);
+    authMessage.inputs[0] <== 2767026351765469656051157340358831096390428282884753190435662753196438984477;
+    authMessage.inputs[1] <== beta;
+    component keyOnCurve = BabyCheck();
+    keyOnCurve.x <== Ax;
+    keyOnCurve.y <== Ay;
+    component nonceOnCurve = BabyCheck();
+    nonceOnCurve.x <== R8x;
+    nonceOnCurve.y <== R8y;
+    component authorization = EdDSAPoseidonVerifier();
+    authorization.enabled <== 1;
+    authorization.Ax <== Ax;
+    authorization.Ay <== Ay;
+    authorization.S <== S;
+    authorization.R8x <== R8x;
+    authorization.R8y <== R8y;
+    authorization.M <== authMessage.out;
 
     // Horner's rule, highest coefficient first.
     signal sigma;

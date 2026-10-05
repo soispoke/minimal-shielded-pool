@@ -1,7 +1,8 @@
 """Reference implementation of circomlib's Poseidon over BN254 in plain Python.
 
 This is the hash the BN254 spend circuit uses: Poseidon over the BN254 scalar
-field, x^5 S-box, 8 full rounds plus 57 (t=3), 56 (t=4) or 66 (t=11) partial rounds,
+field, x^5 S-box, 8 full rounds plus 57 (t=3), 56 (t=4), 60 (t=5, t=6) or 66 (t=11)
+partial rounds,
 state initialised as [0, in_0, ..., in_{n-1}], output state[0]. Constants and
 the mix convention (new_state[i] = sum_j M[i][j] * state[j]) are exactly
 circomlibjs's poseidon_reference.js; both live in
@@ -12,7 +13,7 @@ the same circomlibjs package the circuit's poseidon.circom pairs with.
 ../vectors/poseidon_bn254_vectors.json (computed by two independent
 circomlibjs implementations and asserted equal at export), including the
 pool's tagged owner_pk / cm / domain-separated nf / out_cm chain and the depth-20
-incremental-tree fixtures. This file is the wallet-side building block and
+incremental-tree fixtures. babyjubjub.py checks the EdDSA-Poseidon vectors. This file is the wallet-side building block and
 the source the Solidity library is checked against.
 """
 import json
@@ -28,11 +29,11 @@ def _params(t):
         [int(x) for x in c["C"]], [[int(x) for x in row] for row in c["M"]]
 
 
-_PARAMS = {3: _params(3), 4: _params(4), 11: _params(11)}
+_PARAMS = {t: _params(t) for t in (3, 4, 5, 6, 11)}
 
 
 def poseidon(inputs):
-    """circomlib Poseidon: 2, 3 or 10 field-element inputs, one output."""
+    """circomlib Poseidon: 2, 3, 4, 5 or 10 field-element inputs, one output."""
     t = len(inputs) + 1
     rf, rp, C, M = _PARAMS[t]
     state = [0] + [x % P for x in inputs]
@@ -48,6 +49,9 @@ def poseidon(inputs):
 
 # ---- the pool's tagged-hash shapes (mirrors ../circuits/spend.circom) ----
 TAG_PK, TAG_LEAF, TAG_NULL = 1, 2, 3
+# keccak256("minimal-shielded-pool:spend-auth:v1") mod P: the spending key signs
+# Poseidon2(TAG_AUTH, beta), never beta itself.
+TAG_AUTH = 2767026351765469656051157340358831096390428282884753190435662753196438984477
 
 
 def p2(a, b):
@@ -74,11 +78,12 @@ def _check():
         assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), "poseidon2 mismatch"
     for v in vecs["poseidon3"]:
         assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), "poseidon3 mismatch"
-    for v in vecs["poseidon10"]:
-        assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), "poseidon10 mismatch"
+    for width in (4, 5, 10):
+        for v in vecs[f"poseidon{width}"]:
+            assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), f"poseidon{width} mismatch"
 
     c = {k: int(v) for k, v in vecs["pool_chain"].items()}
-    owner_pk = tagged(TAG_PK, c["spend_key"], 0)
+    owner_pk = poseidon([TAG_PK, c["spend_Ax"], c["spend_Ay"], c["nk"]])
     assert owner_pk == c["owner_pk"], "owner_pk mismatch"
     inner = p2(owner_pk, c["rho"])
     assert inner == c["inner"], "inner mismatch"
@@ -86,7 +91,7 @@ def _check():
     assert cm == c["cm"], "cm mismatch"
     # The domain includes the input epoch, and the constrained Merkle index
     # distinguishes independently funded occurrences of the same commitment.
-    domain_key = p2(c["domain"], c["spend_key"])
+    domain_key = p2(c["domain"], c["nk"])
     nf = tagged(4, domain_key, p2(cm, c["index"]))
     assert nf == c["nf"], "nf mismatch"
     nf2 = tagged(4, domain_key, p2(tagged(TAG_LEAF, inner, 0), c["index"]))
@@ -101,7 +106,7 @@ def _check():
         zeros.append(p2(zeros[-1], zeros[-1]))
     assert zeros[-1] == int(t["root_empty"]), "empty root mismatch"
 
-    n = len(vecs["poseidon2"]) + len(vecs["poseidon3"]) + len(vecs["poseidon10"])
+    n = sum(len(vecs[f"poseidon{width}"]) for width in (2, 3, 4, 5, 10))
     print(f"poseidon_bn254.py matches circomlibjs: {n} vectors + pool chain + empty root")
 
 

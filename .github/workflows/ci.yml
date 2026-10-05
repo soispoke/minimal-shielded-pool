@@ -84,7 +84,8 @@ jobs:
             wallet/test_wallet_occurrence.py wallet/test_generators.py \
             wallet/disclosure.py wallet/test_disclosure.py \
             wallet/gen_nonce_race.py wallet/gen_smoke.py wallet/wallet.py \
-            reference/gen_poseidon_sol.py reference/poseidon_bn254.py \
+            wallet/ledger_signer.py wallet/test_ledger_signer.py \
+            reference/babyjubjub.py reference/gen_poseidon_sol.py reference/poseidon_bn254.py \
             tooling/check_activation.py tooling/check_forge_config.py tooling/check_gas_profile.py \
             tooling/check_formal_pins.py \
             tooling/test_check_activation.py \
@@ -99,12 +100,14 @@ jobs:
           python wallet/test_wallet_occurrence.py
           python wallet/test_generators.py
           python wallet/test_disclosure.py
+          python wallet/test_ledger_signer.py
           python tooling/check_gas_profile.py
           python tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
           python tooling/check_forge_config.py activation_manifest.testbed.json contracts
           python tooling/test_check_activation.py
           python wallet/wallet.py
           python reference/poseidon_bn254.py
+          python reference/babyjubjub.py
 
       - name: Preserve historical deployment evidence
         run: |

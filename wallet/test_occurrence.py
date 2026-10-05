@@ -11,6 +11,7 @@ import struct
 import subprocess
 import time
 from pathlib import Path
+from unittest import mock
 
 import wallet as w
 
@@ -59,6 +60,18 @@ UNCHECKED = [
     "    sameOutput.out === 0;\n",
 ]
 RANGE = "        rc[k].in <== vals[k];\n"
+# Disables the EdDSA check alone. BabyCheck stays, as do the verifier's own
+# booleanity and bit decompositions, so its witness still has every wire.
+UNSIGNED = "    authorization.enabled <== 1;\n"
+# The verifier's three checks, all off in the unsigned variant, which still
+# computes them: S below the subgroup order, 8*A not the identity, and the curve
+# equation. A signature case must fail exactly the one it targets.
+SIGNATURE_CHECKS = {
+    "range": lambda v: v["main.authorization.compConstant.out"] == 0,
+    "small-order": lambda v: v["main.authorization.isZero.out"] == 0,
+    "equation": lambda v: v["main.authorization.eqCheckX.isz.out"] == 1
+    and v["main.authorization.eqCheckY.isz.out"] == 1,
+}
 
 
 def sym_wires(sym):
@@ -78,6 +91,9 @@ def compile_variant(variant):
             for line in UNCHECKED:
                 assert source.count(line) == 1, line
                 source = source.replace(line, "")
+        elif variant == "unsigned":
+            assert source.count(UNSIGNED) == 1
+            source = source.replace(UNSIGNED, UNSIGNED.replace("<== 1", "<== 0"))
         else:
             k = int(variant.removeprefix("range-"))
             assert source.count(RANGE) == 1
@@ -114,9 +130,20 @@ def committed_layout(variant, input_json, target, r1cs=None, sym=None, template=
     return r1cs or BUILD / "spend.r1cs"
 
 
-def r1cs_rejects(name, variant):
+def failing_signature_checks(variant, target):
+    """Which of SIGNATURE_CHECKS the variant's witness for target fails."""
+    _, sym = compile_variant(variant)
+    wires = sym_wires(sym)
+    values = json.loads((WORK / f"{target.stem}.variant.json").read_text())
+    named = {name: int(values[wires[name]]) for name in wires
+             if name.startswith("main.authorization.") and wires[name] >= 0}
+    return {check for check, holds in SIGNATURE_CHECKS.items() if not holds(named)}
+
+
+def r1cs_rejects(name, variant, fails=None):
     """The committed R1CS rejects the complete witness the variant computes, and
-    accepts the variant's honest witness, which checks the wire mapping."""
+    accepts the variant's honest witness, which checks the wire mapping. For a
+    signature case, `fails` names the one verifier check the witness must fail."""
     for label, source, accepted in (("honest", WORK / "first-occurrence.json", True),
                                     ("violating", WORK / (name + ".json"), False)):
         target = WORK / f"{name}-{variant}-{label}.wtns"
@@ -124,9 +151,12 @@ def r1cs_rejects(name, variant):
         result = run(["npx", "snarkjs", "wtns", "check", r1cs, target])
         ok = result.returncode == 0 and "WITNESS IS CORRECT" in result.stdout + result.stderr
         assert ok == accepted, f"{name} ({label}): committed R1CS {'rejects' if accepted else 'accepts'} it\n{result.stdout}"
+        if fails is not None:
+            failing = failing_signature_checks(variant, target)
+            assert failing == (set() if accepted else {fails}), f"{name} ({label}) fails {failing}"
 
 
-def witness_case(name, witness, expected=True, nullifiers=None, variant=None):
+def witness_case(name, witness, expected=True, nullifiers=None, variant=None, fails=None):
     start = time.monotonic()
     source = WORK / (name + ".json")
     target = WORK / (name + ".wtns")
@@ -136,7 +166,7 @@ def witness_case(name, witness, expected=True, nullifiers=None, variant=None):
     assert (result.returncode == 0) == expected, name + "\n" + result.stdout + result.stderr
     if not expected:
         assert variant is not None, f"{name}: a rejected case must name the constraints it breaks"
-        r1cs_rejects(name, variant)
+        r1cs_rejects(name, variant, fails)
     publics = None
     if expected:
         must(["npx", "snarkjs", "wtns", "check", BUILD / "spend.r1cs", target])
@@ -241,57 +271,91 @@ def main():
     pool = "0x" + "12" * 20
     domain0 = w.domain_scalar(31337, pool, 0)
     domain1 = w.domain_scalar(31337, pool, 1)
-    sk, rho = w.new_note()
-    real = {"sk": sk, "rho": rho, "value": 100, "idx": 0}
-    cm = w.commitment(sk, rho, 100)
+    signer = w.new_signer()
+    pub = signer.public_key
+    nk, rho = w.new_note()
+    real = {"nk": nk, "rho": rho, "value": 100, "idx": 0}
+    cm = w.commitment(pub, nk, rho, 100)
     tree = w.Tree()
     tree.append(cm)
     tree.append(cm)
-    tree.append(w.commitment(*w.new_note(), 17))
+    tree.append(w.commitment(pub, *w.new_note(), 17))
     duplicate = dict(real, idx=1)
     dummy = w.dummy_input()
     _, authorizer = w.new_authorizer()
 
     def make(inputs, domain=domain0):
-        return w.build_witness(tree, inputs, w.sink_outputs(), domain,
+        return w.build_witness(tree, inputs, w.sink_outputs(), domain, signer=signer,
                                authorizer=authorizer,
                                public_amount=sum(n["value"] for n in inputs),
                                recipient="0x" + "34" * 20)
 
+    def signed(witness):
+        """A witness the note holder signs after changing it: the circuit's
+        rules must hold against the key holder too, so only the targeted
+        constraint may refuse it, never a stale signature."""
+        return w.sign_witness(witness, signer)
+
     first = make([real, dummy])
     second = make([duplicate, dummy])
     public_first = witness_case("first-occurrence", first,
-                                nullifiers=w.input_nullifiers(domain0, [real, dummy]))
+                                nullifiers=w.input_nullifiers(domain0, pub, [real, dummy]))
     public_second = witness_case("identical-second-occurrence", second,
-                                 nullifiers=w.input_nullifiers(domain0, [duplicate, dummy]))
+                                 nullifiers=w.input_nullifiers(domain0, pub, [duplicate, dummy]))
     assert public_first[0] != public_second[0]
     public_pair = witness_case("both-identical-funded-occurrences", make([real, duplicate]),
-                               nullifiers=w.input_nullifiers(domain0, [real, duplicate]))
+                               nullifiers=w.input_nullifiers(domain0, pub, [real, duplicate]))
     assert public_pair[:2] == [public_first[0], public_second[0]]
 
     witness_case("same-occurrence-twice", make([real, real]), False, variant="unchecked")
     bad = make([real, duplicate])
-    bad["out_inner"] = [str(w.inner(sk, rho))] * 2
+    bad["out_inner"] = [str(w.inner(pub, nk, rho))] * 2
     bad["out_value"] = ["100", "100"]
     bad["public_amount"] = "0"
     bad["recipient"] = "0"
-    witness_case("same-output-twice-in-one-spend", bad, False, variant="unchecked")
+    witness_case("same-output-twice-in-one-spend", signed(bad), False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["in_bits"][0][1] = "1"  # Selects a different non-identical branch.
-    witness_case("forged-real-position", bad, False, variant="unchecked")
+    witness_case("forged-real-position", signed(bad), False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["in_bits"][0][0] = "2"
-    witness_case("nonboolean-path-bit", bad, False, variant="unchecked")
+    witness_case("nonboolean-path-bit", signed(bad), False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["root"] = str((int(first["root"]) + 1) % w.P)
-    witness_case("incorrect-root", bad, False, variant="unchecked")
+    witness_case("incorrect-root", signed(bad), False, variant="unchecked")
+
+    # Spend authorization. Each case breaks only the signature check: another
+    # key's signature, a statement changed after signing (one wei moved from
+    # the payout to the fee, still conserved), and S + L, which satisfies the
+    # curve equation (B8 has order L) and fails only the S < L check.
+    other = w.new_signer()
+    message = w.auth_message(w.witness_statement(first))
+    bad = dict(first, **dict(zip(("R8x", "R8y", "S"), map(str, other.sign(message)))))
+    witness_case("signature-by-another-key", bad, False, variant="unsigned", fails="equation")
+    bad = dict(first, public_amount="99", fee="1")
+    witness_case("statement-changed-after-signing", bad, False, variant="unsigned", fails="equation")
+    bad = dict(first, S=str(int(first["S"]) + w.bjj.L))
+    witness_case("unreduced-signature-scalar", bad, False, variant="unsigned", fails="range")
+    # A note paid to a small-order key: 8*A is the identity, so R8 = S*B8
+    # satisfies the curve equation for any message and anyone could spend it.
+    # Only the verifier's 8*A != identity check refuses it.
+    weak = type("WeakKey", (), {"public_key": w.bjj.IDENTITY,
+                                "sign": staticmethod(lambda m: (*w.bjj.mul(w.bjj.B8, 5), 5))})()
+    weak_nk, weak_rho = w.new_note()
+    weak_tree = w.Tree()
+    weak_tree.append(w.commitment(weak.public_key, weak_nk, weak_rho, 100))
+    with mock.patch.object(w.bjj, "verify", return_value=True):
+        bad = w.build_witness(weak_tree, [{"nk": weak_nk, "rho": weak_rho, "value": 100, "idx": 0},
+                                          w.dummy_input()], w.sink_outputs(), domain0, signer=weak,
+                              authorizer=authorizer, public_amount=100, recipient="0x" + "34" * 20)
+    witness_case("small-order-spending-key", bad, False, variant="unsigned", fails="small-order")
 
     # The same input epoch, commitment and position retain their spending
     # identity when the root changes. Publication slot is intentionally absent.
-    tree.append(w.commitment(*w.new_note(), 29))
+    tree.append(w.commitment(pub, *w.new_note(), 29))
     later = make([real, dummy])
     public_later = witness_case("same-occurrence-later-root", later,
-                                nullifiers=w.input_nullifiers(domain0, [real, dummy]))
+                                nullifiers=w.input_nullifiers(domain0, pub, [real, dummy]))
     assert public_later[4] != public_first[4]
     assert public_later[:2] == public_first[:2]
 
@@ -299,57 +363,58 @@ def main():
     # This circuit test only checks domain separation, not root provenance.
     other_epoch = make([real, dummy], domain1)
     public_epoch = witness_case("same-position-other-authenticated-epoch", other_epoch,
-                                nullifiers=w.input_nullifiers(domain1, [real, dummy]))
+                                nullifiers=w.input_nullifiers(domain1, pub, [real, dummy]))
     assert public_epoch[0] != public_later[0]
 
     # A reorg can change the insertion order. Reconstruct the canonical tree
     # and input index before reproving; retaining the old path must fail.
     branch_a = w.Tree()
-    other_cm = w.commitment(*w.new_note(), 37)
+    other_cm = w.commitment(pub, *w.new_note(), 37)
     branch_a.append(cm)
     branch_a.append(other_cm)
     branch_b = w.Tree()
     branch_b.append(other_cm)
     branch_b.append(cm)
     original = w.build_witness(branch_a, [real, dummy], w.sink_outputs(), domain0,
-                               authorizer=authorizer, public_amount=100,
+                               signer=signer, authorizer=authorizer, public_amount=100,
                                recipient="0x" + "34" * 20)
     stale = copy.deepcopy(original)
     stale["root"] = str(branch_b.root())
-    witness_case("reorg-stale-membership-path", stale, False, variant="unchecked")
+    witness_case("reorg-stale-membership-path", signed(stale), False, variant="unchecked")
     rebuilt_input = dict(real, idx=1)
     rebuilt = w.build_witness(branch_b, [rebuilt_input, dummy], w.sink_outputs(), domain0,
-                              authorizer=authorizer, public_amount=100,
+                              signer=signer, authorizer=authorizer, public_amount=100,
                               recipient="0x" + "34" * 20)
     public_rebuilt = witness_case("reorg-rebuilt-tree-and-index", rebuilt,
-                                  nullifiers=w.input_nullifiers(domain0, [rebuilt_input, dummy]))
+                                  nullifiers=w.input_nullifiers(domain0, pub, [rebuilt_input, dummy]))
     assert public_rebuilt[0] != public_first[0]
 
     # Each witness below breaks exactly one constraint, so deleting or weakening
     # that constraint alone would let it through.
     bad = copy.deepcopy(first)
     bad["public_amount"] = "101"
-    witness_case("outputs-exceed-inputs", bad, False, variant="unchecked")
+    witness_case("outputs-exceed-inputs", signed(bad), False, variant="unchecked")
     bad["public_amount"] = "99"
-    witness_case("inputs-exceed-outputs", bad, False, variant="unchecked")
+    witness_case("inputs-exceed-outputs", signed(bad), False, variant="unchecked")
     bad = copy.deepcopy(first)
     bad["public_amount"], bad["fee"] = "101", str(w.P - 1)  # conserved mod p only
-    witness_case("value-wraps-the-field", bad, False, variant="range-5")
+    witness_case("value-wraps-the-field", signed(bad), False, variant="range-5")
     # A dummy's membership is gated off by its zero value, so a non-boolean
     # path bit there breaks only the booleanity constraint, at any depth.
     for depth in (0, 10, 19):
         bad = copy.deepcopy(first)
         bad["in_bits"][1][depth] = "2"
-        witness_case(f"nonboolean-dummy-path-bit-{depth}", bad, False, variant="unchecked")
-    transfer = w.build_witness(tree, [real, dummy], [(w.inner(*w.new_note()), 60), (w.inner(*w.new_note()), 40)],
-                               domain0, authorizer=authorizer, public_amount=0)
+        witness_case(f"nonboolean-dummy-path-bit-{depth}", signed(bad), False, variant="unchecked")
+    transfer = w.build_witness(tree, [real, dummy],
+                               [(w.inner(pub, *w.new_note()), 60), (w.inner(pub, *w.new_note()), 40)],
+                               domain0, signer=signer, authorizer=authorizer, public_amount=0)
     for position in (0, 1):
         bad = copy.deepcopy(transfer)
         bad["out_value"] = ["0", "100"] if position == 0 else ["100", "0"]
-        witness_case(f"zero-output-{position}-without-its-sink", bad, False, variant="unchecked")
+        witness_case(f"zero-output-{position}-without-its-sink", signed(bad), False, variant="unchecked")
     bad = copy.deepcopy(transfer)
     bad["out_inner"][0] = "2"
-    witness_case("positive-output-with-the-second-sink", bad, False, variant="unchecked")
+    witness_case("positive-output-with-the-second-sink", signed(bad), False, variant="unchecked")
     # A negative output paid for by an inflated other output conserves value
     # modulo p and breaks only that output's 128-bit range: without it, 100
     # wei of input would create a 10^21 wei note.
@@ -357,28 +422,29 @@ def main():
         bad = copy.deepcopy(transfer)
         values = [str(w.P - 10**21), str(100 + 10**21)]
         bad["out_value"] = values if position == 0 else values[::-1]
-        witness_case(f"output-{position}-below-zero", bad, False, variant=f"range-{2 + position}")
+        witness_case(f"output-{position}-below-zero", signed(bad), False, variant=f"range-{2 + position}")
     # The width itself, without a wrap: two funded inputs of 2^128 - 1 and 1
     # paying one output of exactly 2^128.
-    wide = [{"sk": s_, "rho": r_, "value": v, "idx": i}
-            for i, ((s_, r_), v) in enumerate([(w.new_note(), 2**128 - 1), (w.new_note(), 1)])]
+    wide = [{"nk": n_, "rho": r_, "value": v, "idx": i}
+            for i, ((n_, r_), v) in enumerate([(w.new_note(), 2**128 - 1), (w.new_note(), 1)])]
     wide_tree = w.Tree()
     for n in wide:
-        wide_tree.append(w.commitment(n["sk"], n["rho"], n["value"]))
-    bad = w.build_witness(wide_tree, wide, [w.sink_outputs()[0], (w.inner(*w.new_note()), 2**128 - 1)],
-                          domain0, authorizer=authorizer, public_amount=1, recipient="0x" + "34" * 20)
+        wide_tree.append(w.commitment(pub, n["nk"], n["rho"], n["value"]))
+    bad = w.build_witness(wide_tree, wide, [w.sink_outputs()[0], (w.inner(pub, *w.new_note()), 2**128 - 1)],
+                          domain0, signer=signer, authorizer=authorizer, public_amount=1,
+                          recipient="0x" + "34" * 20)
     bad.update(public_amount="0", recipient="0")
     bad["out_value"][1] = str(2**128)
-    witness_case("output-of-exactly-2^128", bad, False, variant="range-3")
+    witness_case("output-of-exactly-2^128", signed(bad), False, variant="range-3")
 
-    same_secrets_dummy = {"sk": sk, "rho": rho, "value": 0, "idx": None}
+    same_secrets_dummy = {"nk": nk, "rho": rho, "value": 0, "idx": None}
     public_dummy = witness_case("dummy-same-secret-and-position", make([real, same_secrets_dummy]),
-                                nullifiers=w.input_nullifiers(domain0, [real, same_secrets_dummy]))
+                                nullifiers=w.input_nullifiers(domain0, pub, [real, same_secrets_dummy]))
     assert public_dummy[0] != public_dummy[1]
     dummy_at_max = make([real, same_secrets_dummy])
     dummy_at_max["in_bits"][1] = ["1"] * w.DEPTH
-    max_dummy_nf = w.nullifier(domain0, sk, w.commitment(sk, rho, 0), (1 << w.DEPTH) - 1)
-    public_dummy_max = witness_case("dummy-arbitrary-maximum-position", dummy_at_max,
+    max_dummy_nf = w.nullifier(domain0, nk, w.commitment(pub, nk, rho, 0), (1 << w.DEPTH) - 1)
+    public_dummy_max = witness_case("dummy-arbitrary-maximum-position", signed(dummy_at_max),
                                     nullifiers=[public_dummy[0], max_dummy_nf])
     assert public_dummy_max[1] != public_later[0]
 
@@ -392,7 +458,7 @@ def main():
             pass
     for invalid_index in [-1, 1 << w.DEPTH]:
         try:
-            w.nullifier(domain0, sk, cm, invalid_index)
+            w.nullifier(domain0, nk, cm, invalid_index)
             raise AssertionError("accepted invalid index")
         except ValueError:
             pass
