@@ -79,8 +79,8 @@ def tree_of(*notes):
 BASE = tree_of(NA, NB)
 def deposit(name, n, nonce, tree, slot=SLOT):
     inner = "0x" + word(n["inner"]).hex()
-    note = "0x" + builder.shield_note({}, inner).hex()
-    return save(name, ordinary(nonce, POOL, calldata("shield(bytes32,bytes)", inner, note), n["value"]),
+    shield = builder.shield_calldata(inner, {"note": "0x" + TEST_NOTE.hex()})
+    return save(name, ordinary(nonce, POOL, shield, n["value"]),
         slot_number=slot, storage={addr(POOL): {"21": str(len(tree.leaves)), "22": str(tree.root())}},
         balance_delta_before_gas={addr(POOL): str(n["value"])})
 def publish(name, nonce, epoch=0, slot=SLOT):
@@ -92,12 +92,22 @@ entries = {}
 KEY_HASH = hashlib.sha256((REPO / "build/spend_final.zkey").read_bytes()).hexdigest()
 WASM_HASH = hashlib.sha256((REPO / "build/spend_js/spend.wasm").read_bytes()).hexdigest()
 
+# The pool publishes notes without reading them, so these vectors carry fixed test
+# bytes. The worst settlement shapes carry a first payment's 1,184 bytes, so the
+# native run measures settlement gas with the largest notes.
+TEST_NOTE = keccak(b"minimal-shielded-pool:native-test-note")[:16] * 3
+TEST_NOTES = "0x" + (TEST_NOTE * 2).hex()
+TEST_FIRST_PAYMENT_NOTES = "0x" + (keccak(b"minimal-shielded-pool:native-test-ciphertext") * 34 + TEST_NOTE * 2).hex()
+MAX_NOTES_CASES = ("long-carry", "rollover", "full-tree-rollover")  # every settlement gas case
+
+
 def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=SLOT, alias=None):
     outputs = w.sink_outputs() if outputs is None else outputs
     public = n["value"] - FEE - sum(v for _, v in outputs)
     assert public >= 0
     if not public: recipient = 0
     inputs = [{key: n[key] for key in ("sk", "rho", "value")} | {"idx": index}, w.dummy_input()]
+    notes = TEST_FIRST_PAYMENT_NOTES if name.startswith(MAX_NOTES_CASES) else TEST_NOTES
     private_key, authorizer = w.new_authorizer()
     domain = w.domain_scalar(CHAIN, addr(POOL), epoch)
     witness = w.build_witness(tree, inputs, outputs, domain, authorizer=authorizer, public_amount=public, fee=FEE, recipient=addr(recipient))
@@ -121,10 +131,12 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
     if alias is not None:
         honest = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer,
                                    private_key, prove_publics_honest(inputs, outputs, tree, domain, public, recipient,
-                                                                     authorizer, publics), proof, root_slot=str(root_slot))
+                                                                     authorizer, publics), proof, root_slot=str(root_slot),
+                                   notes=notes)
         entries[name] = honest
         return honest
-    entry = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer, private_key, publics, proof, root_slot=str(root_slot))
+    entry = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer, private_key,
+                              publics, proof, root_slot=str(root_slot), notes=notes)
     entries[name] = entry
     return entry
 

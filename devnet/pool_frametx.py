@@ -9,8 +9,8 @@ Spends use one base grammar:
   VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment)
     -> SENDER(pool, settle(Spend) || notes)
 
-The notes are the fixture entry's `notes`, or two dummy notes for a fixture that
-delivers its outputs off chain (see wallet/notes.py for the format).
+The notes are the fixture entry's `notes`, made by wallet/notes.py: the CLI
+refuses a fixture without them.
 
 Every spend is three frames and may append one DEFAULT tail. The wallet
 default for a withdrawal is DEFAULT(pool, claimWithdrawal(recipient)) at
@@ -62,7 +62,6 @@ from gas_profile import (
     CLAIM_FRAME_STATE_GAS,
     EIP7825_TX_GAS_CAP,
     ETHEX_MEMPOOL_MAX_BYTES,
-    NOTE_BYTES,
     POOL_PROFILE,
     RECENT_ROOT_FRAME_GAS,
     SETTLE_FRAME_DATA_BYTES,
@@ -133,41 +132,28 @@ def spend_args(entry):
             f'{entry["fee"]},{entry["recipient"]},{entry["authorizer"]})')
 
 
-def spend_notes(entry, settle_calldata):
-    """The notes appended to settle(Spend): the fixture entry's `notes`, or two dummies.
-
-    The pool publishes notes and never reads them. A fixture without notes delivers its
-    outputs off chain, so its spend carries 96 bytes derived from its settlement words:
-    they look random and open for no one.
-    """
-    notes = entry.get("notes")
-    if notes is None:
-        first = _keccak(b"minimal-shielded-pool:dummy-notes:v1" + settle_calldata)
-        return first + _keccak(first) + _keccak(_keccak(first))
-    data = bytes.fromhex(notes.removeprefix("0x"))
-    if len(data) not in SPEND_NOTES_BYTES:
-        raise SystemExit(f"spend notes must be {' or '.join(map(str, SPEND_NOTES_BYTES))} bytes, "
-                         f"not {len(data)}")
-    return data
-
-
-def shield_note(entry, inner):
-    """A shield's note: the fixture entry's `note`, or one dummy, as for spend_notes."""
-    note = entry.get("note")
-    if note is None:
-        first = _keccak(b"minimal-shielded-pool:dummy-notes:v1" + bytes.fromhex(inner.removeprefix("0x")))
-        return first + _keccak(first)[:NOTE_BYTES - 32]
-    data = bytes.fromhex(note.removeprefix("0x"))
-    if len(data) not in SHIELD_NOTE_BYTES:
-        raise SystemExit(f"a shield note must be {' or '.join(map(str, SHIELD_NOTE_BYTES))} bytes, "
-                         f"not {len(data)}")
+def _notes_field(entry, key, sizes, what):
+    """The hex note bytes a wallet stored in the fixture entry, checked for length."""
+    if key not in entry:
+        raise SystemExit(f"the fixture's {what} has no `{key}`: regenerate it with wallet/gen_smoke.py "
+                         "or wallet/gen_nonce_race.py so its recipients can find their notes")
+    data = bytes.fromhex(entry[key].removeprefix("0x"))
+    if len(data) not in sizes:
+        raise SystemExit(f"the {what}'s notes must be {' or '.join(map(str, sizes))} bytes, not {len(data)}")
     return data
 
 
 def settle_calldata(entry):
-    """settle(Spend) calldata followed by the spend's notes, as the SENDER frame carries."""
-    settle = cast_calldata(f"settle({SPEND_TUPLE})", spend_args(entry))
-    return settle + spend_notes(entry, settle)
+    """settle(Spend) calldata followed by the spend's notes (wallet/notes.py), as the
+    SENDER frame carries them. The pool publishes the notes and never reads them."""
+    return (cast_calldata(f"settle({SPEND_TUPLE})", spend_args(entry))
+            + _notes_field(entry, "notes", SPEND_NOTES_BYTES, "spend"))
+
+
+def shield_calldata(inner, entry):
+    """shield(inner, note) calldata with the note the wallet made for the new leaf."""
+    note = _notes_field(entry, "note", SHIELD_NOTE_BYTES, "shield")
+    return cast_calldata("shield(bytes32,bytes)", inner, "0x" + note.hex())
 
 
 def proof_bytes(entry):
@@ -994,13 +980,13 @@ def main():
                 raise SystemExit("this fixture's shields do not record prior_root; regenerate it")
             value, inner, leaf = int(s["value"]), s["inner"], int(s["leaf"])
             prior_root = int(s["prior_root"], 16)
-            note = shield_note(s, inner)
+            shield_entry = s
         else:
             # gen_smoke.py proves note A as the first leaf of an empty tree.
             value, inner, leaf, prior_root = int(fix["shield_value"]), fix["inner_a"], 0, EMPTY_ROOT
-            note = shield_note({"note": fix.get("shield_note")} if fix.get("shield_note") else {}, inner)
+            shield_entry = {"note": fix["shield_note"]} if "shield_note" in fix else {}
         check_shield_fixture(url, pool, cfg["chainId"], fix, leaf, prior_root)
-        calldata = cast_calldata("shield(bytes32,bytes)", inner, "0x" + note.hex())
+        calldata = shield_calldata(inner, shield_entry)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
         rcpt = build_and_send(url, funded_key(), pool, value, calldata, dry_run=dry)
         if not dry and rcpt:

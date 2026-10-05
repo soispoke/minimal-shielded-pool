@@ -61,18 +61,23 @@ def frame(logs, data=b"", mode=2, status=1):
     return {"mode": mode, "to": POOL, "data": data, "status": status, "logs": logs}
 
 
-def settle(spend, logs):
-    return frame(logs, d.SETTLE_SELECTOR + b"".join(spend[k].to_bytes(32, "big") for k in d.SPEND_FIELDS))
+def settle(spend, logs, notes=bytes(96)):
+    """A settlement frame: settle(Spend) followed by the spend's notes."""
+    return frame(logs, d.SETTLE_SELECTOR + b"".join(spend[k].to_bytes(32, "big") for k in d.SPEND_FIELDS) + notes)
 
 
-def story():
+def story(shared_key=False):
     """Alice deposits 1 ETH, pays Bob 0.6 privately keeping 0.35 change, and
     withdraws 0.3 of the change; a contract the withdrawal's fourth frame calls
     shields 5 ETH. Bob later withdraws his note. The same commitment as Alice's
-    deposit also lands at leaf 3, and at leaf 0 of epoch 1 after a rollover."""
+    deposit also lands at leaf 3, and at leaf 0 of epoch 1 after a rollover.
+    With shared_key, Alice's change uses her deposit's spend key, as two notes
+    paid to one address (wallet/notes.py) do."""
     w.set_seed(7)
     D = w.domain_scalar(CHAIN, f"0x{POOL:040x}", 0)
     notes = {k: w.new_note() for k in ("a", "b", "c", "d1", "d2", "d3", "e")}
+    if shared_key:
+        notes["c"] = (notes["a"][0], notes["c"][1])
     values = {"a": ETH, "b": 6 * ETH // 10, "c": 35 * ETH // 100, "d1": 0, "d2": 0, "d3": 0, "e": 5 * ETH}
     cm = {k: w.commitment(*notes[k], values[k]) for k in notes}
     nf = {k: w.nullifier(D, notes[k][0], cm[k], i)
@@ -111,8 +116,8 @@ def verify(chain, receipt):
     return d.verify(chain, receipt, trusted)
 
 
-def export(chain, fixture, only=None):
-    return d.export(chain, CHAIN, POOL, fixture, only)
+def export(chain, fixture, only=None, address_wide=False):
+    return d.export(chain, CHAIN, POOL, fixture, only, address_wide=address_wide)
 
 
 def rejected(chain, receipt, expected):
@@ -296,8 +301,25 @@ def main():
                 raise AssertionError(f"export replaced {existing}")
         assert Path(tmp, "target").read_text() == "keep" and Path(tmp, "r.json").read_text() == "{}"
 
+    # Two notes under one spend key, as one address's notes are: a nullifier key
+    # would show when either is spent, so export refuses unless asked, and then
+    # marks the scope. The receipt still verifies.
+    shared_chain, shared_fixture, _, _, _ = story(shared_key=True)
+    try:
+        export(shared_chain, shared_fixture)
+    except d.ReceiptError as error:
+        assert "--address-wide" in str(error), str(error)
+        checked += 1
+    else:
+        raise AssertionError("exported an address-wide nullifier key without --address-wide")
+    wide = export(shared_chain, shared_fixture, address_wide=True)
+    scoped = [n for n in wide["notes"] if n.get("keyScope") == "address"]
+    assert len(scoped) == 2 and all("nullifierKey" in n for n in scoped), scoped
+    verify(shared_chain, wide)
+    checked += 1
+
     print(f"PASS: {checked} disclosure checks: honest receipts verify; altered keys, positions, values, "
-          "epochs, transactions, chains and pools are rejected")
+          "epochs, transactions, chains and pools are rejected; address-wide keys need consent")
 
 
 if __name__ == "__main__":

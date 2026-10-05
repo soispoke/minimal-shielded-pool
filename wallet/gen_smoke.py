@@ -24,15 +24,22 @@ Run from the wallet/ directory:
 The value overrides preserve the same flow at a smaller scale. They are useful
 for disposable devnet deployments and envelope boundary tests; defaults remain
 1.0 ETH shielded, 0.6 ETH paid privately, and a 0.05 ETH fee.
+
+Every note comes from wallet/notes.py: Alice's deposit and change from her own
+secret, Bob's payment through his public address (the transfer carries the
+ML-KEM ciphertext), and random notes in the withdrawals' unused places. The
+fixture records each wallet's seed, so a scan rebuilds the notes from it.
 """
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+import notes as n
 import wallet as w
 from poseidon_bn254 import hex32
 
@@ -263,16 +270,29 @@ def main():
     previous = refuse_overwrite(output_path)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
-    # notes: Alice's deposit, Bob's payment target, Alice's change target
-    sk_a, rho_a = w.new_note()
-    sk_b, rho_b = w.new_note()
-    sk_a2, rho_a2 = w.new_note()
     v_shield, v_bob, v_fee = shield_wei, payment_wei, fee_wei
     if not 0 < v_fee < v_bob < v_shield:
         raise SystemExit("value overrides require 0 < fee < payment < shield")
     v_change = v_shield - v_bob - v_fee
     if v_change <= v_fee:
         raise SystemExit("value overrides require change > fee so withdraw_seed can leave prior credit")
+
+    # The wallets. The fixed seeds are as public as the fixed proving seed, and
+    # refused off the test chain above.
+    if "--random" in sys.argv:
+        alice_seed, bob_seed = secrets.token_bytes(32), secrets.token_bytes(32)
+    else:
+        alice_seed = w.keccak(b"minimal-shielded-pool:smoke:alice:v1")
+        bob_seed = w.keccak(b"minimal-shielded-pool:smoke:bob:v1")
+    alice, bob = n.WalletKeys(alice_seed), n.WalletKeys(bob_seed)
+    alice_self = n.direct_channel(alice.owner_pk, alice.self_secret)
+
+    # notes: Alice's deposit, Bob's payment, Alice's change
+    note_a, rho_a, _, _ = n.reserve(alice_self, v_shield)
+    to_bob = n.open_channel(bob.address())
+    note_b, rho_b, _, ciphertext_b = n.reserve(to_bob, v_bob)
+    note_a2, rho_a2, _, _ = n.reserve(alice_self, v_change)
+    sk_a, sk_b, sk_a2 = alice.spend_key, bob.spend_key, alice.spend_key
     inner_a = w.inner(sk_a, rho_a)
     cm_a = w.commitment(sk_a, rho_a, v_shield)
 
@@ -363,6 +383,7 @@ def main():
     missing_recipient["recipient"] = "0"
     assert_unprovable(missing_recipient, "withdrawal_without_recipient")
 
+    unused = n.spend_notes(n.dummy_note(), n.dummy_note())
     fixture = {
         "chain_id": chain_id,
         "pool_address": pool_address,
@@ -371,18 +392,23 @@ def main():
         "inner_a": hex32(inner_a),
         "cm_a": hex32(cm_a),
         "shield_value": str(v_shield),
+        "shield_note": "0x" + n.shield_notes(note_a).hex(),
         "recipient": recipient,
+        "wallets": {name: {"seed": "0x" + seed.hex(), "address": keys.address().hex()}
+                    for name, seed, keys in (("alice", alice_seed, alice), ("bob", bob_seed, bob))},
         "transfer": spend_entry(t1, domain, ins_t, outs_t, epoch,
                                 0, v_fee, 0, auth_t, auth_t_key, pub_t, proof_t,
+                                notes="0x" + n.spend_notes(note_b, note_a2, ciphertext_b).hex(),
                                 # Bob's opening is retained for the withdrawal vector.
                                 out_inner1=hex32(outs_t[0][0]),
                                 out_value1=str(outs_t[0][1])),
         "withdraw_seed": spend_entry(t2, domain, ins_seed, w.sink_outputs(), epoch,
                                      v_seed_pub, v_fee, w.address_scalar(recipient),
-                                     auth_s, auth_s_key, pub_s, proof_s),
+                                     auth_s, auth_s_key, pub_s, proof_s, notes="0x" + unused.hex()),
         "withdraw": spend_entry(t2, domain, ins_w, outs_w, epoch,
                                 v_pub, v_fee, w.address_scalar(recipient),
-                                auth_w, auth_w_key, pub_w, proof_w),
+                                auth_w, auth_w_key, pub_w, proof_w,
+                                notes="0x" + n.spend_notes(n.dummy_note(), n.dummy_note()).hex()),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     write_private(output_path, json.dumps(fixture, indent=1), previous)

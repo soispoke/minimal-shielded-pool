@@ -231,12 +231,15 @@ swap them after signing.
   it was made for; that property is proven for round-3 Kyber (PKC 2023) and
   was not checked separately for FIPS 203.
 - Tags look random, but a sender that reuses an index repeats a tag and links
-  two payments. The sender's wallet must keep one counter per secret across
-  devices, and recompute it from the chain after a restore.
-- All notes paid to one address share its spend key. A disclosure receipt then
-  covers every spend of that address in the epoch, not only the note it
-  names. A wallet that issues receipts should give each counterparty its own
-  address. Separating them per note needs a circuit change.
+  two payments. `notes.reserve` advances the index before the note leaves the
+  wallet, and the wallet must save that state before broadcasting. A sender
+  cannot recompute an outgoing secret from its seed, so a restored wallet opens
+  a new secret with each recipient instead of guessing an index.
+- All notes paid to one address share its spend key, so a nullifier key covers
+  every spend of that address in the epoch, not only the note a receipt names.
+  `wallet/disclosure.py` refuses to export such a key unless `--address-wide`
+  accepts it, and marks it in the receipt. A per-note nullifier key needs a
+  circuit change, planned with the next circuit revision.
 - A secret sent out of band is only as private as its channel. If that
   channel is recorded and later broken, the secret reveals which outputs paid
   the recipient on it, and their amounts, though it cannot spend them. Use a
@@ -245,9 +248,12 @@ swap them after signing.
   its own. Wallets download every `Notes` event instead.
 - Ethereum clients will stop serving history older than a few months
   (EIP-4444). Recovering older notes needs an archive, which a wallet can check
-  against block headers but which nobody guarantees to keep.
-- `kyber-py` is a pure-Python ML-KEM that is not constant time. It suits this
-  research wallet, not production keys.
+  against block headers but which nobody guarantees to keep. `notes.py scan`
+  refuses a node whose leaves arrive with gaps, including ethrex's omission of
+  every log of a frame transaction whose fourth frame failed.
+- ML-KEM-768 and ChaCha20-Poly1305 come from `cryptography` 50.0.2 (OpenSSL).
+  Keys derive from the seed through FIPS 203's 64-byte seed form;
+  encapsulation uses OpenSSL's randomness.
 
 ## Assumptions and remaining gates
 

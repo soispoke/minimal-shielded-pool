@@ -24,12 +24,19 @@ The fixed seed is public, so it is refused outside the local test chain and
 whenever --rpc reads a live tree: pass --random there. The fixture holds the
 only openings of its notes, inputs and outputs alike, so it is written under
 the ignored wallet/artifacts/ and never over a fixture for another chain.
+
+Notes come from wallet/notes.py. Alice and Carol shield from their own
+secrets; Alice pays Bob through his public address (her transfer carries the
+ML-KEM ciphertext), and Carol pays Dave with a secret Dave handed her out of
+band. The fixture records the wallets' seeds.
 """
 import json
+import secrets
 import sys
 import urllib.request
 from pathlib import Path
 
+import notes as n
 import wallet as w
 from poseidon_bn254 import hex32
 from gen_smoke import prove, refuse_overwrite, spend_entry, write_private, ETH, WORK
@@ -126,12 +133,23 @@ def main():
     WORK.mkdir(exist_ok=True)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
+    # The wallets: fixed public seeds on the test chain, refused anywhere else.
+    names = ("alice", "bob", "carol", "dave")
+    if "--random" in sys.argv:
+        seeds = {name: secrets.token_bytes(32) for name in names}
+    else:
+        seeds = {name: w.keccak(f"minimal-shielded-pool:nonce-race:{name}:v1".encode()) for name in names}
+    keys = {name: n.WalletKeys(seed) for name, seed in seeds.items()}
+    alice_self = n.direct_channel(keys["alice"].owner_pk, keys["alice"].self_secret)
+    carol_self = n.direct_channel(keys["carol"].owner_pk, keys["carol"].self_secret)
+
     # Two deposits, into one tree. Root R is fixed after both inserts. Against a
     # live pool, seed the tree from its existing leaves first so the fixture's
     # root and proofs match the pool state after the two shields land.
-    sk_a, rho_a = w.new_note()
-    sk_c, rho_c = w.new_note()
     v = note_wei
+    note_a, rho_a, _, _ = n.reserve(alice_self, v)
+    note_c, rho_c, _, _ = n.reserve(carol_self, v)
+    sk_a, sk_c = keys["alice"].spend_key, keys["carol"].spend_key
     inner_a = w.inner(sk_a, rho_a)
     inner_c = w.inner(sk_c, rho_c)
     cm_a = w.commitment(sk_a, rho_a, v)
@@ -148,9 +166,11 @@ def main():
     v_bob, v_fee = v * 60 // 100, v * 5 // 100
     v_change = v - v_bob - v_fee
 
-    # transfer A: spend note A (idx 0) against R
-    sk_bob, rho_bob = w.new_note()
-    sk_achg, rho_achg = w.new_note()
+    # transfer A: spend note A (idx 0) against R, paying Bob's public address
+    to_bob = n.open_channel(keys["bob"].address())
+    note_bob, rho_bob, _, ciphertext_bob = n.reserve(to_bob, v_bob)
+    note_achg, rho_achg, _, _ = n.reserve(alice_self, v_change)
+    sk_bob, sk_achg = keys["bob"].spend_key, keys["alice"].spend_key
     ins_a = [{"sk": sk_a, "rho": rho_a, "value": v, "idx": idx_a}, w.dummy_input()]
     outs_a = [(w.inner(sk_bob, rho_bob), v_bob), (w.inner(sk_achg, rho_achg), v_change)]
     auth_a_key, auth_a = w.new_authorizer()
@@ -160,9 +180,12 @@ def main():
     )
     pub_a, proof_a = prove(wa, "race_a")
 
-    # transfer C: spend note C (idx 1) against the SAME R
-    sk_dave, rho_dave = w.new_note()
-    sk_cchg, rho_cchg = w.new_note()
+    # transfer C: spend note C (idx 1) against the SAME R, paying Dave with the
+    # secret he handed Carol out of band
+    to_dave = n.direct_channel(keys["dave"].owner_pk, keys["dave"].direct_secret(0))
+    note_dave, rho_dave, _, _ = n.reserve(to_dave, v_bob)
+    note_cchg, rho_cchg, _, _ = n.reserve(carol_self, v_change)
+    sk_dave, sk_cchg = keys["dave"].spend_key, keys["carol"].spend_key
     ins_c = [{"sk": sk_c, "rho": rho_c, "value": v, "idx": idx_c}, w.dummy_input()]
     outs_c = [(w.inner(sk_dave, rho_dave), v_bob), (w.inner(sk_cchg, rho_cchg), v_change)]
     auth_c_key, auth_c = w.new_authorizer()
@@ -180,11 +203,13 @@ def main():
         tree, domain, ins_a, outs_a, epoch, 0, v_fee, 0,
         auth_a, auth_a_key, pub_a, proof_a,
         output_openings=openings((sk_bob, rho_bob, v_bob), (sk_achg, rho_achg, v_change)),
+        notes="0x" + n.spend_notes(note_bob, note_achg, ciphertext_bob).hex(),
     )
     ec = spend_entry(
         tree, domain, ins_c, outs_c, epoch, 0, v_fee, 0,
         auth_c, auth_c_key, pub_c, proof_c,
         output_openings=openings((sk_dave, rho_dave, v_bob), (sk_cchg, rho_cchg, v_change)),
+        notes="0x" + n.spend_notes(note_dave, note_cchg).hex(),
     )
 
     nfa = {ea["nf1"], ea["nf2"]}
@@ -201,10 +226,12 @@ def main():
         "root": hex32(root_R),
         "shields": [
             {"inner": hex32(inner_a), "cm": hex32(cm_a), "value": str(v), "leaf": idx_a,
-             "prior_root": hex32(prior_a)},
+             "prior_root": hex32(prior_a), "note": "0x" + n.shield_notes(note_a).hex()},
             {"inner": hex32(inner_c), "cm": hex32(cm_c), "value": str(v), "leaf": idx_c,
-             "prior_root": hex32(prior_c)},
+             "prior_root": hex32(prior_c), "note": "0x" + n.shield_notes(note_c).hex()},
         ],
+        "wallets": {name: {"seed": "0x" + seeds[name].hex(), "address": keys[name].address().hex()}
+                    for name in names},
         # pool_frametx.py reads spend entries under an op key; both are transfers
         "transfer": ea,
         "transfer_c": ec,

@@ -136,35 +136,53 @@ epoch root to EIP-8272.
 A recipient needs each note's amount and `rho` to spend it. Notes carry them on
 chain, encrypted under a 32-byte secret `K` that the sender and recipient share,
 so a payment can go to a reusable address and the recipient can recover
-everything from its seed. `wallet/notes.py` implements the format:
+everything from its seed. `wallet/notes.py` implements the format with
+ML-KEM-768 and ChaCha20-Poly1305 from `cryptography` (OpenSSL):
 
 ```text
 note = tag (16) || ChaCha20-Poly1305(value) (16 + 16)
 tag  = PRF(K, "tag", i)[:16]    rho = PRF(K, "rho", i) mod r
 ```
 
-`i` counts the payments a sender has made with `K`. A sender sets up `K` in one
-of two ways, and later payments look the same whichever it used:
+`i` counts the notes a sender has sent with `K`. A sender sets up `K` in one of
+two ways, and later payments look the same whichever it used:
 
-- **Public address** (`owner_pk` and an ML-KEM-768 key, 1,216 bytes, shared by
-  ENS or QR): no prior contact. The sender's first payment carries the 1,088-byte
-  ML-KEM ciphertext, which the recipient decapsulates.
+- **Public address** (a version byte, `owner_pk` and an ML-KEM-768 key,
+  1,217 bytes, shared by ENS or QR): no prior contact. The sender's first
+  payment carries the 1,088-byte ML-KEM ciphertext, which the recipient
+  decapsulates.
 - **Out of band:** the recipient derives `K` from its seed and sends it to the
   sender over Signal or another post-quantum channel. Nothing extra goes on chain.
 
 Every spend carries two notes, one for the payee and one for the change (a
 withdrawal's payee note is random). A shield carries one. The pool only
 checks their length and emits them in a `Notes` event; the one-time
-authorizer's signature covers them. Wallets download every event and look for
-the tags they expect, so no server learns which notes are theirs, and recover
-from the seed by re-deriving their secrets and decapsulating every ciphertext.
-History older than Ethereum's retention window (EIP-4444) comes from archives,
-as it already does for the tree leaves.
+authorizer's signature covers them. The CLI refuses a spend or shield whose
+fixture lacks the wallet's notes.
+
+Wallets download every event and look for the tags they expect, so no server
+learns which notes are theirs. From its seed alone a wallet rebuilds its
+incoming and change notes: it re-derives its secrets, decapsulates every
+ciphertext and matches tags, and it tracks their spends by nullifier. A sender
+cannot recompute an outgoing secret, so after a restore it opens a new one
+with each recipient. It reserves each index in its saved state before
+broadcasting, because a repeated tag links two payments.
+
+```sh
+python3 wallet/notes.py address --seed-file SEED
+python3 wallet/notes.py direct-secret --number N --seed-file SEED
+python3 wallet/notes.py scan --config devnet/deploy_config.json --state STATE --seed-file SEED
+```
+
+The seed file must be readable by its owner only; without `--seed-file` the
+seed is read from the terminal. `scan` reads finalized blocks only, keeps its
+state in an owner-only file, and refuses a node whose leaves arrive with gaps,
+which would hide notes. History older than Ethereum's retention window
+(EIP-4444) comes from archives, as it already does for the tree leaves.
 
 A normal spend grows by 96 bytes and about 3,700 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
-1,184 bytes and is visibly larger. Senders must never reuse an index, because a
-repeated tag links two payments. See [SECURITY.md](SECURITY.md#note-delivery).
+1,184 bytes and is visibly larger. See [SECURITY.md](SECURITY.md#note-delivery).
 
 ## Code
 
@@ -202,7 +220,9 @@ python3 wallet/disclosure.py verify --rpc URL --config devnet/deploy_config.json
 ```
 
 Export discloses only the notes you name, and gives a nullifier key only for
-notes you spent. Verify checks the receipt against finalized blocks and the
+notes you spent. Notes paid to one address share its spend key, so their
+nullifier key shows when any of that address's notes in the epoch is spent;
+export refuses such a key unless you pass `--address-wide`. Verify checks the receipt against finalized blocks and the
 pool's deployed code. It trusts its config and its node, so use your own copy
 of the config and a node you control; a public node also learns which
 transactions you look up. A receipt proves links and amounts, not who

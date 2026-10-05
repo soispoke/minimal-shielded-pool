@@ -259,13 +259,18 @@ def check_shield_binds_fixture():
     # The nonce-race fixture names each note's leaf and the root before it, so a
     # foreign deposit at an earlier leaf is refused although the next leaf matches.
     prior = "0x" + (1234).to_bytes(32, "big").hex()
-    race = dict(fixture, shields=[{"inner": fixture["inner_a"], "value": "1", "leaf": 3, "prior_root": prior}])
+    race = dict(fixture, shields=[{"inner": fixture["inner_a"], "value": "1", "leaf": 3, "prior_root": prior,
+                                   "note": fixture["shield_note"]}])
     error, sent = run(race, (0, 3, 1234), (0, 3), extra=("--note", "0"))
     assert error is None and len(sent) == 1, error
+    # A shield without the wallet's note would leave its recipient unable to find it.
+    unnoted = dict(race, shields=[{k: v for k, v in race["shields"][0].items() if k != "note"}])
+    error, sent = run(unnoted, (0, 3, 1234), (0, 3), extra=("--note", "0"))
+    assert error and "has no `note`" in error and not sent, error
     for state, expected in (((0, 2, 1234), "leaf 3"), ((0, 3, 999), "another deposit took an earlier leaf")):
         error, sent = run(race, state, extra=("--note", "0"))
         assert error and expected in error and not sent, error
-    return len(refused) + 2
+    return len(refused) + 3
 
 def main():
     assert POOL_PROFILE == "position-notes-v3"
