@@ -380,11 +380,12 @@ unpinned validation limits, the fee check that covers them, and hybrid
 compression, including fresh proofs over a statement value plus the field
 modulus that only the dispatcher's range checks refuse, and malformed envelopes
 that only the dispatcher's key, signature, settlement, recent-root and domain
-checks refuse. The highest measured settlement execution cost is 1,423,709;
-the old 1.4M limit fails after consuming input keys. The new 2M limit includes
-additional margin, not a formal proof of a universal bound. These runs use
-ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where
-the same scenarios give identical results, gas included. See
+checks refuse. The highest measured settlement execution cost, with a first
+payment's notes, is 1,435,539; the old 1.4M limit fails after consuming input
+keys. The new 2M limit includes additional margin, not a formal proof of a
+universal bound. These runs use ethrex `247e2dd2`; the live chain runs
+`bdfc5d8f`, 88 commits older, where the same scenarios gave identical results,
+gas included, before notes were added. See
 [`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
 
 The earlier profile's gas derivation is recorded in

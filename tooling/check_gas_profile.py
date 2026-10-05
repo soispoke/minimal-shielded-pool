@@ -79,24 +79,18 @@ CONSERVATIVE_VERIFY_STATE_BOUND = (
 MAX_SSTORE_OPERATIONS = 31
 MAX_NEW_STORAGE_SLOTS = 5
 
-# Pinned ethrex 247e2dd2, long carry at index 2^19-1, two outputs and credit.
+# Pinned ethrex 247e2dd2, long carry at index 2^19-1, two outputs and credit,
+# carrying a first payment's 1,184 note bytes (11,830 gas more than without notes).
 # See devnet/native_occurrence/native-report.json. The previous rollover-only
 # Foundry measurement missed this 39-hash path and did not bound native gas.
-NATIVE_MAX_OBSERVED_SETTLEMENT_GAS = 1_423_709
+NATIVE_MAX_OBSERVED_SETTLEMENT_GAS = 1_435_539
 # EIP-8038: cold access (2,100) + STORAGE_WRITE (10,000).
 EIP_8038_COLD_WRITE_GAS = 12_100
-# Settlement now emits its notes, which the native measurement above predates. LOG1 of the
-# largest notes, ABI-encoded as two words plus 1,184 bytes, costs 375 + 375 + 8 * 1,248 =
-# 10,734 before copying and memory. Forge measures 11,056 for the event alone, and 12,184
-# added to the longest settlement path when the dispatcher-sized calldata grows from 484
-# to 1,572 bytes (contracts/test/DispatcherPool.t.sol).
-NOTES_EVENT_GAS_BOUND = 12_500
 # EIP-8037 uses the same state gas for any new storage slot.
 EIP_8037_NEW_SLOT_STATE_GAS = KEYED_NONCE_FIRST_USE_STATE_GAS
 
 # The execution dimension no longer carries state growth.
-_WITH_WRITE_MARGIN = (NATIVE_MAX_OBSERVED_SETTLEMENT_GAS + MAX_SSTORE_OPERATIONS * EIP_8038_COLD_WRITE_GAS
-                      + NOTES_EVENT_GAS_BOUND)
+_WITH_WRITE_MARGIN = NATIVE_MAX_OBSERVED_SETTLEMENT_GAS + MAX_SSTORE_OPERATIONS * EIP_8038_COLD_WRITE_GAS
 # Two nested call levels: dispatcher -> logic -> Poseidon. Charge the full
 # write margin again even though the measured path already contains writes.
 CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND = (_WITH_WRITE_MARGIN * 64 * 64 + 63 * 63 - 1) // (63 * 63)
@@ -227,7 +221,6 @@ def main():
             "tree_hash_and_write_maxima": tree_shapes,
             "execution_cap": SETTLE_FRAME_GAS,
             "state_cap": SETTLE_FRAME_STATE_GAS,
-            "notes_event_bound": NOTES_EVENT_GAS_BOUND,
             "conservative_execution_bound": CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND,
             "conservative_state_bound": CONSERVATIVE_SETTLEMENT_STATE_BOUND,
             "execution_margin": SETTLE_FRAME_GAS - CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND,

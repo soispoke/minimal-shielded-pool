@@ -77,6 +77,15 @@ def tree_of(*notes):
     return tree
 
 BASE = tree_of(NA, NB)
+
+# The pool publishes notes without reading them, so these vectors carry fixed test
+# bytes. The worst settlement shapes carry a first payment's 1,184 bytes, so the
+# native run measures settlement gas with the largest notes.
+TEST_NOTE = keccak(b"minimal-shielded-pool:native-test-note")[:16] * 3
+TEST_NOTES = "0x" + (TEST_NOTE * 2).hex()
+TEST_FIRST_PAYMENT_NOTES = "0x" + (keccak(b"minimal-shielded-pool:native-test-ciphertext") * 34 + TEST_NOTE * 2).hex()
+MAX_NOTES_CASES = ("long-carry", "rollover", "full-tree-rollover")  # every settlement gas case
+
 def deposit(name, n, nonce, tree, slot=SLOT):
     inner = "0x" + word(n["inner"]).hex()
     shield = builder.shield_calldata(inner, {"note": "0x" + TEST_NOTE.hex()})
@@ -91,14 +100,6 @@ NEXT = 8
 entries = {}
 KEY_HASH = hashlib.sha256((REPO / "build/spend_final.zkey").read_bytes()).hexdigest()
 WASM_HASH = hashlib.sha256((REPO / "build/spend_js/spend.wasm").read_bytes()).hexdigest()
-
-# The pool publishes notes without reading them, so these vectors carry fixed test
-# bytes. The worst settlement shapes carry a first payment's 1,184 bytes, so the
-# native run measures settlement gas with the largest notes.
-TEST_NOTE = keccak(b"minimal-shielded-pool:native-test-note")[:16] * 3
-TEST_NOTES = "0x" + (TEST_NOTE * 2).hex()
-TEST_FIRST_PAYMENT_NOTES = "0x" + (keccak(b"minimal-shielded-pool:native-test-ciphertext") * 34 + TEST_NOTE * 2).hex()
-MAX_NOTES_CASES = ("long-carry", "rollover", "full-tree-rollover")  # every settlement gas case
 
 
 def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=SLOT, alias=None):

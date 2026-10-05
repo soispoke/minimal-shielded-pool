@@ -180,7 +180,7 @@ state in an owner-only file, and refuses a node whose leaves arrive with gaps,
 which would hide notes. History older than Ethereum's retention window
 (EIP-4444) comes from archives, as it already does for the tree leaves.
 
-A normal spend grows by 96 bytes and about 3,700 gas, and an inclusion list
+A normal spend grows by 96 bytes and about 4,000 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
 1,184 bytes and is visibly larger. See [SECURITY.md](SECURITY.md#note-delivery).
 

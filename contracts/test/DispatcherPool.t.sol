@@ -72,17 +72,6 @@ contract LogicProxy {
     receive() external payable {}
 }
 
-/// Measures emitting the largest notes the dispatcher admits, as settlement does.
-contract NotesEmitter {
-    event Notes(bytes notes);
-
-    function emitNotes(bytes calldata notes) external returns (uint256 used) {
-        uint256 before = gasleft();
-        emit Notes(notes);
-        used = before - gasleft();
-    }
-}
-
 contract RevertingRecentRoot {
     fallback() external payable {
         revert();
@@ -535,14 +524,5 @@ contract DispatcherPoolTest {
             pool.shield{value: 1}(bytes32(uint256(73)), new bytes(lengths[i]));
         }
         require(pool.nextIndex() == 2, "a rejected shield appended a leaf");
-    }
-
-    /// tooling/check_gas_profile.py adds NOTES_EVENT_GAS_BOUND (12,500) to the
-    /// settlement bound, because the native measurement predates the notes event.
-    function test_largest_notes_event_fits_its_gas_bound() public {
-        NotesEmitter emitter = new NotesEmitter();
-        uint256 used = emitter.emitNotes(_firstPaymentNotes());
-        emit SettlementGasMeasured(used);
-        require(used < 12_500, "notes event exceeds NOTES_EVENT_GAS_BOUND");
     }
 }

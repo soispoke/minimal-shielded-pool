@@ -26,7 +26,7 @@
     "settle_frame_state_gas": 550000,
     "claim_frame_gas": 100000,
     "claim_frame_state_gas": 183600,
-    "conservative_settle_bound": 1869268,
+    "conservative_settle_bound": 1868576,
     "conservative_settle_state_bound": 489600
   },
   "artifacts": {
@@ -44,7 +44,7 @@
     "devnet/frametx.py": "ac008480a576bae7543287f7488afb93c1b12c1cdf103f95e0f933b68823d459",
     "devnet/gas_profile.py": "00e3d1fa88c2d985df501da5a8fb0d79dc664dd8648447facfdd4466f957a164",
     "devnet/pool_frametx.py": "cf239da219fdeb5ae211b18cc880cf27edb7d626c35f6f3233070e16200fbb79",
-    "tooling/check_gas_profile.py": "575a6815eeff5c51311c8eac703c935ab7b59061ec063e33e55248a83b6d16a0"
+    "tooling/check_gas_profile.py": "b5cdc832233a3284689fd9f0d39e69e9225ea94a203c2b97fc491d0be57285ce"
   },
   "compiler": {
     "default": {
