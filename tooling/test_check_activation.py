@@ -100,7 +100,8 @@ def main():
             assert message in result.stderr, (label, result.stderr)
 
     # --ptau runs snarkjs only on a file whose hash the manifest pins.
-    unpinned = (BASE, "requires ceremony.phase1_ptau_sha256")
+    unpinned = (mutated(lambda m: m["ceremony"].pop("phase1_ptau_sha256")),
+                "requires ceremony.phase1_ptau_sha256")
     wrong = (mutated(ceremony(phase1_ptau_sha256="0" * 64)), "ptau hash does not match")
     for manifest, message in (unpinned, wrong):
         result = run(manifest, "--allow-testbed", "--ptau", str(ROOT / gate.R1CS))

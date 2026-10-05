@@ -4,17 +4,18 @@
 
 Unaudited research software. Do not use the committed proving key or deployed
 testnet pool for real value. The committed key comes from a local test setup.
-Its phase 2 records one contribution, and its phase 1 is not recorded:
-`tooling/setup.sh` generates both phases locally unless given an external powers
-of tau. Whoever produced either phase could have kept the toxic waste and could
-forge arbitrary spends.
+Its phase 2 records one contribution, and its phase 1 is a local file the
+manifest pins by hash but nobody else has: `tooling/setup.sh` generates both
+phases locally unless given an external powers of tau. Whoever produced either
+phase could have kept the toxic waste and could forge arbitrary spends.
 
 The previously identified implementation blockers are fixed in the active
 code: complete-envelope authorization, positional sinks, pre-insert epoch
 rollover, separate root publication, canonical Groth16 encodings, direct-call
 rejection, exact three/four-frame self-payment, and EIP-7843 slot handling. Production
 activation remains blocked on a real ceremony, independent audit, cross-client
-evidence, and fork-specific gas proof.
+evidence, and fork-specific gas proof. Hardware-wallet custody is further
+blocked on a device app that shows the spend it signs, and on testing one.
 
 The active transaction encoder and dispatcher target EIP-8141 as currently
 specified: nested fees and separate execution and state gas limits. The
@@ -37,6 +38,27 @@ four-frame spend grammar, the complete two-key
 EIP-8250 nonce set, and the exact EIP-8272 tuple proven by the leading
 recent-root verifier frame. A copied or rerandomized proof cannot be rewrapped
 without the one-time private key.
+
+Each note commits to a BabyJubjub spending key `A`. The circuit requires both
+inputs, dummy included, to commit to the same `A`, and checks `A`'s
+EdDSA-Poseidon signature over `Poseidon2(TAG_AUTH, beta)`, which binds all ten
+statement values. circomlib's verifier refuses an `S` at or above the subgroup
+order and an `A` whose eighth multiple is the identity, for which any
+`R8 = S·B8` would verify. It does not check that `A` and `R8` lie on the curve,
+so the circuit adds `BabyCheck` for both. The prover holds the signature, never
+the private key, and a note's nullifying key `nk`, which the prover also holds,
+cannot spend. Changing the notes spent, the outputs, the withdrawal or the fee
+therefore takes a new signature from the key's holder; a signature made before
+a host was compromised cannot be reused for another spend. Whether a
+compromised host can get a new one depends on the signer. A device that shows
+the spend it signs lets its user refuse; a device that signs blind, such as the
+RAILGUN Ledger app this repository's adapter uses, shows only the signed hash,
+so malware on the host can get a spend of its choosing signed, though it
+cannot extract the key. The host also holds the authorizer key, so it chooses
+the envelope fields the statement leaves open (gas limits and prices within
+the signed fee, the fourth frame), and it can read the user's notes and
+withhold their spends. The wallet checks each signature before proving, so a
+faulty signer is caught there.
 
 The proof exposes three public signals instead of the ten statement values,
 using the hybrid compression of eprint 2025/1500. The ten values stay public in
@@ -207,15 +229,18 @@ other spends:
   output also reveals the other output's value by conservation. If that note
   is later withdrawn in full, the amount links the withdrawal to it, even when
   the note belongs to someone else. A nullifier key shows when any note of the
-  same spend key is spent in that epoch, including another deposit of the
-  same commitment, so the wallet makes a fresh spend key for each note. The
+  same nullifying key is spent in that epoch, including another deposit of the
+  same commitment, so the wallet makes a fresh `nk` for each note. The
+  spending key itself never appears on chain, so one key can own many notes. The
   receipt also reveals each note's `inner`, which links any other note paid to
   the same `inner`.
 
 ## Assumptions and remaining gates
 
 - Groth16 knowledge soundness, BN254 pairing security, Poseidon collision
-  resistance, Keccak collision resistance, and secp256k1 unforgeability.
+  resistance, Keccak collision resistance, secp256k1 unforgeability, and
+  unforgeability of circomlib's EdDSA-Poseidon over BabyJubjub, whose challenge
+  hash is Poseidon(5).
 - Joint UHF hardness of Keccak-mod-p and circomlib Poseidon(10), the
   assumption under which eprint 2025/1500 proves hybrid compression binds the
   ten statement values to the proof's three public signals.
@@ -229,8 +254,9 @@ other spends:
   every key point is a combination of the phase-1 powers of tau, so only
   `snarkjs zkey verify` against the phase-1 file checks them. The gate runs it
   when given `--ptau` and the manifest pins that file's SHA-256 as
-  `ceremony.phase1_ptau_sha256`. The committed key's phase 1 is not recorded,
-  so for it these remain unchecked.
+  `ceremony.phase1_ptau_sha256`. The committed key's phase 1 is a local
+  single-contribution file the manifest pins; the full check passed against it
+  on 2026-10-05, but the file is not published, so nobody else can repeat it.
 - Correct ethrex v23 implementations of EIP-8141, EIP-8250, EIP-8272 and
   EIP-7843. The activation manifest records the EIP-8250 and EIP-8272
   revisions, and the native suite pins ethrex `247e2dd2`.
@@ -289,7 +315,10 @@ does not change circuit outputs. A direct compiler upgrade requires a new
 artifact set, ceremony, activation manifest, and circuit review.
 
 The wallet is a fixture generator, not a production keystore. Random note
-secrets and one-time authorizer keys are not durably backed up. The fixture
+secrets and one-time authorizer keys are not durably backed up. Its software
+spending keys sit in the fixtures, readable by their owner only;
+`wallet/ledger_signer.py`, not yet tested on a device, keeps one on a Ledger
+instead. The fixture
 generators' fixed seed is public, so they refuse it outside the local test
 chain or a live tree, and refuse recipients that would strand a credit. A
 fixture's proofs assume the tree its generator built, so another deposit
@@ -313,16 +342,28 @@ only the second output is new, the full tree's root kept when the last leaf
 fills, direct-call rejection, valid proof verification, coordinate aliases, infinity,
 and mutation of each statement value, `beta` and `gamma`. The circuit generator
 rejects same-note inputs, duplicate outputs, dummy-only spends, wrong sinks,
-sink-valued positive outputs, zero authorizers, and recipient mismatches. The
+sink-valued positive outputs, zero authorizers, recipient mismatches, another
+key's signature and a fee changed after signing; all but the last two are
+signed again by the note's own key, so a stale signature cannot be what
+refuses them. The
 circuit test checks `beta` against an independent Poseidon(10) and rejects a
 forged witness whose `beta` or `gamma` does not follow from the statement, and
 witnesses that each break only one constraint: value conservation, the 128-bit
 ranges of the fee and of each output, including an output of exactly 2^128,
-path-bit booleanity at several depths, and the sink rules. Each rejection is checked against the committed R1CS, not
+path-bit booleanity at several depths, the sink rules, and the signature
+check: another key's signature, a statement changed after signing, an
+unreduced `S`, and a note owned by a small-order key. The witnesses aimed at
+other constraints are signed again by the note's own key, so a stale signature
+cannot be what refuses them. For the four signature witnesses the test reads
+which of the verifier's three checks fails (`S` below the subgroup order, 8·A
+not the identity, the curve equation) and requires exactly the intended one.
+Each rejection is checked against the committed R1CS, not
 only the witness generator, using a complete witness from a circuit without
 that constraint, so a constraint that became a runtime-only check would fail
 the test. The circuit test also fails if the circuit gains an unconstrained
-assignment (`<--` or `-->`), which it currently has none of. The
+assignment (`<--` or `-->`), which it currently has none of; circomlib's
+signature gadgets use them internally, under their own constraints. No test
+isolates the two `BabyCheck` components, which no known forgery needs. The
 envelope vector checks that changing any of 49 transfer components, 57
 withdrawal components, 58 gas-only tail components or 58 custom withdrawal tail
 components, including `beta`, changes the signed hash.

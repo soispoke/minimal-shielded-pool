@@ -8,6 +8,7 @@ import wallet as w
 
 class WalletOccurrenceTest(unittest.TestCase):
     POOL = "0x" + "12" * 20
+    OWNER = w.SoftwareSigner(5).public_key
 
     def rebuild(self, leaves, epoch=0, expected_epoch=None):
         tree = w.Tree()
@@ -32,15 +33,15 @@ class WalletOccurrenceTest(unittest.TestCase):
                                     epoch if expected_epoch is None else expected_epoch)
 
     def test_duplicate_events_remain_distinct_positions(self):
-        cm = w.commitment(123, 456, 100)
+        cm = w.commitment(self.OWNER, 123, 456, 100)
         tree = self.rebuild([cm, cm])
         self.assertEqual(tree.leaves, [cm, cm])
         domain = w.domain_scalar(31337, self.POOL, 0)
         self.assertNotEqual(w.nullifier(domain, 123, cm, 0), w.nullifier(domain, 123, cm, 1))
 
     def test_reorg_rebuild_changes_position_and_spend_identity(self):
-        cm = w.commitment(123, 456, 100)
-        other = w.commitment(321, 654, 200)
+        cm = w.commitment(self.OWNER, 123, 456, 100)
+        other = w.commitment(self.OWNER, 321, 654, 200)
         before = self.rebuild([cm, other])
         after = self.rebuild([other, cm])
         domain = w.domain_scalar(31337, self.POOL, 0)
@@ -51,9 +52,9 @@ class WalletOccurrenceTest(unittest.TestCase):
                             w.nullifier(domain, 123, cm, new_index))
 
     def test_later_root_keeps_existing_occurrence_identity(self):
-        cm = w.commitment(123, 456, 100)
+        cm = w.commitment(self.OWNER, 123, 456, 100)
         before = self.rebuild([cm])
-        after = self.rebuild([cm, w.commitment(321, 654, 200)])
+        after = self.rebuild([cm, w.commitment(self.OWNER, 321, 654, 200)])
         domain = w.domain_scalar(31337, self.POOL, 0)
         self.assertNotEqual(before.root(), after.root())
         self.assertEqual(w.nullifier(domain, 123, cm, before.leaves.index(cm)),
@@ -61,10 +62,10 @@ class WalletOccurrenceTest(unittest.TestCase):
 
     def test_epoch_mismatch_stops_before_proving(self):
         with self.assertRaisesRegex(SystemExit, "does not match the live tree epoch"):
-            self.rebuild([w.commitment(123, 456, 100)], epoch=1, expected_epoch=0)
+            self.rebuild([w.commitment(self.OWNER, 123, 456, 100)], epoch=1, expected_epoch=0)
 
     def test_same_index_in_another_epoch_has_a_new_spend_identity(self):
-        cm = w.commitment(123, 456, 100)
+        cm = w.commitment(self.OWNER, 123, 456, 100)
         epoch0 = self.rebuild([cm], epoch=0)
         epoch1 = self.rebuild([cm], epoch=1)
         self.assertEqual(epoch0.root(), epoch1.root())
@@ -79,12 +80,16 @@ class WalletOccurrenceTest(unittest.TestCase):
         fixture = json.loads((Path(__file__).parent / "smoke_fixture.json").read_text())
         for name in ("transfer", "withdraw_seed", "withdraw"):
             entry = fixture[name]
-            inputs = [{"sk": int(i["spend_key"], 16), "rho": int(i["rho"], 16),
+            pub = tuple(int(c, 16) for c in entry["spend_pub"])
+            # The software signer stands in for a device; its key must still sign.
+            self.assertEqual(w.SoftwareSigner(int(entry["spend_key"], 16)).public_key, pub, name)
+            inputs = [{"nk": int(i["nk"], 16), "rho": int(i["rho"], 16),
                        "value": int(i["value"]), "idx": i["leaf"]} for i in entry["inputs"]]
-            nullifiers = w.input_nullifiers(int(entry["domain"], 16), inputs)
+            nullifiers = w.input_nullifiers(int(entry["domain"], 16), pub, inputs)
             self.assertEqual(nullifiers, [int(entry["nf1"], 16), int(entry["nf2"], 16)], name)
         opened = fixture["transfer"]["inputs"][0]
-        self.assertEqual(w.commitment(int(opened["spend_key"], 16), int(opened["rho"], 16),
+        pub = tuple(int(c, 16) for c in fixture["transfer"]["spend_pub"])
+        self.assertEqual(w.commitment(pub, int(opened["nk"], 16), int(opened["rho"], 16),
                                       int(opened["value"])), int(fixture["cm_a"], 16))
 
 

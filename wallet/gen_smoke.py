@@ -12,6 +12,12 @@ All values and fees are wei-denominated; no ERC-20 path is modeled. The story:
 The v2 circuit rejects the same note in both inputs directly (`nf1 != nf2`),
 while the EIP-8250 duplicate-key rule remains defense in depth.
 
+Alice and Bob each hold a software spending key, the stand-in for a hardware
+wallet, which signs each spend's statement. Their secrets go into the fixture
+so its notes can be proved again. With --ledger-account=N, Alice's key is the
+RAILGUN Ledger app's for account N (see ledger_signer.py): the device signs her
+two spends, and the fixture records only her public key and the account.
+
 Each honest proof is verified off-chain against the committed verification
 key before it lands in the fixture. Groth16 proving is randomised, so the
 fixture pairs with the committed Groth16Verifier.sol from the same setup.
@@ -20,6 +26,7 @@ Run from the wallet/ directory:
   python3 gen_smoke.py [--random] [--chain-id=N] [--pool-address=0x...]
                        [--shield-wei=N] [--payment-wei=N] [--fee-wei=N]
                        [--output=PATH] [--recipient=0x...] [--epoch=N]
+                       [--ledger-account=N]
 
 The value overrides preserve the same flow at a smaller scale. They are useful
 for disposable devnet deployments and envelope boundary tests; defaults remain
@@ -174,12 +181,21 @@ def assert_unprovable(witness, tag):
         raise SystemExit(f"UNSOUND: circuit accepted {tag}")
 
 
+def spending_key(signer):
+    """What a fixture records of a spending key: its public half, and the secret
+    of a software key or the account of a Ledger's, which never leaves it."""
+    pub = {"spend_pub": [hex32(c) for c in signer.public_key]}
+    if isinstance(signer, w.SoftwareSigner):
+        return pub | {"spend_key": hex32(signer.secret)}
+    return pub | {"ledger_account": int.from_bytes(signer.account, "big")}
+
+
 def spend_entry(
     tree, domain, inputs, outputs, epoch, public_amount, fee, recipient,
-    authorizer, authorizer_private_key, publics, proof, **extra,
+    authorizer, authorizer_private_key, publics, proof, *, signer, **extra,
 ):
     root = tree.root()
-    nf1, nf2 = w.input_nullifiers(domain, inputs)
+    nf1, nf2 = w.input_nullifiers(domain, signer.public_key, inputs)
     out_cm1, out_cm2 = w.output_commitments(outputs)
     # the crux: the proof's public signals (beta, gamma, alpha), in the
     # circuit's order, compress exactly the wallet's own ten statement values,
@@ -201,14 +217,78 @@ def spend_entry(
          "authorizer_private_key": authorizer_private_key,
          "beta": hex32(beta),
          "proof": proof,
-         # The openings of both inputs, dummy included. If another deposit
-         # changes the tree first, the notes must be proved again against a
-         # newer root, at the leaves they occupy, and nothing else keeps these
-         # secrets.
-         "inputs": [{"spend_key": hex32(i["sk"]), "rho": hex32(i["rho"]),
+         # The spending key and the openings of both inputs, dummy included.
+         # If another deposit changes the tree first, the notes must be proved
+         # again against a newer root, at the leaves they occupy, and nothing
+         # else keeps these secrets.
+         **spending_key(signer),
+         "inputs": [{"nk": hex32(i["nk"]), "rho": hex32(i["rho"]),
                      "value": str(i["value"]), "leaf": i["idx"]} for i in inputs]}
     e.update(extra)
     return e
+
+
+def assert_review_cases(t1, wt, ww, ins_t, domain, alice, bob, v_shield, v_fee, v_pub):
+    """Circuit-level attacks the witness generator must refuse. Each is signed by
+    the note's own key, so a device holding it would have to approve every one."""
+    # The old circuit accepted one real note in both inputs and relied only on
+    # the envelope's duplicate-key rule. V2 rejects the witness itself.
+    ins_same = [dict(ins_t[0]), dict(ins_t[0])]
+    outs_same = [(w.inner(bob.public_key, *w.new_note()), v_shield),
+                 (w.inner(bob.public_key, *w.new_note()), v_shield)]
+    _, auth_same = w.new_authorizer()
+    same = w.build_witness(
+        t1, ins_same, outs_same, domain, signer=alice, authorizer=auth_same,
+        public_amount=0, fee=0,
+    )
+    assert_unprovable(same, "same_note")
+
+    # Each attack below is signed again by the note's own key, so only the
+    # constraint it targets can refuse it, not a stale signature.
+    # A positive duplicate output was previously counted twice in conservation
+    # but inserted once. The new relation rejects it before approval.
+    duplicate_value = (v_shield - v_fee) // 2
+    if duplicate_value * 2 + v_fee == v_shield:
+        dup_inner = w.inner(bob.public_key, *w.new_note())
+        _, auth_dup = w.new_authorizer()
+        duplicate = dict(wt)
+        duplicate["out_inner"] = [str(dup_inner), str(dup_inner)]
+        duplicate["out_value"] = [str(duplicate_value), str(duplicate_value)]
+        duplicate["authorizer"] = str(auth_dup)
+        assert_unprovable(w.sign_witness(duplicate, alice), "duplicate_positive_output")
+
+    no_real = dict(wt)
+    no_real["in_value"] = ["0", "0"]
+    no_real["out_inner"] = ["1", "2"]
+    no_real["out_value"] = ["0", "0"]
+    no_real["public_amount"] = "0"
+    no_real["fee"] = "0"
+    assert_unprovable(w.sign_witness(no_real, alice), "zero_real_inputs")
+
+    wrong_sinks = dict(ww)
+    wrong_sinks["out_inner"] = ["2", "1"]
+    assert_unprovable(w.sign_witness(wrong_sinks, bob), "wrong_sink_positions")
+
+    zero_authorizer = dict(wt)
+    zero_authorizer["authorizer"] = "0"
+    assert_unprovable(w.sign_witness(zero_authorizer, alice), "zero_authorizer")
+
+    positive_sink = dict(wt)
+    positive_sink["out_inner"] = ["1", wt["out_inner"][1]]
+    assert_unprovable(w.sign_witness(positive_sink, alice), "positive_output_uses_sink")
+
+    missing_recipient = dict(ww)
+    missing_recipient["recipient"] = "0"
+    assert_unprovable(w.sign_witness(missing_recipient, bob), "withdrawal_without_recipient")
+
+    # Spend authorization: Alice's own key cannot spend Bob's note, and Bob's
+    # signature covers the fee, so moving a wei from the payout to the fee
+    # after he signed leaves a conserved spend nobody can prove.
+    stolen = dict(ww)
+    stolen.update(zip(("R8x", "R8y", "S"), map(str, alice.sign(w.auth_message(w.witness_statement(ww))))))
+    assert_unprovable(stolen, "signature_by_another_key")
+    refeed = dict(ww, public_amount=str(v_pub - 1), fee=str(v_fee + 1))
+    assert_unprovable(refeed, "fee_changed_after_signing")
 
 
 def main():
@@ -225,6 +305,7 @@ def main():
     payment_wei = ETH * 60 // 100
     fee_wei = ETH * 5 // 100
     output_path = None
+    ledger_account = None
     recipient = RECIPIENT
     for arg in sys.argv[1:]:
         if arg.startswith("--chain-id="):
@@ -248,6 +329,8 @@ def main():
             recipient = f"0x{w.address_scalar(recipient):040x}"
         elif arg.startswith("--output="):
             output_path = Path(arg.split("=", 1)[1]).expanduser().resolve()
+        elif arg.startswith("--ledger-account="):
+            ledger_account = int(arg.split("=", 1)[1], 0)
     # The fixed seed is public, so anyone could rebuild these notes and spend
     # them. Keep it, and the placeholder recipient, for the committed fixture's
     # test chain and pool.
@@ -263,27 +346,35 @@ def main():
     previous = refuse_overwrite(output_path)
     domain = w.domain_scalar(chain_id, pool_address, epoch)
 
-    # notes: Alice's deposit, Bob's payment target, Alice's change target
-    sk_a, rho_a = w.new_note()
-    sk_b, rho_b = w.new_note()
-    sk_a2, rho_a2 = w.new_note()
+    # spending keys, then notes: Alice's deposit, Bob's payment target, Alice's change target
+    if ledger_account is None:
+        alice = w.new_signer()
+    else:
+        from ledger_signer import RailgunLedgerSigner
+        alice = RailgunLedgerSigner.connect(ledger_account)
+        print(f"Alice's key is the Ledger's, account {ledger_account}: approve each spend on the device")
+    bob = w.new_signer()
+    nk_a, rho_a = w.new_note()
+    nk_b, rho_b = w.new_note()
+    nk_a2, rho_a2 = w.new_note()
     v_shield, v_bob, v_fee = shield_wei, payment_wei, fee_wei
     if not 0 < v_fee < v_bob < v_shield:
         raise SystemExit("value overrides require 0 < fee < payment < shield")
     v_change = v_shield - v_bob - v_fee
     if v_change <= v_fee:
         raise SystemExit("value overrides require change > fee so withdraw_seed can leave prior credit")
-    inner_a = w.inner(sk_a, rho_a)
-    cm_a = w.commitment(sk_a, rho_a, v_shield)
+    inner_a = w.inner(alice.public_key, nk_a, rho_a)
+    cm_a = w.commitment(alice.public_key, nk_a, rho_a, v_shield)
 
     # 1+2. Alice's join-split transfer: (A, dummy) -> (Bob 0.6, change 0.35), fee 0.05
     t1 = w.Tree()
     t1.append(cm_a)
-    ins_t = [{"sk": sk_a, "rho": rho_a, "value": v_shield, "idx": 0}, w.dummy_input()]
-    outs_t = [(w.inner(sk_b, rho_b), v_bob), (w.inner(sk_a2, rho_a2), v_change)]
+    ins_t = [{"nk": nk_a, "rho": rho_a, "value": v_shield, "idx": 0}, w.dummy_input()]
+    outs_t = [(w.inner(bob.public_key, nk_b, rho_b), v_bob),
+              (w.inner(alice.public_key, nk_a2, rho_a2), v_change)]
     auth_t_key, auth_t = w.new_authorizer()
     wt = w.build_witness(
-        t1, ins_t, outs_t, domain, authorizer=auth_t, public_amount=0, fee=v_fee,
+        t1, ins_t, outs_t, domain, signer=alice, authorizer=auth_t, public_amount=0, fee=v_fee,
     )
     pub_t, proof_t = prove(wt, "transfer")
 
@@ -291,77 +382,35 @@ def main():
     t2 = w.Tree()
     for cm in [cm_a, *w.output_commitments(outs_t)]:
         t2.append(cm)
-    cm_b = w.commitment(sk_b, rho_b, v_bob)
+    cm_b = w.commitment(bob.public_key, nk_b, rho_b, v_bob)
     assert t2.leaves[1] == cm_b, "Bob's note is leaf 1"
-    ins_w = [{"sk": sk_b, "rho": rho_b, "value": v_bob, "idx": 1}, w.dummy_input()]
+    ins_w = [{"nk": nk_b, "rho": rho_b, "value": v_bob, "idx": 1}, w.dummy_input()]
     outs_w = w.sink_outputs()
     v_pub = v_bob - v_fee
     auth_w_key, auth_w = w.new_authorizer()
     ww = w.build_witness(
-        t2, ins_w, outs_w, domain, authorizer=auth_w,
+        t2, ins_w, outs_w, domain, signer=bob, authorizer=auth_w,
         public_amount=v_pub, fee=v_fee, recipient=recipient,
     )
     pub_w, proof_w = prove(ww, "withdraw")
 
     # Alice's change at leaf 2, same post-transfer root: a seed exit that can
     # leave withdrawalCredit on the recipient without invalidating Bob's proof.
-    cm_change = w.commitment(sk_a2, rho_a2, v_change)
+    cm_change = w.commitment(alice.public_key, nk_a2, rho_a2, v_change)
     assert t2.leaves[2] == cm_change, "Alice's change is leaf 2"
-    ins_seed = [{"sk": sk_a2, "rho": rho_a2, "value": v_change, "idx": 2}, w.dummy_input()]
+    ins_seed = [{"nk": nk_a2, "rho": rho_a2, "value": v_change, "idx": 2}, w.dummy_input()]
     v_seed_pub = v_change - v_fee
     auth_s_key, auth_s = w.new_authorizer()
     ws = w.build_witness(
-        t2, ins_seed, w.sink_outputs(), domain, authorizer=auth_s,
+        t2, ins_seed, w.sink_outputs(), domain, signer=alice, authorizer=auth_s,
         public_amount=v_seed_pub, fee=v_fee, recipient=recipient,
     )
     pub_s, proof_s = prove(ws, "withdraw_seed")
 
-    # The old circuit accepted one real note in both inputs and relied only on
-    # the envelope's duplicate-key rule. V2 rejects the witness itself.
-    ins_same = [dict(ins_t[0]), dict(ins_t[0])]
-    outs_same = [(w.inner(*w.new_note()), v_shield), (w.inner(*w.new_note()), v_shield)]
-    _, auth_same = w.new_authorizer()
-    same = w.build_witness(
-        t1, ins_same, outs_same, domain, authorizer=auth_same,
-        public_amount=0, fee=0,
-    )
-    assert_unprovable(same, "same_note")
-
-    # A positive duplicate output was previously counted twice in conservation
-    # but inserted once. The new relation rejects it before approval.
-    duplicate_value = (v_shield - v_fee) // 2
-    if duplicate_value * 2 + v_fee == v_shield:
-        dup_inner = w.inner(*w.new_note())
-        _, auth_dup = w.new_authorizer()
-        duplicate = dict(wt)
-        duplicate["out_inner"] = [str(dup_inner), str(dup_inner)]
-        duplicate["out_value"] = [str(duplicate_value), str(duplicate_value)]
-        duplicate["authorizer"] = str(auth_dup)
-        assert_unprovable(duplicate, "duplicate_positive_output")
-
-    no_real = dict(wt)
-    no_real["in_value"] = ["0", "0"]
-    no_real["out_inner"] = ["1", "2"]
-    no_real["out_value"] = ["0", "0"]
-    no_real["public_amount"] = "0"
-    no_real["fee"] = "0"
-    assert_unprovable(no_real, "zero_real_inputs")
-
-    wrong_sinks = dict(ww)
-    wrong_sinks["out_inner"] = ["2", "1"]
-    assert_unprovable(wrong_sinks, "wrong_sink_positions")
-
-    zero_authorizer = dict(wt)
-    zero_authorizer["authorizer"] = "0"
-    assert_unprovable(zero_authorizer, "zero_authorizer")
-
-    positive_sink = dict(wt)
-    positive_sink["out_inner"] = ["1", wt["out_inner"][1]]
-    assert_unprovable(positive_sink, "positive_output_uses_sink")
-
-    missing_recipient = dict(ww)
-    missing_recipient["recipient"] = "0"
-    assert_unprovable(missing_recipient, "withdrawal_without_recipient")
+    # Attack witnesses are signed by Alice's key: with a device, each would need
+    # approval on it. They run with software keys, as in CI.
+    if isinstance(alice, w.SoftwareSigner):
+        assert_review_cases(t1, wt, ww, ins_t, domain, alice, bob, v_shield, v_fee, v_pub)
 
     fixture = {
         "chain_id": chain_id,
@@ -373,16 +422,16 @@ def main():
         "shield_value": str(v_shield),
         "recipient": recipient,
         "transfer": spend_entry(t1, domain, ins_t, outs_t, epoch,
-                                0, v_fee, 0, auth_t, auth_t_key, pub_t, proof_t,
+                                0, v_fee, 0, auth_t, auth_t_key, pub_t, proof_t, signer=alice,
                                 # Bob's opening is retained for the withdrawal vector.
                                 out_inner1=hex32(outs_t[0][0]),
                                 out_value1=str(outs_t[0][1])),
         "withdraw_seed": spend_entry(t2, domain, ins_seed, w.sink_outputs(), epoch,
                                      v_seed_pub, v_fee, w.address_scalar(recipient),
-                                     auth_s, auth_s_key, pub_s, proof_s),
+                                     auth_s, auth_s_key, pub_s, proof_s, signer=alice),
         "withdraw": spend_entry(t2, domain, ins_w, outs_w, epoch,
                                 v_pub, v_fee, w.address_scalar(recipient),
-                                auth_w, auth_w_key, pub_w, proof_w),
+                                auth_w, auth_w_key, pub_w, proof_w, signer=bob),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     write_private(output_path, json.dumps(fixture, indent=1), previous)
@@ -392,7 +441,11 @@ def main():
     print(f"  withdraw_seed publicAmount {v_seed_pub} fee {v_fee}")
     print(f"  withdraw  publicAmount {v_pub} fee {v_fee}")
     print(f"  domain   {fixture['domain']} (chain {chain_id}, pool {pool_address})")
-    print("  same-note witness rejected in-circuit (nf1 != nf2)")
+    if isinstance(alice, w.SoftwareSigner):
+        print("  same-note witness rejected in-circuit (nf1 != nf2)")
+        print("  another key's signature and a fee changed after signing rejected in-circuit")
+    else:
+        print("  attack witnesses not checked: they would need approval on the device")
 
 
 if __name__ == "__main__":

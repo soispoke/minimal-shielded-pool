@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Disclosure receipts: show which notes a spend consumed and created, without
-giving away the spending key.
+giving away the power to spend.
 
 A note's nullifier is Poseidon3(4, K, Poseidon2(cm, index)) with the nullifier
-key K = Poseidon2(D, spend_key). Given K and the note's position, anyone can
-recompute the nullifier and find the spend that published it, and the spend
-proof ties that nullifier to exactly this note. K cannot spend: a proof needs
-spend_key itself. Following notes from spend to spend traces funds from a
+key K = Poseidon2(D, nk), where nk is the note's nullifying key. Given K and the
+note's position, anyone can recompute the nullifier and find the spend that
+published it, and the spend proof ties that nullifier to exactly this note.
+Neither K nor nk can spend: a proof needs a signature by the note's spending
+key, which a hardware wallet keeps. Following notes from spend to spend traces funds from a
 public deposit to a withdrawal. A receipt proves these links and amounts, not
 who presents it or where the funds came from before the deposit.
 
@@ -112,7 +113,7 @@ def export(chain, chain_id, pool, fixture, only, from_block=0):
     """A receipt for the chosen notes a generator fixture opens: `only` is a set
     of commitments, or None for all. It reads the pool's LeafAppended and
     NoteSpent logs once and matches them locally, so the RPC does not learn
-    which notes are disclosed. spend_key and rho stay out, and only notes the
+    which notes are disclosed. nk and rho stay out, and only notes the
     fixture spends get a nullifier key: a payment's output may be someone
     else's note, whose later spend is theirs to disclose."""
     leaves, spent_in = {}, {}
@@ -128,12 +129,16 @@ def export(chain, chain_id, pool, fixture, only, from_block=0):
             continue
         # Inputs name their leaf, a dummy's nullifier uses leaf 0, and outputs
         # are found by commitment. One note can appear as an output and an input.
-        mentions = [(i, int(entry["epoch"]), i["leaf"] if i["leaf"] is not None else 0) for i in entry["inputs"]]
-        mentions += [(o, None, None) for o in entry.get("output_openings", [])]
-        for m, epoch, index in mentions:
-            sk, rho, value = int(m["spend_key"], 16), int(m["rho"], 16), int(m["value"])
-            note = notes.setdefault(w.commitment(sk, rho, value),
-                                    {"sk": sk, "inner": w.inner(sk, rho), "value": value, "places": set()})
+        # Both inputs belong to the spend's key; each output names its owner's.
+        spender = tuple(int(c, 16) for c in entry["spend_pub"])
+        mentions = [(i, spender, int(entry["epoch"]), i["leaf"] if i["leaf"] is not None else 0)
+                    for i in entry["inputs"]]
+        mentions += [(o, tuple(int(c, 16) for c in o["spend_pub"]), None, None)
+                     for o in entry.get("output_openings", [])]
+        for m, owner, epoch, index in mentions:
+            nk, rho, value = int(m["nk"], 16), int(m["rho"], 16), int(m["value"])
+            note = notes.setdefault(w.commitment(owner, nk, rho, value),
+                                    {"nk": nk, "inner": w.inner(owner, nk, rho), "value": value, "places": set()})
             if index is not None:
                 note["places"].add((epoch, index))
     out = []
@@ -148,7 +153,7 @@ def export(chain, chain_id, pool, fixture, only, from_block=0):
             places = [(e, i, found.get((e, i))) for e, i in n["places"]] if own else \
                 [(e, i, h) for (e, i), h in found.items()]
         for epoch, index, created in places:
-            key = p2(w.domain_scalar(chain_id, pool, epoch), n["sk"])
+            key = p2(w.domain_scalar(chain_id, pool, epoch), n["nk"])
             nf = nullifier(key, cm, index)
             spent = spent_in.get(nf) if own else None
             if own and (spent is None or (created is None and n["value"])) and chain.nonce_used(pool, nf):

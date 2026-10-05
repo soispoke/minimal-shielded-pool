@@ -11,12 +11,19 @@ It has no ERC-20 support, admin, governance or external paymaster.
 
 ## How it works
 
-A note commits to its owner, a random `rho` and its value:
+A note commits to its owner, a random `rho` and its value. The owner is a
+BabyJubjub spending key `A` and a nullifying key `nk`:
 
 ```text
-owner_pk = Poseidon3(1, spend_key, 0)
+owner_pk = Poseidon4(1, Ax, Ay, nk)
 cm       = Poseidon3(2, Poseidon2(owner_pk, rho), value)
 ```
+
+Only a signer holds `A`'s private key: a hardware wallet, or the software
+signer the fixture generators use. The wallet keeps `nk` and `rho`, which
+cannot spend. The proof checks `A`'s signature over the spend, so whoever
+generates the proof never holds the spending key. See
+[Spending keys](#spending-keys).
 
 `PoseidonN` is circomlib's Poseidon over BN254 with N inputs, not the separate
 Poseidon2 hash.
@@ -31,7 +38,8 @@ public signals instead, using the hybrid compression of
 polynomial at `alpha + beta`. The ten values stay public in the settlement
 data. The pool recomputes `alpha` and `gamma` from them and range-checks each
 value itself, since the verifier no longer sees them. The circuit derives each nullifier from its input note and checks that
-every positive input is in the tree, that value is conserved over 128-bit
+both inputs belong to one spending key whose signature covers the statement,
+that every positive input is in the tree, that value is conserved over 128-bit
 amounts, and that at least one input carries value. It also requires distinct
 nullifiers and outputs, a nonzero authorizer address, and a recipient exactly
 when `publicAmount` is positive. A zero-value output must use a fixed "sink"
@@ -42,7 +50,7 @@ that position, so two notes with the same commitment are spent independently and
 
 ```text
 D  = keccak256(domain_tag || chain_id || pool || epoch) mod r
-nf = Poseidon3(4, Poseidon2(D, spend_key), Poseidon2(cm, leaf_index))
+nf = Poseidon3(4, Poseidon2(D, nk), Poseidon2(cm, leaf_index))
 ```
 
 Here `domain_tag = keccak256("minimal-shielded-pool:occurrence-domain:v1")`,
@@ -128,6 +136,42 @@ a new epoch first, for shields and settlements alike. Sinks take no space, so a
 full tree never blocks a full withdrawal. Anyone may publish the pool's current or final
 epoch root to EIP-8272.
 
+## Spending keys
+
+A spend carries two signatures. The spending key signs the statement, the ten
+values the proof binds, as one field element: `M = Poseidon2(TAG_AUTH, beta)`,
+where `beta` is the statement's Poseidon hash and `TAG_AUTH =
+keccak256("minimal-shielded-pool:spend-auth:v1") mod r`. The circuit checks
+that signature against the key both inputs commit to, with circomlib's
+EdDSA-Poseidon verifier and on-curve checks it lacks. The signature and the key
+stay private. The one-time authorizer then signs the whole transaction, which
+the proof cannot cover because the transaction contains it.
+
+A hardware wallet therefore signs only `M`. The host keeps `nk`, `rho`, the
+Merkle paths and the authorizer, and generates the proof. A compromised host
+can read the user's notes and delay or withhold their spends, and with the
+authorizer it chooses what the statement leaves open: gas limits and prices
+within the signed fee, and the optional fourth frame. The notes spent, the
+outputs, the withdrawal and the fee are signed, so changing them takes a new
+signature: a signer that shows the spend lets the user refuse it, and a
+signature made before the compromise cannot be reused for another spend. The
+wallet verifies every signature it receives before proving.
+
+`wallet/ledger_signer.py` uses the RAILGUN Ledger app's `SIGN_HASH` as such a
+signer. That app signs blind: it shows `M`, not the spend, so malware on the
+host cannot take the key but can still get a spend of its choosing signed.
+Showing the spend needs a device app that recomputes the statement. Use an
+account index no RAILGUN wallet uses, so this pool's key is not also a RAILGUN
+spending key; that does not stop host malware, which can ask the app to sign
+under any account. The adapter has been tested against a simulated app only,
+not a device. `wallet/gen_smoke.py --ledger-account=N` puts Alice's key on the
+device.
+
+One signature covers both inputs, so a spend cannot combine notes of two
+spending keys. The key never appears on chain, so one key can own many notes;
+wallets should still give each note a fresh `nk`, because a disclosed
+nullifier key covers every note that shares its `nk`.
+
 ## Code
 
 ```
@@ -136,12 +180,14 @@ contracts/src/Groth16Verifier.sol
 contracts/src/ShieldedPoolLogic.sol
 contracts/src/PoseidonT3.sol
 contracts/src/PoseidonT4.sol
+reference/babyjubjub.py
 devnet/ShieldedPoolDispatcher.yul
 devnet/dispatcher.py
 devnet/pool_frametx.py
 wallet/wallet.py
 wallet/gen_smoke.py
 wallet/disclosure.py
+wallet/ledger_signer.py
 ```
 
 ## Disclosure receipts
@@ -149,9 +195,9 @@ wallet/disclosure.py
 `wallet/disclosure.py` lets a user show, after the fact, where funds in the
 pool came from and where they went, like Tornado Cash's compliance tool but
 without giving anyone the power to spend. For each note you spent, a receipt
-gives its nullifier key `K = Poseidon2(D, spend_key)`. With `K` and the
+gives its nullifier key `K = Poseidon2(D, nk)`. With `K` and the
 note's position, anyone can confirm on chain which spend used up the note,
-but `K` cannot spend anything. A receipt can follow notes from a public
+but neither `K` nor `nk` can spend anything. A receipt can follow notes from a public
 deposit through private transfers to a withdrawal, and fully explains a
 spend when both of its inputs are disclosed.
 
@@ -172,7 +218,7 @@ presents it or where the funds came from before the deposit. See
 
 ## Deployment
 
-This is pool profile `position-notes-v2`. It follows EIP-8141 at
+This is pool profile `signed-spends-v1`. It follows EIP-8141 at
 `7d1c8bfb94`, EIP-8250 at `f3079a09e8` and EIP-8272 at `824cbc0b0e`: an eight-field envelope
 with separate execution and state gas limits for each frame. Because the EIPs
 are drafts, each supported combination is a separate profile, and profiles are
@@ -180,23 +226,27 @@ not wire compatible. The format chain 8141 used before its relaunch is archived 
 under `devnet/vectors/2026-09-01-hegota-final-profile/`.
 
 Each profile needs its own deployment, because a deployed pool cannot be
-upgraded and a `position-notes-v1` pool rejects this profile's validation
-limits. `devnet/deploy_config.json` records this profile's testnet deployment
-on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`), which completed shield,
-transfer, withdrawal and claim calls on September 25, 2026. The earlier
-`position-notes-v1` pool (`0xac01…b100`, commit `c26b8e4`) stays on chain, and
-the CLI refuses to shield into or spend from it.
+upgraded. `signed-spends-v1` keeps `position-notes-v2`'s dispatcher, settlement
+logic and gas limits, but its notes, nullifiers and verifier are new, so a
+`position-notes-v2` pool rejects its proofs. It is not deployed yet.
+`devnet/deploy_config.json` still records the `position-notes-v2` testnet
+deployment on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`), which
+completed shield, transfer, withdrawal and claim calls on September 25, 2026.
+That pool and the earlier `position-notes-v1` pool (`0xac01…b100`, commit
+`c26b8e4`) stay on chain, and the CLI refuses to shield into or spend from
+either.
 
 Before shielding or spending, the CLI requires the config to name this profile
 and checks the pool itself: the RPC must be on the configured chain, the pool's
 code must be exactly what this profile's dispatcher deploys when linked to the
 logic and verifier the config records, and its `domain(uint64)` must match the
-profile's formula. The code check matters because both profiles share the
+profile's formula. The code check matters because the profiles share the
 domain formula. The linked verifier must also accept a reference proof and
-reject it with `gamma` changed. These checks catch a stale or mislabeled config,
-not a malicious deployer: they trust the config's logic and verifier, which the
-deployment script verified, and cannot see what a pool's constructor wrote to
-storage. Before depositing into a pool someone else deployed, check its
+reject it with `gamma` changed; that check is what refuses a
+`position-notes-v2` pool, whose dispatcher and logic this profile shares.
+These checks catch a stale or mislabeled config, not a malicious deployer:
+they trust the config's logic and verifier, which the deployment script
+verified, and cannot see what a pool's constructor wrote to storage. Before depositing into a pool someone else deployed, check its
 deployment transactions.
 
 A shield also refuses a fixture made for another chain, pool or epoch, or one
@@ -228,12 +278,14 @@ python3 wallet/test_occurrence.py
 python3 wallet/test_wallet_occurrence.py
 python3 wallet/test_generators.py
 python3 wallet/test_disclosure.py
+python3 wallet/test_ledger_signer.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
 python3 tooling/check_forge_config.py activation_manifest.testbed.json contracts
 python3 tooling/test_check_activation.py
 python3 wallet/wallet.py
 python3 reference/poseidon_bn254.py
+python3 reference/babyjubjub.py
 
 forge fmt --root contracts --check
 forge lint --root contracts --deny warnings
@@ -248,7 +300,8 @@ only to replace the test setup on purpose, then rebuild the activation manifest
 and proof fixtures. The activation gate checks that the proving key's A and B
 terms come from the committed R1CS and that the verifier holds the key's
 verification key; the rest of the key needs the phase-1 file (`--ptau`, see
-[SECURITY.md](SECURITY.md)).
+[SECURITY.md](SECURITY.md)). The manifest pins the hash of the local power-15
+phase-1 file the committed key was made from, which is not published.
 
 The native tests in [`devnet/native_occurrence/`](devnet/native_occurrence/README.md)
 run real proofs through the pinned ethrex VM. They cover duplicate notes,
@@ -257,7 +310,8 @@ other clients or FOCIL.
 
 A Lean formal verification of this pool at `8835be7` lives in
 [verified-shielded-pool](https://github.com/soispoke/verified-shielded-pool),
-with its own CI. It is checked out as `formal/` inside a pool checkout, which
+with its own CI. It predates this profile: its proofs cover the `spend_key`
+circuit, not the signature check. It is checked out as `formal/` inside a pool checkout, which
 git ignores here. CI's `formal-pins` job warns, without failing, when a change
 touches a file those proofs pin (`python3 tooling/check_formal_pins.py`).
 

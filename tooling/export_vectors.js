@@ -10,14 +10,15 @@
 // a constants mismatch inside circomlibjs itself would fail here, not later.
 //
 // Vector set: zero, unit, counter, and LCG-seeded
-// states for Poseidon(2), Poseidon(3) and Poseidon(10) (hybrid compression's
-// beta), plus the pool chain from seed 2026
-// (owner_pk, cm, the domain-separated nf, out_cm) and the depth-20
-// incremental-tree fixtures.
+// states for Poseidon(2), Poseidon(3), Poseidon(4) (owner_pk), Poseidon(5)
+// (the EdDSA challenge) and Poseidon(10) (hybrid compression's beta), plus
+// the pool chain from seed 2026 (owner_pk, cm, the domain-separated nf,
+// out_cm, the spend-authorization signature), circomlibjs EdDSA-Poseidon
+// signatures, and the depth-20 incremental-tree fixtures.
 
 const fs = require("fs");
 const path = require("path");
-const { buildPoseidonReference, buildPoseidon } = require("circomlibjs");
+const { buildPoseidonReference, buildPoseidon, buildEddsa } = require("circomlibjs");
 const constants = JSON.parse(fs.readFileSync(
   path.join(require.resolve("circomlibjs"), "..", "..", "src", "poseidon_constants.json")));
 
@@ -65,30 +66,62 @@ async function main() {
   }
   const vec2 = cases(2).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
   const vec3 = cases(3).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
+  // Poseidon(4): owner_pk over the spending key's coordinates and nk.
+  const vec4 = cases(4).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
+  // Poseidon(5): circomlib's EdDSA challenge h = H(R8x, R8y, Ax, Ay, M).
+  const vec5 = cases(5).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
   // Poseidon(10): hybrid compression's beta over the ten-value statement.
   const vec10 = cases(10).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
+
+  // ---- EdDSA-Poseidon, as circomlibjs signs it (and the RAILGUN and ZKNox
+  // Ledger apps reproduce): 8 signatures over LCG-seeded keys and messages,
+  // each checked by circomlibjs's own verifier before export ----
+  const eddsa = await buildEddsa();
+  const E = eddsa.F;
+  const toBytes32 = (x) => Buffer.from(x.toString(16).padStart(64, "0"), "hex");
+  function eddsaVector(prv, msg) {
+    const A = eddsa.prv2pub(prv);
+    const sig = eddsa.signPoseidon(prv, E.e(msg));
+    if (!eddsa.verifyPoseidon(E.e(msg), sig, A)) throw new Error("circomlibjs rejects its own signature");
+    return {
+      Ax: E.toObject(A[0]), Ay: E.toObject(A[1]), M: msg,
+      R8x: E.toObject(sig.R8[0]), R8y: E.toObject(sig.R8[1]), S: sig.S,
+    };
+  }
+  const elcg = new Lcg(8141);
+  const eddsaVectors = Array.from({ length: 8 }, () => {
+    const v = eddsaVector(toBytes32(elcg.nextFe(p)), elcg.nextFe(p));
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x.toString()]));
+  });
 
   // ---- the pool's tagged chain (mirrors circuits/spend.circom), seed 2026 ----
   // note chain: the value-carrying note and the join-split outputs
   const lcg = new Lcg(2026);
-  const [spend_key, rho, out_inner1, out_inner2] =
+  const [nk, rho, out_inner1, out_inner2] =
     Array.from({ length: 4 }, () => lcg.nextFe(p));
   const mask128 = (1n << 128n) - 1n;
   const value = lcg.nextFe(p) & mask128;
   const out_value1 = lcg.nextFe(p) & mask128;
   const out_value2 = lcg.nextFe(p) & mask128;
-  // drawn last so the earlier draws (and their committed vectors) are stable
+  // drawn after the note so the earlier draws (and their committed vectors) are stable
   const domain = lcg.nextFe(p); // stands in for keccak(TAG||chain||pool||epoch) mod p
+  const spend_seed = toBytes32(lcg.nextFe(p)); // the device's key; only A leaves it
+  const beta = lcg.nextFe(p); // stands in for Poseidon10 of a statement
   const index = 37n;
-  const owner_pk = p3(1n, spend_key, 0n);
+  const A = eddsa.prv2pub(spend_seed).map((c) => E.toObject(c));
+  const owner_pk = hash([1n, A[0], A[1], nk]);
   const inner = p2(owner_pk, rho);
   const cm = p3(2n, inner, value);
   // Position-bound nullifiers, mirroring circuits/spend.circom. Even with
   // the same secret and position, a zero-value dummy has a different identity.
-  const nf = p3(4n, p2(domain, spend_key), p2(cm, index));
-  const nf2 = p3(4n, p2(domain, spend_key), p2(p3(2n, inner, 0n), index));
+  const nf = p3(4n, p2(domain, nk), p2(cm, index));
+  const nf2 = p3(4n, p2(domain, nk), p2(p3(2n, inner, 0n), index));
   const out_cm1 = p3(2n, out_inner1, out_value1);
   const out_cm2 = p3(2n, out_inner2, out_value2);
+  // keccak256("minimal-shielded-pool:spend-auth:v1") mod p, as in the circuit.
+  const TAG_AUTH = 2767026351765469656051157340358831096390428282884753190435662753196438984477n;
+  const auth_message = p2(TAG_AUTH, beta);
+  const auth = eddsaVector(spend_seed, auth_message);
 
   // ---- depth-20 incremental-tree fixtures (mirrors ShieldedPool._append) ----
   const zeros = [0n];
@@ -112,10 +145,14 @@ async function main() {
   const vectors = {
     poseidon2: vec2,
     poseidon3: vec3,
+    poseidon4: vec4,
+    poseidon5: vec5,
     poseidon10: vec10,
+    eddsa_poseidon: eddsaVectors,
     pool_chain: Object.fromEntries(Object.entries({
-      spend_key, rho, value, out_inner1, out_inner2, out_value1, out_value2,
+      spend_Ax: A[0], spend_Ay: A[1], nk, rho, value, out_inner1, out_inner2, out_value1, out_value2,
       domain, index, owner_pk, inner, cm, nf, nf2, out_cm1, out_cm2,
+      beta, auth_message, auth_R8x: auth.R8x, auth_R8y: auth.R8y, auth_S: auth.S,
     }).map(([k, v]) => [k, v.toString()])),
     tree: {
       depth: DEPTH,
@@ -141,10 +178,13 @@ async function main() {
     prime: p.toString(),
     t3: { rounds_f: 8, rounds_p: 57, C: constants.C[1].map(toDec), M: constants.M[1].map((r) => r.map(toDec)) },
     t4: { rounds_f: 8, rounds_p: 56, C: constants.C[2].map(toDec), M: constants.M[2].map((r) => r.map(toDec)) },
+    t5: { rounds_f: 8, rounds_p: 60, C: constants.C[3].map(toDec), M: constants.M[3].map((r) => r.map(toDec)) },
+    t6: { rounds_f: 8, rounds_p: 60, C: constants.C[4].map(toDec), M: constants.M[4].map((r) => r.map(toDec)) },
     t11: { rounds_f: 8, rounds_p: 66, C: constants.C[9].map(toDec), M: constants.M[9].map((r) => r.map(toDec)) },
   }, null, 1));
 
-  console.log(`wrote ${vpath} (${vec2.length}+${vec3.length}+${vec10.length} vectors + pool chain + tree)`);
+  console.log(`wrote ${vpath} (${vec2.length}+${vec3.length}+${vec4.length}+${vec5.length}+${vec10.length} ` +
+              `vectors + ${eddsaVectors.length} signatures + pool chain + tree)`);
   console.log(`wrote ${cpath}`);
 }
 

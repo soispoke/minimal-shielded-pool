@@ -32,7 +32,7 @@ from pathlib import Path
 
 import wallet as w
 from poseidon_bn254 import hex32
-from gen_smoke import prove, refuse_overwrite, spend_entry, write_private, ETH, WORK
+from gen_smoke import prove, refuse_overwrite, spend_entry, spending_key, write_private, ETH, WORK
 
 DEFAULT_OUTPUT = WORK / "nonce_race_fixture.json"
 
@@ -129,13 +129,14 @@ def main():
     # Two deposits, into one tree. Root R is fixed after both inserts. Against a
     # live pool, seed the tree from its existing leaves first so the fixture's
     # root and proofs match the pool state after the two shields land.
-    sk_a, rho_a = w.new_note()
-    sk_c, rho_c = w.new_note()
+    alice, carol, bob, dave = (w.new_signer() for _ in range(4))
+    nk_a, rho_a = w.new_note()
+    nk_c, rho_c = w.new_note()
     v = note_wei
-    inner_a = w.inner(sk_a, rho_a)
-    inner_c = w.inner(sk_c, rho_c)
-    cm_a = w.commitment(sk_a, rho_a, v)
-    cm_c = w.commitment(sk_c, rho_c, v)
+    inner_a = w.inner(alice.public_key, nk_a, rho_a)
+    inner_c = w.inner(carol.public_key, nk_c, rho_c)
+    cm_a = w.commitment(alice.public_key, nk_a, rho_a, v)
+    cm_c = w.commitment(carol.public_key, nk_c, rho_c, v)
 
     tree = seeded_tree(rpc_url, pool, epoch) if rpc_url else w.Tree()
     # The root before each note lands, which shield checks against the pool.
@@ -149,25 +150,27 @@ def main():
     v_change = v - v_bob - v_fee
 
     # transfer A: spend note A (idx 0) against R
-    sk_bob, rho_bob = w.new_note()
-    sk_achg, rho_achg = w.new_note()
-    ins_a = [{"sk": sk_a, "rho": rho_a, "value": v, "idx": idx_a}, w.dummy_input()]
-    outs_a = [(w.inner(sk_bob, rho_bob), v_bob), (w.inner(sk_achg, rho_achg), v_change)]
+    nk_bob, rho_bob = w.new_note()
+    nk_achg, rho_achg = w.new_note()
+    ins_a = [{"nk": nk_a, "rho": rho_a, "value": v, "idx": idx_a}, w.dummy_input()]
+    outs_a = [(w.inner(bob.public_key, nk_bob, rho_bob), v_bob),
+              (w.inner(alice.public_key, nk_achg, rho_achg), v_change)]
     auth_a_key, auth_a = w.new_authorizer()
     wa = w.build_witness(
-        tree, ins_a, outs_a, domain, authorizer=auth_a,
+        tree, ins_a, outs_a, domain, signer=alice, authorizer=auth_a,
         public_amount=0, fee=v_fee,
     )
     pub_a, proof_a = prove(wa, "race_a")
 
     # transfer C: spend note C (idx 1) against the SAME R
-    sk_dave, rho_dave = w.new_note()
-    sk_cchg, rho_cchg = w.new_note()
-    ins_c = [{"sk": sk_c, "rho": rho_c, "value": v, "idx": idx_c}, w.dummy_input()]
-    outs_c = [(w.inner(sk_dave, rho_dave), v_bob), (w.inner(sk_cchg, rho_cchg), v_change)]
+    nk_dave, rho_dave = w.new_note()
+    nk_cchg, rho_cchg = w.new_note()
+    ins_c = [{"nk": nk_c, "rho": rho_c, "value": v, "idx": idx_c}, w.dummy_input()]
+    outs_c = [(w.inner(dave.public_key, nk_dave, rho_dave), v_bob),
+              (w.inner(carol.public_key, nk_cchg, rho_cchg), v_change)]
     auth_c_key, auth_c = w.new_authorizer()
     wc = w.build_witness(
-        tree, ins_c, outs_c, domain, authorizer=auth_c,
+        tree, ins_c, outs_c, domain, signer=carol, authorizer=auth_c,
         public_amount=0, fee=v_fee,
     )
     pub_c, proof_c = prove(wc, "race_c")
@@ -175,16 +178,17 @@ def main():
     # No later spend here records the outputs, so their openings go with the
     # transfer that creates them.
     def openings(*notes):
-        return [{"spend_key": hex32(sk), "rho": hex32(rho), "value": str(v)} for sk, rho, v in notes]
+        return [{**spending_key(owner), "nk": hex32(nk), "rho": hex32(rho), "value": str(v)}
+                for owner, nk, rho, v in notes]
     ea = spend_entry(
         tree, domain, ins_a, outs_a, epoch, 0, v_fee, 0,
-        auth_a, auth_a_key, pub_a, proof_a,
-        output_openings=openings((sk_bob, rho_bob, v_bob), (sk_achg, rho_achg, v_change)),
+        auth_a, auth_a_key, pub_a, proof_a, signer=alice,
+        output_openings=openings((bob, nk_bob, rho_bob, v_bob), (alice, nk_achg, rho_achg, v_change)),
     )
     ec = spend_entry(
         tree, domain, ins_c, outs_c, epoch, 0, v_fee, 0,
-        auth_c, auth_c_key, pub_c, proof_c,
-        output_openings=openings((sk_dave, rho_dave, v_bob), (sk_cchg, rho_cchg, v_change)),
+        auth_c, auth_c_key, pub_c, proof_c, signer=carol,
+        output_openings=openings((dave, nk_dave, rho_dave, v_bob), (carol, nk_cchg, rho_cchg, v_change)),
     )
 
     nfa = {ea["nf1"], ea["nf2"]}

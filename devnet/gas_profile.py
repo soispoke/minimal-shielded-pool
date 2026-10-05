@@ -16,10 +16,13 @@ verify budget.
 # 2,400 and 8,850 gas of headroom, so the declared validation budget is 235,800.
 RECENT_ROOT_FRAME_GAS = 8_000
 RECENT_ROOT_TUPLE_BYTES = 72
-POOL_PROFILE = "position-notes-v2"
+# Notes commit to a BabyJubjub spending key whose signature the circuit checks, so the
+# prover never holds the key. Frames, dispatcher and gas are position-notes-v2's; the
+# circuit, proving key and verifier are new.
+POOL_PROFILE = "signed-spends-v1"
 # The last deployed profile. The deployment record keeps naming it until this profile is
 # deployed, and the CLI refuses to spend against it.
-PREVIOUS_POOL_PROFILE = "position-notes-v1"
+PREVIOUS_POOL_PROFILE = "position-notes-v2"
 VERIFY_FRAME_GAS = 225_000
 # Native ethrex 247e2dd2 spends at 262,143 and 524,287 leaves verify and
 # approve, then settlement OOGs with no outputs at 1.4M. The signed SENDER

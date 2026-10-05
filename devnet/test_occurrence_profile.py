@@ -27,8 +27,8 @@ def check_profile_labels():
     runs = 0
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.json"
-        for profile in (PREVIOUS_POOL_PROFILE, "recipient-pull-v1", "eip8272-canonical-frame",
-                        None, ABSENT):
+        for profile in (PREVIOUS_POOL_PROFILE, "position-notes-v1", "recipient-pull-v1",
+                        "eip8272-canonical-frame", None, ABSENT):
             cfg = dict(original, profile=profile)
             if profile is ABSENT:
                 del cfg["profile"]
@@ -107,19 +107,22 @@ def fake_node(chain_id, pool_code, domain, verifier="committed"):
 
 
 def recorded_pool():
-    """The recorded chain 8141 pool, and the stand-in code of the previous profile's
-    dispatcher there: same logic, verifier and domain, different dispatcher code."""
+    """The recorded chain 8141 pool, and the stand-in code of another profile's
+    dispatcher there: same logic, verifier and domain, different dispatcher code.
+    The recorded pool itself is the previous profile's, whose dispatcher and logic
+    this profile keeps; only its verifier, for the previous proving key, differs."""
     cfg = json.loads((ROOT / "devnet/deploy_config.json").read_text())
     initcode = (ROOT / "devnet/build/shielded_pool_dispatcher_init.hex").read_text().strip()
     logic, verifier = int(cfg["logic"], 16), int(cfg["verifier"], 16)
-    previous = initcode[:-2] + f"{int(initcode[-2:], 16) ^ 1:02x}"
-    return cfg, initcode, logic, verifier, deployed(linked(previous, logic, verifier))
+    other = initcode[:-2] + f"{int(initcode[-2:], 16) ^ 1:02x}"
+    return cfg, initcode, logic, verifier, deployed(linked(other, logic, verifier))
 
 
 def check_deployed_pool_gate():
-    """The gate compares the deployed code, so the previous profile's pool is refused
-    although its domain matches."""
-    cfg, initcode, logic, verifier, previous_code = recorded_pool()
+    """The gate compares the deployed code and tries the verifier, so another
+    profile's pool is refused although its domain matches, and so is the previous
+    profile's, whose code matches but whose verifier rejects these proofs."""
+    cfg, initcode, logic, verifier, other_code = recorded_pool()
     chain_id, pool = cfg["chainId"], int(cfg["pool"], 16)
     this_code = deployed(linked(initcode, logic, verifier))
     good = "0x" + builder.expected_domain(chain_id, pool).to_bytes(32, "big").hex()
@@ -127,7 +130,7 @@ def check_deployed_pool_gate():
     not_dispatcher = f"is not the {POOL_PROFILE} dispatcher"
     not_verifier = f"does not verify {POOL_PROFILE} proofs"
     cases = {
-        "previous profile's dispatcher with a matching domain": (previous_code, good, not_dispatcher),
+        "another profile's dispatcher with a matching domain": (other_code, good, not_dispatcher),
         "this dispatcher linked to other logic": (
             deployed(linked(initcode, logic ^ 1, verifier)), good, not_dispatcher),
         "this dispatcher linked to another verifier": (
@@ -140,7 +143,7 @@ def check_deployed_pool_gate():
         "domain from another epoch": (this_code, wrong, "domain(0) does not match"),
         "this dispatcher linked to the previous ten-input verifier": (
             this_code, good, not_verifier, "previous-interface"),
-        "this dispatcher linked to a verifier for another proving key": (
+        "the previous profile's pool, linked to its own proving key's verifier": (
             this_code, good, not_verifier, "other-key"),
         "this dispatcher linked to a verifier that accepts any proof": (
             this_code, good, not_verifier, "accepts-any"),
@@ -171,14 +174,15 @@ def check_deployed_pool_gate():
 
 def check_cli_runs_deployed_gate():
     """shield, transfer and withdraw refuse the previous profile's pool, relabeled as
-    this profile, before anything is signed or sent."""
-    cfg, _, _, _, previous_code = recorded_pool()
+    this profile, before anything is signed or sent: its code is this dispatcher's,
+    but its verifier rejects this profile's reference proof."""
+    cfg, initcode, logic, verifier, _ = recorded_pool()
     pool = int(cfg["pool"], 16)
     good = "0x" + builder.expected_domain(cfg["chainId"], pool).to_bytes(32, "big").hex()
     tmp = tempfile.TemporaryDirectory()
     cfg_path = Path(tmp.name) / "config.json"
     cfg_path.write_text(json.dumps(dict(cfg, profile=POOL_PROFILE)))
-    rpc = fake_node(cfg["chainId"], previous_code, good)
+    rpc = fake_node(cfg["chainId"], deployed(linked(initcode, logic, verifier)), good, "other-key")
 
     for operation in ("shield", "transfer", "withdraw"):
         argv = ["pool_frametx.py", "http://node", str(cfg_path),
@@ -188,7 +192,7 @@ def check_cli_runs_deployed_gate():
             try:
                 builder.main()
             except SystemExit as error:
-                assert f"is not the {POOL_PROFILE} dispatcher" in str(error), (operation, error)
+                assert f"does not verify {POOL_PROFILE} proofs" in str(error), (operation, error)
             else:
                 raise AssertionError(f"{operation} ran without the deployed-pool check")
 
@@ -268,15 +272,16 @@ def check_shield_binds_fixture():
     return len(refused) + 2
 
 def main():
-    assert POOL_PROFILE == "position-notes-v2"
+    assert POOL_PROFILE == "signed-spends-v1"
     runs = check_profile_labels()
     check_recorded_deployment()
     check_deployed_pool_gate()
     check_cli_runs_deployed_gate()
     shield_cases = check_shield_binds_fixture()
     print(f"PASS: other, null and missing profile labels rejected before RPC in {runs} CLI runs; "
-          "recorded deployment matches the domain formula; the previous profile's dispatcher, "
-          "other logic or verifier, a verifier that does not verify this profile's proofs, "
+          "recorded deployment matches the domain formula; another profile's dispatcher, "
+          "other logic or verifier, the previous profile's verifier and any other that does not "
+          "verify this profile's proofs, "
           "codeless, wrong-domain and wrong-chain pools refused; "
           "shield, transfer and withdraw refuse a relabeled previous-profile pool before sending; "
           f"shield refuses {shield_cases} fixtures that cannot spend the note it would fund "

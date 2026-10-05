@@ -13,7 +13,7 @@
 #
 # Outputs (build/ is gitignored, but these three generated artifacts are tracked):
 #   build/spend.r1cs, build/spend_js/spend.wasm   circuit
-#   build/spend_final.zkey                        proving key (~8 MB)
+#   build/spend_final.zkey                        proving key (~13 MB)
 #   ../contracts/src/Groth16Verifier.sol          committed, snarkjs-generated
 #   ../contracts/vectors/spend_vkey.json          committed verification key
 #
@@ -35,11 +35,13 @@ if [ -n "${PTAU:-}" ]; then
   echo "==> using external powers of tau: $PTAU"
   cp "$PTAU" "$BUILD/pot_final.ptau"
 else
-  echo "==> TESTBED phase 1: local powers of tau (power 14)"
-  npx snarkjs powersoftau new bn128 14 "$BUILD/pot14_0.ptau" -v >/dev/null
-  npx snarkjs powersoftau contribute "$BUILD/pot14_0.ptau" "$BUILD/pot14_1.ptau" \
+  # Power 15 (32,768 constraints) covers the 19,330-constraint circuit; the
+  # in-circuit signature check took it past power 14's 16,384.
+  echo "==> TESTBED phase 1: local powers of tau (power 15)"
+  npx snarkjs powersoftau new bn128 15 "$BUILD/pot15_0.ptau" -v >/dev/null
+  npx snarkjs powersoftau contribute "$BUILD/pot15_0.ptau" "$BUILD/pot15_1.ptau" \
     --name="testbed" -e="$(head -c 64 /dev/urandom | base64)" >/dev/null
-  npx snarkjs powersoftau prepare phase2 "$BUILD/pot14_1.ptau" "$BUILD/pot_final.ptau" -v >/dev/null
+  npx snarkjs powersoftau prepare phase2 "$BUILD/pot15_1.ptau" "$BUILD/pot_final.ptau" -v >/dev/null
 fi
 
 echo "==> phase 2: circuit-specific zkey"

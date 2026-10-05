@@ -74,7 +74,9 @@ def story():
     D = w.domain_scalar(CHAIN, f"0x{POOL:040x}", 0)
     notes = {k: w.new_note() for k in ("a", "b", "c", "d1", "d2", "d3", "e")}
     values = {"a": ETH, "b": 6 * ETH // 10, "c": 35 * ETH // 100, "d1": 0, "d2": 0, "d3": 0, "e": 5 * ETH}
-    cm = {k: w.commitment(*notes[k], values[k]) for k in notes}
+    alice, bob = w.new_signer().public_key, w.new_signer().public_key
+    owner = {k: bob if k in ("b", "d3") else alice for k in notes}
+    cm = {k: w.commitment(owner[k], *notes[k], values[k]) for k in notes}
     nf = {k: w.nullifier(D, notes[k][0], cm[k], i)
           for k, i in (("a", 0), ("d1", 0), ("c", 2), ("d2", 0), ("b", 1), ("d3", 0))}
     sinks = w.sink_commitments()
@@ -94,11 +96,13 @@ def story():
                                          [log(d.NOTE_SPENT, nf["b"]), log(d.NOTE_SPENT, nf["d3"])])])
     chain.add("0xdep3", ALICE, [frame([leaf(cm["a"], 0, 3)])])
     chain.add("0xdep_epoch1", ALICE, [frame([leaf(cm["a"], 1, 0)])])
-    op = lambda k, leaf_=None: {"spend_key": hex32(notes[k][0]), "rho": hex32(notes[k][1]),  # noqa: E731
-                                "value": str(values[k]), "leaf": leaf_}
-    # Like the repository's generators, Alice's fixture also holds Bob's key.
-    fixture = {"transfer": {"epoch": 0, "inputs": [op("a", 0), op("d1")], "output_openings": [op("b"), op("c")]},
-               "withdraw": {"epoch": 0, "inputs": [op("c", 2), op("d2")]}}
+    pub = lambda key: [hex32(c) for c in key]  # noqa: E731
+    op = lambda k, leaf_=None: {"spend_pub": pub(owner[k]), "nk": hex32(notes[k][0]),  # noqa: E731
+                                "rho": hex32(notes[k][1]), "value": str(values[k]), "leaf": leaf_}
+    # Like the repository's generators, Alice's fixture also opens Bob's note.
+    fixture = {"transfer": {"epoch": 0, "spend_pub": pub(alice), "inputs": [op("a", 0), op("d1")],
+                            "output_openings": [op("b"), op("c")]},
+               "withdraw": {"epoch": 0, "spend_pub": pub(alice), "inputs": [op("c", 2), op("d2")]}}
     return chain, fixture, notes, cm, op
 
 
@@ -217,7 +221,8 @@ def main():
         raise AssertionError("an export missed a spend the chain consumed")
 
     # A deposit made from a spend's fourth frame is not one of its outputs.
-    tail = export(chain, {"x": {"epoch": 0, "inputs": [], "output_openings": [op("e")]}})
+    tail = export(chain, {"x": {"epoch": 0, "spend_pub": op("e")["spend_pub"], "inputs": [],
+                                "output_openings": [op("e")]}})
     assert verify(chain, tail)["notes"][0]["origin"] == "deposit made from 0xwithdraw's fourth frame"
     checked += 1
 
@@ -228,7 +233,8 @@ def main():
     # An input names its leaf and epoch; a note known only by commitment
     # covers each leaf it occupies, without a nullifier key.
     assert [(n["epoch"], n["index"]) for n in deposit_only["notes"]] == [(0, 0)]
-    anywhere = export(chain, {"x": {"epoch": 0, "inputs": [], "output_openings": [op("a")]}})
+    anywhere = export(chain, {"x": {"epoch": 0, "spend_pub": op("a")["spend_pub"], "inputs": [],
+                                    "output_openings": [op("a")]}})
     assert sorted((n["epoch"], n["index"], "nullifierKey" in n) for n in anywhere["notes"]) == \
         [(0, 0, False), (0, 3, False), (1, 0, False)]
     checked += 1

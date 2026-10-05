@@ -1,13 +1,18 @@
 """Wallet and indexer for the BN254 join-split shielded pool.
 
 Value-carrying notes: cm = Poseidon(TAG_LEAF, inner, value) with
-inner = Poseidon2(owner_pk, rho). A recipient reveals only `inner` (never the
+inner = Poseidon2(owner_pk, rho) and owner_pk = Poseidon(TAG_PK, Ax, Ay, nk).
+A = (Ax, Ay) is a BabyJubjub spending key whose private half only a signer
+holds, such as a hardware wallet; nk, the note's nullifying key, and rho stay
+with the wallet and cannot spend. A recipient reveals only `inner` (never the
 secrets); the payer chooses the value, and `shield` hashes msg.value into the
 commitment on-chain, so a deposit's value is what was actually deposited.
 
-A spend consumes two inputs (a zero-value dummy stands in when only one real
-note is spent) and creates two outputs. `build_witness` returns the circom
-input map that ../tooling proves with snarkjs against build/spend_final.zkey.
+A spend consumes two inputs owned by one spending key (a zero-value dummy
+stands in when only one real note is spent) and creates two outputs.
+`build_witness` asks the signer to sign the statement, checks the signature,
+and returns the circom input map that ../tooling proves with snarkjs against
+build/spend_final.zkey. The prover never sees the spending key.
 """
 import random
 import secrets
@@ -17,7 +22,8 @@ from pathlib import Path
 from eth_hash.auto import keccak
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "reference"))
-from poseidon_bn254 import P, p2, poseidon, tagged, TAG_PK, TAG_LEAF  # noqa: E402
+import babyjubjub as bjj  # noqa: E402
+from poseidon_bn254 import P, TAG_AUTH, p2, poseidon, tagged, TAG_PK, TAG_LEAF  # noqa: E402
 
 DEPTH = 20
 MAX_VALUE = 1 << 128
@@ -45,17 +51,18 @@ def rand_fe():
 
 # ---- note cryptography (mirrors ../circuits/spend.circom) ----
 
-def owner_pk(spend_key):
-    return tagged(TAG_PK, spend_key, 0)
+def owner_pk(pub, nk):
+    """The note owner: the spending key's public half and the note's nullifying key."""
+    return poseidon([TAG_PK, pub[0], pub[1], nk])
 
 
-def inner(spend_key, rho):
+def inner(pub, nk, rho):
     """What a recipient reveals to be paid: hides owner_pk and rho."""
-    return p2(owner_pk(spend_key), rho)
+    return p2(owner_pk(pub, nk), rho)
 
 
-def commitment(spend_key, rho, value):
-    return tagged(TAG_LEAF, inner(spend_key, rho), value)
+def commitment(pub, nk, rho, value):
+    return tagged(TAG_LEAF, inner(pub, nk, rho), value)
 
 
 def domain_scalar(chain_id, pool_address, epoch=0):
@@ -71,15 +78,36 @@ def domain_scalar(chain_id, pool_address, epoch=0):
                                  + epoch.to_bytes(32, "big")), "big") % P
 
 
-def nullifier(domain, spend_key, cm, index):
+def nullifier(domain, nk, cm, index):
     if not 0 <= index < 1 << DEPTH:
         raise ValueError("note index outside the depth-20 tree")
-    return tagged(TAG_OCCURRENCE_NULL, p2(domain, spend_key), p2(cm, index))
+    return tagged(TAG_OCCURRENCE_NULL, p2(domain, nk), p2(cm, index))
 
 
 def new_note():
-    """Fresh (spend_key, rho); the wallet keeps both secret."""
+    """Fresh (nk, rho); the wallet keeps both secret. A fresh nk per note keeps
+    one disclosed nullifier key from revealing the owner's other spends."""
     return rand_fe(), rand_fe()
+
+
+class SoftwareSigner:
+    """A spending key held in this process: the stand-in for a hardware wallet
+    in fixtures and tests. A hardware signer offers the same two members, the
+    public key and a signature over one field element."""
+
+    def __init__(self, secret):
+        self.secret = secret
+        self.public_key = bjj.public_key(secret)
+
+    def sign(self, message):
+        return bjj.sign(self.secret, message)
+
+
+def new_signer():
+    """A fresh software spending key."""
+    if _RNG is None:
+        return SoftwareSigner(secrets.randbelow(bjj.L - 1) + 1)
+    return SoftwareSigner(_RNG.randrange(1, bjj.L))
 
 
 def new_authorizer():
@@ -97,9 +125,10 @@ def new_authorizer():
 def dummy_input():
     """A zero-value dummy input: fabricated secrets, never in the tree. Its
     nullifier derives from its own fabricated cm, so it cannot collide with a
-    real note's, and it contributes zero to conservation."""
-    sk, rho = new_note()
-    return {"sk": sk, "rho": rho, "value": 0, "idx": None}
+    real note's, and it contributes zero to conservation. It is owned by the
+    spend's key like the real input, since one signature covers both."""
+    nk, rho = new_note()
+    return {"nk": nk, "rho": rho, "value": 0, "idx": None}
 
 
 # ---- the tree / indexer ----
@@ -166,15 +195,25 @@ def sink_commitments():
     return [tagged(TAG_LEAF, SINK_INNERS[i], 0) for i in range(2)]
 
 
+def opens(tree, cm, idx):
+    """Whether cm sits at leaf idx of the tree, by its authentication path."""
+    siblings, bits = tree.auth_path(idx)
+    node = cm
+    for sibling, bit in zip(siblings, bits):
+        node = p2(sibling, node) if bit else p2(node, sibling)
+    return node == tree.root()
+
+
 def build_witness(
-    tree, inputs, outputs, domain, *, authorizer, public_amount=0, fee=0,
+    tree, inputs, outputs, domain, *, signer, authorizer, public_amount=0, fee=0,
     recipient=None,
 ):
     """A join-split witness against the current tree, as the circom input map.
 
-    inputs: exactly two dicts {sk, rho, value, idx} (idx None for a dummy,
-            which must have value 0). Use dummy_input() to pad.
+    inputs: exactly two dicts {nk, rho, value, idx} owned by signer's key (idx
+            None for a dummy, which must have value 0). Use dummy_input() to pad.
     outputs: exactly two (inner, value) pairs.
+    signer: holds the spending key; signs the statement (see sign_witness).
     Values must conserve: sum(in) == sum(out) + public_amount + fee.
     """
     assert len(inputs) == 2 and len(outputs) == 2
@@ -196,7 +235,11 @@ def build_witness(
         "output commitments must be distinct"
 
     recipient_value = address_scalar(recipient) if recipient is not None else 0
-    nf1, nf2 = input_nullifiers(domain, inputs)
+    pub = signer.public_key
+    for i in inputs:
+        assert i["idx"] is None or opens(tree, commitment(pub, i["nk"], i["rho"], i["value"]), i["idx"]), \
+            f"leaf {i['idx']} is not this opening under the signer's key"
+    nf1, nf2 = input_nullifiers(domain, pub, inputs)
     out_cm1, out_cm2 = output_commitments(outputs)
     alpha = compression_alpha(statement(nf1, nf2, out_cm1, out_cm2, tree.root(), domain,
                                         public_amount, fee, recipient_value, authorizer))
@@ -209,11 +252,13 @@ def build_witness(
             s, b = tree.auth_path(i["idx"])
             sibs.append(s)
             bits.append(b)
-    return {
+    return sign_witness({
         "alpha": str(alpha),
         "root": str(tree.root()),
         "domain": str(domain),
-        "in_spend_key": [str(i["sk"]) for i in inputs],
+        "Ax": str(pub[0]),
+        "Ay": str(pub[1]),
+        "in_nk": [str(i["nk"]) for i in inputs],
         "in_rho": [str(i["rho"]) for i in inputs],
         "in_value": [str(i["value"]) for i in inputs],
         "in_siblings": [[str(x) for x in s] for s in sibs],
@@ -224,7 +269,42 @@ def build_witness(
         "fee": str(fee),
         "recipient": str(recipient_value),
         "authorizer": str(authorizer),
-    }
+    }, signer)
+
+
+def witness_statement(witness):
+    """The ten statement values the circuit computes from a witness map,
+    whatever its path bits: what a signature over the witness must cover."""
+    def field(key, k=None):
+        return int(witness[key] if k is None else witness[key][k]) % P
+
+    pub, domain = (field("Ax"), field("Ay")), field("domain")
+    nfs = []
+    for k in range(2):
+        cm = commitment(pub, field("in_nk", k), field("in_rho", k), field("in_value", k))
+        index = sum(int(b) << i for i, b in enumerate(witness["in_bits"][k])) % P
+        nfs.append(tagged(TAG_OCCURRENCE_NULL, p2(domain, field("in_nk", k)), p2(cm, index)))
+    outs = output_commitments([(field("out_inner", k), field("out_value", k)) for k in range(2)])
+    return statement(*nfs, *outs, field("root"), domain, field("public_amount"), field("fee"),
+                     field("recipient"), field("authorizer"))
+
+
+def auth_message(stmt):
+    """The field element the spending key signs: Poseidon2(TAG_AUTH, beta)."""
+    return p2(TAG_AUTH, compression_beta(stmt))
+
+
+def sign_witness(witness, signer):
+    """The witness with the spending key's signature over its statement. The
+    signature is checked here before proving: a signer, a hardware wallet
+    included, is a source of input to validate, not an authority."""
+    message = auth_message(witness_statement(witness))
+    signature = signer.sign(message)
+    pub = (int(witness["Ax"]), int(witness["Ay"]))
+    if not bjj.verify(pub, message, signature):
+        raise ValueError("the signer's signature does not verify for this spend's key and statement")
+    r8x, r8y, s = signature
+    return dict(witness, R8x=str(r8x), R8y=str(r8y), S=str(s))
 
 
 def statement(nf1, nf2, out_cm1, out_cm2, root, domain, public_amount, fee,
@@ -255,9 +335,9 @@ def fingerprint(sigma, stmt):
     return acc
 
 
-def input_nullifiers(domain, inputs):
-    """The two nullifiers a witness's inputs expose, in order."""
-    return [nullifier(domain, i["sk"], commitment(i["sk"], i["rho"], i["value"]),
+def input_nullifiers(domain, pub, inputs):
+    """The two nullifiers a witness's inputs, owned by pub, expose, in order."""
+    return [nullifier(domain, i["nk"], commitment(pub, i["nk"], i["rho"], i["value"]),
                       i["idx"] if i["idx"] is not None else 0) for i in inputs]
 
 
@@ -278,8 +358,8 @@ def _selfcheck():
     t.append(int(fx["cm1"]))
     assert t.root() == int(fx["root_after_cm0_cm1"]), "root after cm0,cm1 mismatch"
 
-    sk, rho = new_note()
-    cm = commitment(sk, rho, 10**18)
+    nk, rho = new_note()
+    cm = commitment(new_signer().public_key, nk, rho, 10**18)
     t2 = Tree()
     i = t2.append(cm)
     sibs, bits = t2.auth_path(i)

@@ -112,7 +112,8 @@ def main():
         fixture = json.loads(race_out.read_text())
         for name in ("transfer", "transfer_c"):
             entry = fixture[name]
-            cms = [w.commitment(int(o["spend_key"], 16), int(o["rho"], 16), int(o["value"]))
+            cms = [w.commitment(tuple(int(c, 16) for c in o["spend_pub"]), int(o["nk"], 16),
+                                int(o["rho"], 16), int(o["value"]))
                    for o in entry["output_openings"]]
             assert cms == [int(entry["out_cm1"], 16), int(entry["out_cm2"], 16)], name
         tree = w.Tree()
