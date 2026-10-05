@@ -63,8 +63,9 @@ second spend of either note. A spend has three frames and an optional fourth:
 2. `VERIFY(pool, proof)`: the pool checks the proof, binds it to that tuple,
    and checks the frame layout and the settlement frame's gas limits. It then
    approves execution and payment.
-3. `SENDER(pool, settle(Spend))`: settlement inserts the outputs and records
-   any withdrawal as a credit for `recipient`. It never publishes a root or
+3. `SENDER(pool, settle(Spend) || notes)`: settlement inserts the outputs,
+   records any withdrawal as a credit for `recipient` and emits the notes (see
+   [Note delivery](#note-delivery)). It never publishes a root or
    calls the recipient, and the pool's `VERIFY` rejects anything settlement
    would refuse. Its gas limits must cover the worst tree shape, because running
    out after approval burns the notes. The pinned limits come from
@@ -92,8 +93,10 @@ stands out.
 |---|---:|---:|---:|
 | Recent root | 8,000 default (uses 5,579) | 0 pinned | 72 bytes |
 | Proof | 225,000 default (uses about 210,000) | 195,840 default | 288 bytes |
-| Settlement | 2,000,000 pinned | 550,000 pinned | 388 bytes |
+| Settlement | 2,000,000 pinned | 550,000 pinned | 484 or 1,572 bytes |
 
+The settlement frame's data is the 388-byte `settle(Spend)` call followed by
+96 note bytes, or 1,184 on a sender's first payment to a public address.
 The proof frame's data is the 256-byte proof followed by `beta`. It needs a
 limit of about 216,000, although it uses about 210,000, because each nested
 call keeps back 1/64 of its gas (EIP-150). Below
@@ -128,6 +131,41 @@ a new epoch first, for shields and settlements alike. Sinks take no space, so a
 full tree never blocks a full withdrawal. Anyone may publish the pool's current or final
 epoch root to EIP-8272.
 
+## Note delivery
+
+A recipient needs each note's amount and `rho` to spend it. Notes carry them on
+chain, encrypted under a 32-byte secret `K` that the sender and recipient share,
+so a payment can go to a reusable address and the recipient can recover
+everything from its seed. `wallet/notes.py` implements the format:
+
+```text
+note = tag (16) || ChaCha20-Poly1305(value) (16 + 16)
+tag  = PRF(K, "tag", i)[:16]    rho = PRF(K, "rho", i) mod r
+```
+
+`i` counts the payments a sender has made with `K`. A sender sets up `K` in one
+of two ways, and later payments look the same whichever it used:
+
+- **Public address** (`owner_pk` and an ML-KEM-768 key, 1,216 bytes, shared by
+  ENS or QR): no prior contact. The sender's first payment carries the 1,088-byte
+  ML-KEM ciphertext, which the recipient decapsulates.
+- **Out of band:** the recipient derives `K` from its seed and sends it to the
+  sender over Signal or another post-quantum channel. Nothing extra goes on chain.
+
+Every spend carries two notes, one for the payee and one for the change (a
+withdrawal's payee note is random). A shield carries one. The pool only
+checks their length and emits them in a `Notes` event; the one-time
+authorizer's signature covers them. Wallets download every event and look for
+the tags they expect, so no server learns which notes are theirs, and recover
+from the seed by re-deriving their secrets and decapsulating every ciphertext.
+History older than Ethereum's retention window (EIP-4444) comes from archives,
+as it already does for the tree leaves.
+
+A normal spend grows by 96 bytes and about 3,700 gas, and an inclusion list
+still holds four spends. A first payment to a public address grows by
+1,184 bytes and is visibly larger. Senders must never reuse an index, because a
+repeated tag links two payments. See [SECURITY.md](SECURITY.md#note-delivery).
+
 ## Code
 
 ```
@@ -140,6 +178,7 @@ devnet/ShieldedPoolDispatcher.yul
 devnet/dispatcher.py
 devnet/pool_frametx.py
 wallet/wallet.py
+wallet/notes.py
 wallet/gen_smoke.py
 wallet/disclosure.py
 ```
@@ -172,7 +211,7 @@ presents it or where the funds came from before the deposit. See
 
 ## Deployment
 
-This is pool profile `position-notes-v2`. It follows EIP-8141 at
+This is pool profile `position-notes-v3`. It follows EIP-8141 at
 `7d1c8bfb94`, EIP-8250 at `f3079a09e8` and EIP-8272 at `824cbc0b0e`: an eight-field envelope
 with separate execution and state gas limits for each frame. Because the EIPs
 are drafts, each supported combination is a separate profile, and profiles are
@@ -180,12 +219,13 @@ not wire compatible. The format chain 8141 used before its relaunch is archived 
 under `devnet/vectors/2026-09-01-hegota-final-profile/`.
 
 Each profile needs its own deployment, because a deployed pool cannot be
-upgraded and a `position-notes-v1` pool rejects this profile's validation
-limits. `devnet/deploy_config.json` records this profile's testnet deployment
-on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`), which completed shield,
-transfer, withdrawal and claim calls on September 25, 2026. The earlier
-`position-notes-v1` pool (`0xac01…b100`, commit `c26b8e4`) stays on chain, and
-the CLI refuses to shield into or spend from it.
+upgraded. A `position-notes-v2` pool rejects this profile's settlement and
+shield calldata, which carry notes. This profile has no deployment yet:
+`devnet/deploy_config.json` still records the `position-notes-v2` testnet
+deployment on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`), which
+completed shield, transfer, withdrawal and claim calls on September 25, 2026,
+and the CLI refuses to shield into or spend from it. The earlier
+`position-notes-v1` pool (`0xac01…b100`, commit `c26b8e4`) stays on chain too.
 
 Before shielding or spending, the CLI requires the config to name this profile
 and checks the pool itself: the RPC must be on the configured chain, the pool's
@@ -228,6 +268,7 @@ python3 wallet/test_occurrence.py
 python3 wallet/test_wallet_occurrence.py
 python3 wallet/test_generators.py
 python3 wallet/test_disclosure.py
+python3 wallet/test_notes.py
 python3 tooling/check_gas_profile.py
 python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
 python3 tooling/check_forge_config.py activation_manifest.testbed.json contracts

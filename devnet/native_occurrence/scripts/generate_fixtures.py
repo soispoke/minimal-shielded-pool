@@ -78,7 +78,9 @@ def tree_of(*notes):
 
 BASE = tree_of(NA, NB)
 def deposit(name, n, nonce, tree, slot=SLOT):
-    return save(name, ordinary(nonce, POOL, calldata("shield(bytes32)", "0x" + word(n["inner"]).hex()), n["value"]),
+    inner = "0x" + word(n["inner"]).hex()
+    note = "0x" + builder.shield_note({}, inner).hex()
+    return save(name, ordinary(nonce, POOL, calldata("shield(bytes32,bytes)", inner, note), n["value"]),
         slot_number=slot, storage={addr(POOL): {"21": str(len(tree.leaves)), "22": str(tree.root())}},
         balance_delta_before_gas={addr(POOL): str(n["value"])})
 def publish(name, nonce, epoch=0, slot=SLOT):
@@ -138,7 +140,7 @@ def prove_publics_honest(inputs, outputs, tree, domain, public, recipient, autho
 def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2, nonce_seq=0, nonce_keys=None):
     source = keccak(POOL.to_bytes(20, "big") + word(int(entry["epoch"])))
     recent = source + int(entry["root_slot"]).to_bytes(8, "big") + word(int(entry["root"], 16))
-    settle = builder.cast_calldata(f"settle({builder.SPEND_TUPLE})", builder.spend_args(entry))
+    settle = builder.settle_calldata(entry)
     frames = [Frame(1, 0, 0x8272, RECENT_ROOT_FRAME_GAS, 0, recent),
         Frame(1, 3, POOL, VERIFY_FRAME_GAS, 0, builder.proof_bytes(entry), VERIFY_FRAME_STATE_GAS),
         Frame(2, 0, POOL, settle_gas, 0, settle, SETTLE_FRAME_STATE_GAS)]

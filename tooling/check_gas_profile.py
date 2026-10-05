@@ -35,9 +35,11 @@ from gas_profile import (  # noqa: E402
     PREVIOUS_POOL_PROFILE,
     RECENT_ROOT_FRAME_GAS,
     REQUIRED_VERIFY_BUDGET,
+    SETTLE_FRAME_DATA_BYTES,
     SETTLE_FRAME_GAS,
     SETTLE_FRAME_STATE_GAS,
     SPEND_NONCE_KEY_COUNT,
+    SPEND_NOTES_BYTES,
     VERIFY_FRAME_GAS,
     VERIFY_FRAME_STATE_GAS,
 )
@@ -83,11 +85,18 @@ MAX_NEW_STORAGE_SLOTS = 5
 NATIVE_MAX_OBSERVED_SETTLEMENT_GAS = 1_423_709
 # EIP-8038: cold access (2,100) + STORAGE_WRITE (10,000).
 EIP_8038_COLD_WRITE_GAS = 12_100
+# Settlement now emits its notes, which the native measurement above predates. LOG1 of the
+# largest notes, ABI-encoded as two words plus 1,184 bytes, costs 375 + 375 + 8 * 1,248 =
+# 10,734 before copying and memory. Forge measures 11,056 for the event alone, and 12,184
+# added to the longest settlement path when the dispatcher-sized calldata grows from 484
+# to 1,572 bytes (contracts/test/DispatcherPool.t.sol).
+NOTES_EVENT_GAS_BOUND = 12_500
 # EIP-8037 uses the same state gas for any new storage slot.
 EIP_8037_NEW_SLOT_STATE_GAS = KEYED_NONCE_FIRST_USE_STATE_GAS
 
 # The execution dimension no longer carries state growth.
-_WITH_WRITE_MARGIN = NATIVE_MAX_OBSERVED_SETTLEMENT_GAS + MAX_SSTORE_OPERATIONS * EIP_8038_COLD_WRITE_GAS
+_WITH_WRITE_MARGIN = (NATIVE_MAX_OBSERVED_SETTLEMENT_GAS + MAX_SSTORE_OPERATIONS * EIP_8038_COLD_WRITE_GAS
+                      + NOTES_EVENT_GAS_BOUND)
 # Two nested call levels: dispatcher -> logic -> Poseidon. Charge the full
 # write margin again even though the measured path already contains writes.
 CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND = (_WITH_WRITE_MARGIN * 64 * 64 + 63 * 63 - 1) // (63 * 63)
@@ -178,6 +187,13 @@ def main():
     )
     assert all(pin in dispatcher for pin in dispatcher_pins), \
         "dispatcher gas limits differ from devnet/gas_profile.py"
+    # The settlement frame admits exactly settle(Spend) plus either note length, and the
+    # gas bound above charges the larger.
+    short, long_ = SETTLE_FRAME_DATA_BYTES
+    assert SPEND_NOTES_BYTES == (96, 1184) and (short, long_) == (484, 1572)
+    length_pin = (f"if iszero(or(eq(settleLength, {short}), eq(settleLength, {long_}))) "
+                  "{ fail(errShape()) }")
+    assert length_pin in dispatcher, "dispatcher settlement lengths differ from devnet/gas_profile.py"
     assert "if gt(frameParam(3, 0x01)," not in dispatcher
     assert "if gt(frameParam(3, 0x09)," not in dispatcher
     assert "if gt(frameParam(3, 0x04)," not in dispatcher
@@ -211,6 +227,7 @@ def main():
             "tree_hash_and_write_maxima": tree_shapes,
             "execution_cap": SETTLE_FRAME_GAS,
             "state_cap": SETTLE_FRAME_STATE_GAS,
+            "notes_event_bound": NOTES_EVENT_GAS_BOUND,
             "conservative_execution_bound": CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND,
             "conservative_state_bound": CONSERVATIVE_SETTLEMENT_STATE_BOUND,
             "execution_margin": SETTLE_FRAME_GAS - CONSERVATIVE_SETTLEMENT_EXECUTION_BOUND,

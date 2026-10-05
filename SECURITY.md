@@ -210,7 +210,44 @@ other spends:
   same spend key is spent in that epoch, including another deposit of the
   same commitment, so the wallet makes a fresh spend key for each note. The
   receipt also reveals each note's `inner`, which links any other note paid to
-  the same `inner`.
+  the same `inner`. Notes paid to one address under [note delivery](#note-delivery)
+  share that address's spend key, so their receipts cover every spend of the
+  address in the epoch.
+
+## Note delivery
+
+`wallet/notes.py` posts each output's amount on chain, encrypted under a
+secret `K` that the sender and recipient share (see the README). The pool only
+checks that settlement carries 96 or 1,184 note bytes and a shield 48 or 1,136,
+and emits them. The one-time authorizer's signature covers them, so no one can
+swap them after signing.
+
+- The pool does not check what a note says. A sender who posts a wrong note
+  only keeps its own recipient from finding the payment; the payment still
+  exists and the sender can deliver the opening off chain.
+- A sender's first payment to a public address carries an ML-KEM-768
+  ciphertext and is visibly larger, which shows that someone paid a public
+  address for the first time. The ciphertext is assumed not to reveal the key
+  it was made for; that property is proven for round-3 Kyber (PKC 2023) and
+  was not checked separately for FIPS 203.
+- Tags look random, but a sender that reuses an index repeats a tag and links
+  two payments. The sender's wallet must keep one counter per secret across
+  devices, and recompute it from the chain after a restore.
+- All notes paid to one address share its spend key. A disclosure receipt then
+  covers every spend of that address in the epoch, not only the note it
+  names. A wallet that issues receipts should give each counterparty its own
+  address. Separating them per note needs a circuit change.
+- A secret sent out of band is only as private as its channel. If that
+  channel is recorded and later broken, the secret reveals which outputs paid
+  the recipient on it, and their amounts, though it cannot spend them. Use a
+  post-quantum channel, and never print a secret in a public QR code.
+- A wallet that asks a server for its tags tells the server which notes are
+  its own. Wallets download every `Notes` event instead.
+- Ethereum clients will stop serving history older than a few months
+  (EIP-4444). Recovering older notes needs an archive, which a wallet can check
+  against block headers but which nobody guarantees to keep.
+- `kyber-py` is a pure-Python ML-KEM that is not constant time. It suits this
+  research wallet, not production keys.
 
 ## Assumptions and remaining gates
 

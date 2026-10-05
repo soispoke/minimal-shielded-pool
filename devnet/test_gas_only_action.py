@@ -32,10 +32,10 @@ ACCOUNT = 0xA11CE
 ACTION_GAS = 300_000
 
 
-def settlement(public_amount=0, recipient=0):
+def settlement(public_amount=0, recipient=0, notes=b"\x5a" * 96):
     words = [1, 1, 0, 2, 3, 4, 5, 6, public_amount, 7, recipient, 8]
     selector = _keccak(f"settle({SPEND_TUPLE})".encode())[:4]
-    return selector + b"".join(word.to_bytes(32, "big") for word in words)
+    return selector + b"".join(word.to_bytes(32, "big") for word in words) + notes
 
 
 def _spend_tx(tail):
@@ -195,7 +195,12 @@ def main():
         lambda: spend_tail_frame(POOL, settlement(public_amount=1, recipient=0)), "both be zero")
     checked += rejects(
         lambda: spend_tail_frame(POOL, settlement(public_amount=0, recipient=ACCOUNT)), "both be zero")
-    checked += rejects(lambda: spend_tail_frame(POOL, settlement()[:-1], action), "canonical")
+    checked += rejects(lambda: spend_tail_frame(POOL, settlement()[:-1], action), "followed by its notes")
+    # settle(Spend) is followed by two notes, optionally after an ML-KEM ciphertext.
+    for length in (0, 48, 95, 97, 1183, 1185):
+        checked += rejects(lambda n=length: spend_tail_frame(POOL, settlement(notes=bytes(n)), action),
+                           "followed by its notes")
+    assert spend_tail_frame(POOL, settlement(notes=bytes(1184)), action) is not None
     # Written out here, not read from the code under test, so dropping an
     # address from the refusal sets fails this test.
     stranding = {

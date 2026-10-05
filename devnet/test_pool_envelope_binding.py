@@ -15,12 +15,10 @@ from pool_frametx import (
     RECENT_ROOT_FRAME_GAS,
     SETTLE_FRAME_GAS,
     SETTLE_FRAME_STATE_GAS,
-    SPEND_TUPLE,
     VERIFY_FRAME_GAS,
     VERIFY_FRAME_STATE_GAS,
-    cast_calldata,
     proof_bytes,
-    spend_args,
+    settle_calldata,
     spend_tail_frame,
 )
 
@@ -40,7 +38,7 @@ def _signed(entry_key, action=None, *, omit=False):
     epoch = int(entry["epoch"])
     source = keccak(pool.to_bytes(20, "big") + epoch.to_bytes(32, "big"))
     root = bytes.fromhex(entry["root"][2:])
-    settle = cast_calldata(f"settle({SPEND_TUPLE})", spend_args(entry))
+    settle = settle_calldata(entry)
     authorizer = int(entry["authorizer"], 16)
     pk = keys.PrivateKey(bytes.fromhex(entry["authorizer_private_key"][2:]))
     frames = [
@@ -104,6 +102,11 @@ def common_mutations(tx):
         add(f"settle_word_{word}", lambda x, w=word: setattr(
             x.frames[2], "data", x.frames[2].data[:4 + w * 32] +
             bytes([x.frames[2].data[4 + w * 32] ^ 1]) + x.frames[2].data[5 + w * 32:]))
+    # The notes follow the twelve words. Flip a byte in each note.
+    for offset in range(4 + 12 * 32, len(tx.frames[2].data), 48):
+        add(f"settle_notes_byte_{offset}", lambda x, o=offset: setattr(
+            x.frames[2], "data", x.frames[2].data[:o] + bytes([x.frames[2].data[o] ^ 1]) +
+            x.frames[2].data[o + 1:]))
     add("signature_scheme", lambda x: setattr(x.signatures[0], "scheme", 2))
     add("signature_signer", lambda x: setattr(x.signatures[0], "signer", x.signatures[0].signer ^ 1))
     add("signature_message", lambda x: setattr(x.signatures[0], "msg", b"\x01" * 32))
@@ -230,7 +233,9 @@ def main():
                       "bound_mutations_withdraw_action": len(withdraw_action_bound),
                       "raw_signature_elision_only": True,
                       "proof_bytes_bound": True,
-                      "settlement_words_bound": 12}, sort_keys=True))
+                      "settlement_words_bound": 12,
+                      "settlement_notes_bound": len(transfer.frames[2].data) - (4 + 12 * 32)},
+                     sort_keys=True))
 
 
 if __name__ == "__main__":

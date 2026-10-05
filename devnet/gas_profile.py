@@ -16,10 +16,22 @@ verify budget.
 # 2,400 and 8,850 gas of headroom, so the declared validation budget is 235,800.
 RECENT_ROOT_FRAME_GAS = 8_000
 RECENT_ROOT_TUPLE_BYTES = 72
-POOL_PROFILE = "position-notes-v2"
+# position-notes-v3 appends notes to settle(Spend) and adds one to shield, so its
+# transactions are not wire compatible with position-notes-v2.
+POOL_PROFILE = "position-notes-v3"
 # The last deployed profile. The deployment record keeps naming it until this profile is
 # deployed, and the CLI refuses to spend against it.
-PREVIOUS_POOL_PROFILE = "position-notes-v1"
+PREVIOUS_POOL_PROFILE = "position-notes-v2"
+# A note is a 16-byte tag, a 16-byte encrypted amount and a 16-byte authentication tag
+# (wallet/notes.py). Settlement calldata is settle(Spend) followed by two notes, and a
+# sender's first payment to a public address puts its ML-KEM-768 ciphertext before them.
+# A shield carries one note, optionally after a ciphertext.
+NOTE_BYTES = 48
+KEM_CIPHERTEXT_BYTES = 1088
+SETTLE_SPEND_BYTES = 4 + 12 * 32
+SPEND_NOTES_BYTES = (2 * NOTE_BYTES, KEM_CIPHERTEXT_BYTES + 2 * NOTE_BYTES)
+SHIELD_NOTE_BYTES = (NOTE_BYTES, KEM_CIPHERTEXT_BYTES + NOTE_BYTES)
+SETTLE_FRAME_DATA_BYTES = tuple(SETTLE_SPEND_BYTES + n for n in SPEND_NOTES_BYTES)
 VERIFY_FRAME_GAS = 225_000
 # Native ethrex 247e2dd2 spends at 262,143 and 524,287 leaves verify and
 # approve, then settlement OOGs with no outputs at 1.4M. The signed SENDER

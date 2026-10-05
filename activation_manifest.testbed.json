@@ -6,8 +6,8 @@
     "label": "local test-only setup, one phase-2 contribution, occurrence prototype"
   },
   "profile": {
-    "wire_profile": "position-notes-v2",
-    "pool_profile": "position-notes-v2",
+    "wire_profile": "position-notes-v3",
+    "pool_profile": "position-notes-v3",
     "eip_8250_merge": "f3079a09e8c606afcb0e5e1a309ff228b88dc067",
     "eip_8272_carrier": "canonical-verifier-frame",
     "eip_8272_pin": "824cbc0b0e",
@@ -26,7 +26,7 @@
     "settle_frame_state_gas": 550000,
     "claim_frame_gas": 100000,
     "claim_frame_state_gas": 183600,
-    "conservative_settle_bound": 1856368,
+    "conservative_settle_bound": 1869268,
     "conservative_settle_state_bound": 489600
   },
   "artifacts": {
@@ -38,13 +38,13 @@
     "contracts/src/Groth16Verifier.sol": "5bcda629ac9fa4317d52aef102281b12419c1c385abfe0fa991c5ed22e906676",
     "contracts/src/PoseidonT3.sol": "f353af63ac124e51a37e78dc5278bcb2e93c19e44aa8dd13a4ecb4c54212720b",
     "contracts/src/PoseidonT4.sol": "2384b8f71a2ed09f3b16c6b0d135bedcd293cb1c862e8a3c893d0ac79eae0960",
-    "contracts/src/ShieldedPoolLogic.sol": "fa9d7b1fc5fdca83c3a78cdd81cd3856dbfc9e18d20095054c22c6c248ad753b",
-    "devnet/ShieldedPoolDispatcher.yul": "32e4701834435d2157cdb1acda219fa16957b5e7b3abae64eede7f2ddd29ea60",
-    "devnet/build/shielded_pool_dispatcher_init.hex": "8339dab370f7fc24a7584d48d08df7bd21296b6840a4bc66fbb8165ea35e1bf4",
+    "contracts/src/ShieldedPoolLogic.sol": "d93bbd9fd7eed8d5f71981bf3e94c94df9b82ad62c1127278473cff3c6948fba",
+    "devnet/ShieldedPoolDispatcher.yul": "82fbb879429ad6f0a7ee663d475af174d2162444942cf69f554164573b5f4631",
+    "devnet/build/shielded_pool_dispatcher_init.hex": "a506c59cc30fda7c700943c181dd39419f99d2a5c6908d668d9aa52daa1a5820",
     "devnet/frametx.py": "ac008480a576bae7543287f7488afb93c1b12c1cdf103f95e0f933b68823d459",
-    "devnet/gas_profile.py": "4771bc7e251a14cc2a0ea806c0d804d6eae8cfdeec11cce8d42aab6c0fd2755a",
-    "devnet/pool_frametx.py": "b01aa8b78ef1773ca5b821689e66d61514f4e41811f60d64d70e05da6a9f6f73",
-    "tooling/check_gas_profile.py": "e0a9679d2ed26e20103775808d7b2df5b24e0f52db9241e1de0e50609a71531a"
+    "devnet/gas_profile.py": "00e3d1fa88c2d985df501da5a8fb0d79dc664dd8648447facfdd4466f957a164",
+    "devnet/pool_frametx.py": "28d13a386bcd9d6f602d6acfb10005e4b23545236b7f529ffd61d147117906af",
+    "tooling/check_gas_profile.py": "575a6815eeff5c51311c8eac703c935ab7b59061ec063e33e55248a83b6d16a0"
   },
   "compiler": {
     "default": {

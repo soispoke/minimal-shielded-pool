@@ -268,7 +268,7 @@ def check_shield_binds_fixture():
     return len(refused) + 2
 
 def main():
-    assert POOL_PROFILE == "position-notes-v2"
+    assert POOL_PROFILE == "position-notes-v3"
     runs = check_profile_labels()
     check_recorded_deployment()
     check_deployed_pool_gate()
