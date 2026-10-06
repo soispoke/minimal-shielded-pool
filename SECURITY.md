@@ -224,17 +224,36 @@ swap them after signing.
 
 - The pool does not check what a note says. A sender who posts a wrong note
   only keeps its own recipient from finding the payment; the payment still
-  exists and the sender can deliver the opening off chain.
+  exists and the sender can deliver the opening off chain. The scanner reads
+  every shield and settlement apart, even several in one transaction, so no
+  call's notes stop other wallets' scans.
 - A sender's first payment to a public address carries an ML-KEM-768
   ciphertext and is visibly larger, which shows that someone paid a public
   address for the first time. The ciphertext is assumed not to reveal the key
   it was made for; that property is proven for round-3 Kyber (PKC 2023) and
-  was not checked separately for FIPS 203.
-- Tags look random, but a sender that reuses an index repeats a tag and links
-  two payments. `notes.reserve` advances the index before the note leaves the
-  wallet, and the wallet must save that state before broadcasting. A sender
-  cannot recompute an outgoing secret from its seed, so a restored wallet opens
-  a new secret with each recipient instead of guessing an index.
+  was not checked separately for FIPS 203. Two transactions carrying the same
+  ciphertext are linked, so `notes.reserve` hands it out once: until that
+  payment is final, another payment to the same recipient opens a new channel.
+- Tags look random, but a sender that reuses an index repeats the tag, the key
+  and `rho`: that links the two payments and reveals the XOR of their amounts.
+  `notes.reserve` advances the index before the note leaves the wallet, and the
+  wallet must save that state before broadcasting. A sender cannot recompute
+  an outgoing secret from its seed, so a restored wallet opens a new channel
+  with each recipient. The change channel cannot be reopened: a restored
+  wallet scans to the finalized head and resumes it with `notes.self_channel`,
+  which skips 10 indices for payments sent before the restore. That is safe
+  while at most 10 of the previous device's change payments are still pending;
+  with more, wait until they are final or can no longer land. One device sends
+  from an account at a time, and a device that takes over, even one that sent
+  before, rebuilds its change channel the same way. A payment that did not land
+  is retried with the same note, never with a new index.
+- A sender keeps fewer than 20 payments per channel past the last one it has
+  seen final, and `direct-secret` issues numbers only within 20 of the highest
+  one paid, because the recipient's scan watches that far ahead. Each number
+  goes to one sender. After a restore, numbers handed out but not yet paid are
+  unknown, and the wallet may hand them out again. Direct secrets and the change
+  channel do not yet depend on the deployment, so a seed must not be used with
+  two pools: the same numbers and change indices would repeat.
 - All notes paid to one address share its spend key, so a nullifier key covers
   every spend of that address in the epoch, not only the note a receipt names.
   `wallet/disclosure.py` refuses to export such a key unless `--address-wide`
@@ -248,9 +267,14 @@ swap them after signing.
   its own. Wallets download every `Notes` event instead.
 - Ethereum clients will stop serving history older than a few months
   (EIP-4444). Recovering older notes needs an archive, which a wallet can check
-  against block headers but which nobody guarantees to keep. `notes.py scan`
-  refuses a node whose leaves arrive with gaps, including ethrex's omission of
-  every log of a frame transaction whose fourth frame failed.
+  against block headers but which nobody guarantees to keep. ethrex leaves out
+  of `eth_getLogs` every log of a frame transaction whose fourth frame failed,
+  although its settlement stands. `notes.py scan` rebuilds such calls from
+  block receipts once a later leaf of the same epoch shows the gap, and stops if
+  leaves are still missing. A left-out spend that appended no leaf, such as a
+  full withdrawal, leaves no gap: its note shows as unspent, and spending it
+  fails because its nullifier is used. The scanner does not ask the node about
+  single nullifiers, which would link a wallet's notes to their spends.
 - ML-KEM-768 and ChaCha20-Poly1305 come from `cryptography` 50.0.2 (OpenSSL).
   Keys derive from the seed through FIPS 203's 64-byte seed form;
   encapsulation uses OpenSSL's randomness.

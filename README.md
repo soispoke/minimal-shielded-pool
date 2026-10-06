@@ -148,11 +148,15 @@ tag  = PRF(K, "tag", i)[:16]    rho = PRF(K, "rho", i) mod r
 two ways, and later payments look the same whichever it used:
 
 - **Public address** (a version byte, `owner_pk` and an ML-KEM-768 key,
-  1,217 bytes, shared by ENS or QR): no prior contact. The sender's first
-  payment carries the 1,088-byte ML-KEM ciphertext, which the recipient
-  decapsulates.
-- **Out of band:** the recipient derives `K` from its seed and sends it to the
-  sender over Signal or another post-quantum channel. Nothing extra goes on chain.
+  1,217 bytes, shared by ENS or QR): no prior contact. The payment that opens
+  the channel carries the 1,088-byte ML-KEM ciphertext, which the recipient
+  decapsulates. Two transactions carrying the same ciphertext would be linked,
+  so until that payment is final, another payment to the same recipient opens
+  a new channel.
+- **Out of band:** the recipient issues the next numbered secret from its seed
+  with `direct-secret` and sends it to the sender over Signal or another
+  post-quantum channel. The wallet state records each number, so that it goes
+  to one sender. Nothing extra goes on chain.
 
 Every spend carries two notes, one for the payee and one for the change (a
 withdrawal's payee note is random). A shield carries one. The pool only
@@ -164,21 +168,37 @@ Wallets download every event and look for the tags they expect, so no server
 learns which notes are theirs. From its seed alone a wallet rebuilds its
 incoming and change notes: it re-derives its secrets, decapsulates every
 ciphertext and matches tags, and it tracks their spends by nullifier. A sender
-cannot recompute an outgoing secret, so after a restore it opens a new one
-with each recipient. It reserves each index in its saved state before
-broadcasting, because a repeated tag links two payments.
+cannot recompute an outgoing secret, so after a restore it opens a new channel
+with each recipient. The change channel cannot be reopened, so a restored
+wallet, or a device taking over sending from the account, rebuilds it with
+`notes.self_channel`, past the indices it may have used. A sender reserves an
+index in its saved state before broadcasting a new payment, because a repeated
+index repeats the tag, key and `rho`, and retries a payment that did not land
+with the same note. It also keeps fewer than 20 payments per channel past the
+last one it has seen final, since the recipient watches 20 indices ahead.
 
 ```sh
 python3 wallet/notes.py address --seed-file SEED
-python3 wallet/notes.py direct-secret --number N --seed-file SEED
-python3 wallet/notes.py scan --config devnet/deploy_config.json --state STATE --seed-file SEED
+python3 wallet/notes.py scan --config CONFIG --state STATE --seed-file SEED
+python3 wallet/notes.py direct-secret --config CONFIG --state STATE --seed-file SEED
 ```
 
+`scan` and `direct-secret` need the config of a `position-notes-v3` pool. No
+such deployment exists yet, and `devnet/deploy_config.json` records the v2 pool,
+which publishes no notes.
+
 The seed file must be readable by its owner only; without `--seed-file` the
-seed is read from the terminal. `scan` reads finalized blocks only, keeps its
-state in an owner-only file, and refuses a node whose leaves arrive with gaps,
-which would hide notes. History older than Ethereum's retention window
-(EIP-4444) comes from archives, as it already does for the tree leaves.
+seed is read from the terminal. `scan` reads finalized blocks only and keeps
+its state in an owner-only file. It reads every shield and settlement apart,
+even several in one transaction. A node may leave a call's logs out of
+`eth_getLogs`, as ethrex does for every log of a frame transaction whose
+fourth frame failed. Once a later leaf shows the gap, `scan` rebuilds the call
+from block receipts, and it stops if leaves are still missing rather than hide
+notes. `direct-secret` needs a state
+that has been scanned, and hands out numbers only within 20 of the highest one
+paid, which is how far a scan from the seed looks. History older than
+Ethereum's retention window (EIP-4444) comes from archives, as it already does
+for the tree leaves.
 
 A normal spend grows by 96 bytes and about 4,000 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
