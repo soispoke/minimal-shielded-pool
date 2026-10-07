@@ -7,7 +7,10 @@ at f3079a09e8 and EIP-8272 at 824cbc0b0e.
 Spends use one base grammar:
 
   VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment)
-    -> SENDER(pool, settle(Spend))
+    -> SENDER(pool, settle(Spend) || notes)
+
+The notes are the fixture entry's `notes`, made by wallet/notes.py: the CLI
+refuses a fixture without them.
 
 Every spend is three frames and may append one DEFAULT tail. The wallet
 default for a withdrawal is DEFAULT(pool, claimWithdrawal(recipient)) at
@@ -61,8 +64,11 @@ from gas_profile import (
     ETHEX_MEMPOOL_MAX_BYTES,
     POOL_PROFILE,
     RECENT_ROOT_FRAME_GAS,
+    SETTLE_FRAME_DATA_BYTES,
     SETTLE_FRAME_GAS,
     SETTLE_FRAME_STATE_GAS,
+    SHIELD_NOTE_BYTES,
+    SPEND_NOTES_BYTES,
     VERIFY_FRAME_GAS,
     VERIFY_FRAME_STATE_GAS,
 )
@@ -124,6 +130,30 @@ def spend_args(entry):
             f'{entry["domain"]},{entry["nf1"]},{entry["nf2"]},'
             f'{entry["out_cm1"]},{entry["out_cm2"]},{entry["public_amount"]},'
             f'{entry["fee"]},{entry["recipient"]},{entry["authorizer"]})')
+
+
+def _notes_field(entry, key, sizes, what):
+    """The hex note bytes a wallet stored in the fixture entry, checked for length."""
+    if key not in entry:
+        raise SystemExit(f"the fixture's {what} has no `{key}`: regenerate it with wallet/gen_smoke.py "
+                         "or wallet/gen_nonce_race.py so its recipients can find their notes")
+    data = bytes.fromhex(entry[key].removeprefix("0x"))
+    if len(data) not in sizes:
+        raise SystemExit(f"the {what}'s notes must be {' or '.join(map(str, sizes))} bytes, not {len(data)}")
+    return data
+
+
+def settle_calldata(entry):
+    """settle(Spend) calldata followed by the spend's notes (wallet/notes.py), as the
+    SENDER frame carries them. The pool publishes the notes and never reads them."""
+    return (cast_calldata(f"settle({SPEND_TUPLE})", spend_args(entry))
+            + _notes_field(entry, "notes", SPEND_NOTES_BYTES, "spend"))
+
+
+def shield_calldata(inner, entry):
+    """shield(inner, note) calldata with the note the wallet made for the new leaf."""
+    note = _notes_field(entry, "note", SHIELD_NOTE_BYTES, "shield")
+    return cast_calldata("shield(bytes32,bytes)", inner, "0x" + note.hex())
 
 
 def proof_bytes(entry):
@@ -468,8 +498,8 @@ def spend_tail_frame(pool, settle_calldata, action=None, *, omit=False):
     target the pool, for example to publish the root its outputs create.
     """
     selector = _keccak(f"settle({SPEND_TUPLE})".encode())[:4]
-    if len(settle_calldata) != 4 + 12 * 32 or settle_calldata[:4] != selector:
-        raise ValueError("tail frame requires canonical settle(Spend) calldata")
+    if len(settle_calldata) not in SETTLE_FRAME_DATA_BYTES or settle_calldata[:4] != selector:
+        raise ValueError("tail frame requires settle(Spend) calldata followed by its notes")
     amount = int.from_bytes(settle_calldata[4 + 8 * 32:4 + 9 * 32], "big")
     recipient = int.from_bytes(settle_calldata[4 + 10 * 32:4 + 11 * 32], "big")
     if not 0 < pool < 1 << 160 or recipient >= 1 << 160 or amount >= 1 << 128:
@@ -950,11 +980,13 @@ def main():
                 raise SystemExit("this fixture's shields do not record prior_root; regenerate it")
             value, inner, leaf = int(s["value"]), s["inner"], int(s["leaf"])
             prior_root = int(s["prior_root"], 16)
+            shield_entry = s
         else:
             # gen_smoke.py proves note A as the first leaf of an empty tree.
             value, inner, leaf, prior_root = int(fix["shield_value"]), fix["inner_a"], 0, EMPTY_ROOT
+            shield_entry = {"note": fix["shield_note"]} if "shield_note" in fix else {}
         check_shield_fixture(url, pool, cfg["chainId"], fix, leaf, prior_root)
-        calldata = cast_calldata("shield(bytes32)", inner)
+        calldata = shield_calldata(inner, shield_entry)
         print(f"shield {value} wei via frame tx -> pool {cfg['pool']}")
         rcpt = build_and_send(url, funded_key(), pool, value, calldata, dry_run=dry)
         if not dry and rcpt:
@@ -978,7 +1010,7 @@ def main():
         e, protocol_nonces, verify, refs, auth_pk = spend_setup("transfer")
         if nonce_keys_override is not None:
             protocol_nonces = nonce_keys_override
-        calldata = cast_calldata(f"settle({SPEND_TUPLE})", spend_args(e))
+        calldata = settle_calldata(e)
         print(f"join-split transfer via frame tx (pool {cfg['pool']} self-pays)")
         build_and_send(url, auth_pk, pool, 0, calldata, protocol_nonces, verify, refs,
                        dry_run=dry, sender_override=sender_override,
@@ -989,7 +1021,7 @@ def main():
         e, protocol_nonces, verify, refs, auth_pk = spend_setup("withdraw")
         if nonce_keys_override is not None:
             protocol_nonces = nonce_keys_override
-        calldata = cast_calldata(f"settle({SPEND_TUPLE})", spend_args(e))
+        calldata = settle_calldata(e)
         print(f"join-split withdraw via frame tx (pool {cfg['pool']} self-pays)")
         build_and_send(url, auth_pk, pool, 0, calldata, protocol_nonces, verify, refs,
                        dry_run=dry, sender_override=sender_override,

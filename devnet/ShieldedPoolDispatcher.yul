@@ -234,7 +234,10 @@ object "ShieldedPoolDispatcher" {
                 if iszero(eq(frameParam(2, 0x09), 550000)) { fail(errShape()) }
                 if iszero(eq(frameParam(2, 0x02), 2)) { fail(errShape()) }
                 if frameParam(2, 0x03) { fail(errShape()) }
-                if iszero(eq(frameParam(2, 0x04), 388)) { fail(errShape()) }
+                // settle(Spend) is 388 bytes, followed by two 48-byte notes, optionally
+                // after a 1,088-byte ML-KEM-768 ciphertext. Settlement only emits them.
+                let settleLength := frameParam(2, 0x04)
+                if iszero(or(eq(settleLength, 484), eq(settleLength, 1572))) { fail(errShape()) }
                 if frameParam(2, 0x08) { fail(errShape()) }
                 if iszero(eq(shr(224, frameDataLoad(2, 0)), 0x921fcac7)) { fail(errShape()) }
 

@@ -6,13 +6,14 @@ import {ShieldedPoolLogic} from "../src/ShieldedPoolLogic.sol";
 interface Vm {
     function deal(address, uint256) external;
     function etch(address, bytes calldata) external;
+    function expectEmit(bool, bool, bool, bool) external;
     function expectRevert(bytes4) external;
     function getDeployedCode(string calldata artifactPath) external returns (bytes memory);
     function store(address, bytes32, bytes32) external;
 }
 
 interface IPool {
-    function shield(bytes32 inner) external payable returns (uint32);
+    function shield(bytes32 inner, bytes calldata note) external payable returns (uint32);
     function settle(ShieldedPoolLogic.Spend calldata s) external;
     function publishEpochRoot(uint64 epoch) external;
     function claimWithdrawal(address payable who) external;
@@ -50,8 +51,9 @@ contract LogicProxy {
         assembly { sstore(22, EMPTY_ROOT) }
     }
 
-    function settleAsSelf(ShieldedPoolLogic.Spend calldata s) external {
-        (bool ok, bytes memory ret) = address(this).call(abi.encodeCall(IPool.settle, (s)));
+    /// The dispatcher's SENDER frame: settle(Spend) calldata with the notes appended.
+    function settleAsSelf(ShieldedPoolLogic.Spend calldata s, bytes calldata notes) external {
+        (bool ok, bytes memory ret) = address(this).call(abi.encodePacked(abi.encodeCall(IPool.settle, (s)), notes));
         if (!ok) assembly { revert(add(ret, 32), mload(ret)) }
     }
 
@@ -128,6 +130,7 @@ contract DispatcherPoolTest {
     uint256 constant SETTLE_FRAME_GAS = 2_000_000;
 
     event SettlementGasMeasured(uint256 gasUsed);
+    event Notes(bytes notes);
 
     ShieldedPoolLogic logic;
     LogicProxy proxy;
@@ -164,31 +167,53 @@ contract DispatcherPoolTest {
     }
 
     function _settle(ShieldedPoolLogic.Spend memory s) internal {
-        proxy.settleAsSelf(s);
+        proxy.settleAsSelf(s, _notes());
+    }
+
+    function _bytes(uint256 length, uint8 seed) internal pure returns (bytes memory b) {
+        b = new bytes(length);
+        for (uint256 i; i < length; i++) {
+            b[i] = keccak256(abi.encode(seed, i))[0];
+        }
+    }
+
+    /// One note, as a shield carries.
+    function _note() internal pure returns (bytes memory) {
+        return _bytes(48, 0x11);
+    }
+
+    /// Two notes, as most spends carry.
+    function _notes() internal pure returns (bytes memory) {
+        return _bytes(96, 0x22);
+    }
+
+    /// A first payment to a public address: an ML-KEM-768 ciphertext, then two notes.
+    function _firstPaymentNotes() internal pure returns (bytes memory) {
+        return _bytes(1184, 0x33);
     }
 
     function test_direct_implementation_calls_are_rejected() public {
         vm.expectRevert(ShieldedPoolLogic.DirectImplementationCall.selector);
-        logic.shield{value: 1}(bytes32(uint256(3)));
+        logic.shield{value: 1}(bytes32(uint256(3)), _note());
     }
 
     function test_shield_does_not_call_recent_root_predeploy() public {
         vm.etch(ROOT_PREDEPLOY, type(RevertingRecentRoot).runtimeCode);
-        uint32 index = pool.shield{value: 1 ether}(bytes32(uint256(33)));
+        uint32 index = pool.shield{value: 1 ether}(bytes32(uint256(33)), _note());
         require(index == 0 && pool.nextIndex() == 1, "shield did not settle");
     }
 
     function test_repeated_deposit_creates_two_separately_funded_occurrences() public {
         bytes32 inner = bytes32(uint256(33));
         uint256 beforeBalance = address(pool).balance;
-        uint32 first = pool.shield{value: 1 ether}(inner);
+        uint32 first = pool.shield{value: 1 ether}(inner, _note());
         bytes32 firstRoot = pool.currentRoot();
-        uint32 second = pool.shield{value: 1 ether}(inner);
+        uint32 second = pool.shield{value: 1 ether}(inner, _note());
         require(first == 0 && second == 1 && pool.nextIndex() == 2, "deposit occurrence missing");
         require(pool.currentRoot() != firstRoot, "duplicate was not appended");
         require(address(pool).balance == beforeBalance + 2 ether, "both deposits must be funded");
         vm.expectRevert(ShieldedPoolLogic.ZeroValueShield.selector);
-        pool.shield(inner);
+        pool.shield(inner, _note());
     }
 
     function test_actual_poseidon_library_runtimes_work_via_staticcall() public {
@@ -199,13 +224,13 @@ contract DispatcherPoolTest {
         ShieldedPoolLogic actualLogic = new ShieldedPoolLogic(t3, t4);
         LogicProxy actualProxy = new LogicProxy(address(actualLogic));
         IPool actualPool = IPool(address(actualProxy));
-        uint32 index = actualPool.shield{value: 1}(bytes32(uint256(99)));
+        uint32 index = actualPool.shield{value: 1}(bytes32(uint256(99)), _note());
         require(index == 0 && actualPool.currentRoot() != EMPTY_ROOT, "actual Poseidon calls failed");
 
         vm.store(address(actualProxy), bytes32(uint256(21)), bytes32(uint256((1 << 20) - 1)));
         ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(301)), bytes32(uint256(302)), 0, address(0));
         s.domain = actualPool.domain(0);
-        actualProxy.settleAsSelf(s);
+        actualProxy.settleAsSelf(s, _notes());
         require(actualPool.currentEpoch() == 1 && actualPool.nextIndex() == 2, "actual rollover failed");
     }
 
@@ -214,6 +239,7 @@ contract DispatcherPoolTest {
     /// settlement at 1.4M after VERIFY and approval succeed. This test is the
     /// epoch-rollover shape; long-carry cases are the dedicated tests below.
     /// The native suite separately checks the execution and state limits.
+    /// The gas tests carry the largest notes the dispatcher admits.
     function test_two_million_gas_covers_rollover_settlement() public {
         address t3 = address(0xA013);
         address t4 = address(0xA014);
@@ -235,8 +261,9 @@ contract DispatcherPoolTest {
         ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(401)), bytes32(uint256(402)), 7, address(0xB0B));
         s.domain = actualPool.domain(0);
 
+        bytes memory call = abi.encodeCall(LogicProxy.settleAsSelf, (s, _firstPaymentNotes()));
         uint256 beforeGas = gasleft();
-        (bool ok,) = address(actualProxy).call{gas: SETTLE_FRAME_GAS}(abi.encodeCall(LogicProxy.settleAsSelf, (s)));
+        (bool ok,) = address(actualProxy).call{gas: SETTLE_FRAME_GAS}(call);
         uint256 used = beforeGas - gasleft();
         emit SettlementGasMeasured(used);
 
@@ -265,8 +292,9 @@ contract DispatcherPoolTest {
         ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(501)), bytes32(uint256(502)), 7, address(0xB0B));
         s.domain = actualPool.domain(0);
 
+        bytes memory call = abi.encodeCall(LogicProxy.settleAsSelf, (s, _firstPaymentNotes()));
         uint256 beforeGas = gasleft();
-        (bool ok,) = address(actualProxy).call{gas: SETTLE_FRAME_GAS}(abi.encodeCall(LogicProxy.settleAsSelf, (s)));
+        (bool ok,) = address(actualProxy).call{gas: SETTLE_FRAME_GAS}(call);
         emit SettlementGasMeasured(beforeGas - gasleft());
         require(ok, "long carry exhausted settlement cap");
         require(actualPool.currentEpoch() == 0, "long carry unexpectedly rolled");
@@ -288,7 +316,8 @@ contract DispatcherPoolTest {
         ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(501)), bytes32(uint256(502)), 7, address(0xB0B));
         s.domain = actualPool.domain(0);
         uint256 forwarded = (SETTLE_FRAME_GAS * 63) / 64;
-        (bool ok,) = address(actualProxy).call{gas: forwarded}(abi.encodeCall(LogicProxy.settleAsSelf, (s)));
+        bytes memory call = abi.encodeCall(LogicProxy.settleAsSelf, (s, _firstPaymentNotes()));
+        (bool ok,) = address(actualProxy).call{gas: forwarded}(call);
         require(ok, "long-carry settlement exhausted EIP-150 forwarded 2M");
         require(actualPool.nextIndex() == nextIndex + 2, "outputs missing");
         require(actualPool.withdrawalCredit(address(0xB0B)) == 7, "credit missing");
@@ -332,10 +361,10 @@ contract DispatcherPoolTest {
     function test_invalid_sink_positions_and_same_spend_duplicate_outputs_reject() public {
         ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(55)), bytes32(uint256(55)), 0, address(0));
         vm.expectRevert(ShieldedPoolLogic.InvalidSettlementShape.selector);
-        proxy.settleAsSelf(s);
+        proxy.settleAsSelf(s, _notes());
         s = _spend(SINK_1, SINK_0, 0, address(0));
         vm.expectRevert(ShieldedPoolLogic.InvalidSettlementShape.selector);
-        proxy.settleAsSelf(s);
+        proxy.settleAsSelf(s, _notes());
     }
 
     function test_output_matching_an_existing_commitment_is_appended() public {
@@ -398,11 +427,11 @@ contract DispatcherPoolTest {
             vm.store(address(proxy), bytes32(l), level[l]);
         }
         vm.store(address(proxy), bytes32(uint256(21)), bytes32(uint256((1 << 20) - 1)));
-        pool.shield{value: 1 ether}(inner);
+        pool.shield{value: 1 ether}(inner, _note());
         require(pool.nextIndex() == 1 << 20, "last leaf not filled");
         require(pool.currentRoot() == level[20], "full tree root lost");
         // The next deposit rolls the epoch and finalizes that same root.
-        pool.shield{value: 1 ether}(inner);
+        pool.shield{value: 1 ether}(inner, _note());
         require(pool.currentEpoch() == 1 && pool.finalRoot(0) == level[20], "final root lost");
     }
 
@@ -417,7 +446,7 @@ contract DispatcherPoolTest {
         LogicProxy other = new LogicProxy(address(logic));
         ShieldedPoolLogic.Spend memory first = _spend(bytes32(uint256(91)), SINK_1, 0, address(0));
         first.domain = IPool(address(other)).domain(0);
-        other.settleAsSelf(first);
+        other.settleAsSelf(first, _notes());
         require(pool.nextIndex() == 1, "second output not inserted");
         require(pool.currentRoot() == IPool(address(other)).currentRoot(), "root not recomputed");
     }
@@ -430,7 +459,7 @@ contract DispatcherPoolTest {
 
     function test_old_epoch_spend_uses_input_domain_after_rollover() public {
         vm.store(address(proxy), bytes32(uint256(21)), bytes32(uint256(1 << 20)));
-        pool.shield{value: 1}(bytes32(uint256(33)));
+        pool.shield{value: 1}(bytes32(uint256(33)), _note());
         require(pool.currentEpoch() == 1, "epoch did not roll");
         ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(81)), bytes32(uint256(82)), 0, address(0));
         _settle(s);
@@ -438,7 +467,7 @@ contract DispatcherPoolTest {
 
         s.domain = pool.domain(1);
         vm.expectRevert(ShieldedPoolLogic.InvalidDomain.selector);
-        proxy.settleAsSelf(s);
+        proxy.settleAsSelf(s, _notes());
     }
 
     function test_current_epoch_spend_requires_current_epoch_domain() public {
@@ -446,9 +475,54 @@ contract DispatcherPoolTest {
         ShieldedPoolLogic.Spend memory s = _spend(SINK_0, SINK_1, 1, address(0xB0B));
         s.epoch = 1;
         vm.expectRevert(ShieldedPoolLogic.InvalidDomain.selector);
-        proxy.settleAsSelf(s);
+        proxy.settleAsSelf(s, _notes());
         s.domain = pool.domain(1);
         _settle(s);
         require(pool.withdrawalCredit(address(0xB0B)) == 1, "credit missing");
+    }
+
+    function test_settlement_publishes_its_notes() public {
+        bytes memory notes = _notes();
+        vm.expectEmit(false, false, false, true);
+        emit Notes(notes);
+        _settle(_spend(bytes32(uint256(61)), bytes32(uint256(62)), 0, address(0)));
+
+        notes = _firstPaymentNotes();
+        ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(63)), bytes32(uint256(64)), 0, address(0));
+        s.nf1 = bytes32(uint256(15));
+        s.nf2 = bytes32(uint256(16));
+        vm.expectEmit(false, false, false, true);
+        emit Notes(notes);
+        proxy.settleAsSelf(s, notes);
+        require(pool.nextIndex() == 4, "outputs missing");
+    }
+
+    function test_settlement_rejects_other_note_lengths() public {
+        uint256[7] memory lengths = [uint256(0), 48, 95, 97, 1136, 1183, 1185];
+        ShieldedPoolLogic.Spend memory s = _spend(bytes32(uint256(65)), bytes32(uint256(66)), 0, address(0));
+        for (uint256 i; i < lengths.length; i++) {
+            vm.expectRevert(ShieldedPoolLogic.InvalidNotes.selector);
+            proxy.settleAsSelf(s, new bytes(lengths[i]));
+        }
+        require(pool.nextIndex() == 0, "a rejected settlement appended outputs");
+    }
+
+    function test_shield_publishes_its_note_and_rejects_other_lengths() public {
+        bytes memory note = _note();
+        vm.expectEmit(false, false, false, true);
+        emit Notes(note);
+        pool.shield{value: 1}(bytes32(uint256(71)), note);
+
+        note = _bytes(1136, 0x44);
+        vm.expectEmit(false, false, false, true);
+        emit Notes(note);
+        pool.shield{value: 1}(bytes32(uint256(72)), note);
+
+        uint256[5] memory lengths = [uint256(0), 47, 49, 96, 1184];
+        for (uint256 i; i < lengths.length; i++) {
+            vm.expectRevert(ShieldedPoolLogic.InvalidNotes.selector);
+            pool.shield{value: 1}(bytes32(uint256(73)), new bytes(lengths[i]));
+        }
+        require(pool.nextIndex() == 2, "a rejected shield appended a leaf");
     }
 }

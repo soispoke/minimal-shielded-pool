@@ -210,7 +210,74 @@ other spends:
   same spend key is spent in that epoch, including another deposit of the
   same commitment, so the wallet makes a fresh spend key for each note. The
   receipt also reveals each note's `inner`, which links any other note paid to
-  the same `inner`.
+  the same `inner`. Notes paid to one address under [note delivery](#note-delivery)
+  share that address's spend key, so their receipts cover every spend of the
+  address in the epoch.
+
+## Note delivery
+
+`wallet/notes.py` posts each output's amount on chain, encrypted under a
+secret `K` that the sender and recipient share (see the README). The pool only
+checks that settlement carries 96 or 1,184 note bytes and a shield 48 or 1,136,
+and emits them. The one-time authorizer's signature covers them, so no one can
+swap them after signing.
+
+- The pool does not check what a note says. A sender who posts a wrong note
+  only keeps its own recipient from finding the payment; the payment still
+  exists and the sender can deliver the opening off chain. The scanner reads
+  every shield and settlement apart, even several in one transaction, so no
+  call's notes stop other wallets' scans.
+- A sender's first payment to a public address carries an ML-KEM-768
+  ciphertext and is visibly larger, which shows that someone paid a public
+  address for the first time. The ciphertext is assumed not to reveal the key
+  it was made for; that property is proven for round-3 Kyber (PKC 2023) and
+  was not checked separately for FIPS 203. Two transactions carrying the same
+  ciphertext are linked, so `notes.reserve` hands it out once: until that
+  payment is final, another payment to the same recipient opens a new channel.
+- Tags look random, but a sender that reuses an index repeats the tag, the key
+  and `rho`: that links the two payments and reveals the XOR of their amounts.
+  `notes.reserve` advances the index before the note leaves the wallet, and the
+  wallet must save that state before broadcasting. A sender cannot recompute
+  an outgoing secret from its seed, so a restored wallet opens a new channel
+  with each recipient. The change channel cannot be reopened: a restored
+  wallet scans to the finalized head and resumes it with `notes.self_channel`,
+  which skips 10 indices for payments sent before the restore. That is safe
+  while at most 10 of the previous device's change payments are still pending;
+  with more, wait until they are final or can no longer land. One device sends
+  from an account at a time, and a device that takes over, even one that sent
+  before, rebuilds its change channel the same way. A payment that did not land
+  is retried with the same note, never with a new index.
+- A sender keeps fewer than 20 payments per channel past the last one it has
+  seen final, and `direct-secret` issues numbers only within 20 of the highest
+  one paid, because the recipient's scan watches that far ahead. Each number
+  goes to one sender. After a restore, numbers handed out but not yet paid are
+  unknown, and the wallet may hand them out again. Direct secrets and the change
+  channel do not yet depend on the deployment, so a seed must not be used with
+  two pools: the same numbers and change indices would repeat.
+- All notes paid to one address share its spend key, so a nullifier key covers
+  every spend of that address in the epoch, not only the note a receipt names.
+  `wallet/disclosure.py` refuses to export such a key unless `--address-wide`
+  accepts it, and marks it in the receipt. A per-note nullifier key needs a
+  circuit change, planned with the next circuit revision.
+- A secret sent out of band is only as private as its channel. If that
+  channel is recorded and later broken, the secret reveals which outputs paid
+  the recipient on it, and their amounts, though it cannot spend them. Use a
+  post-quantum channel, and never print a secret in a public QR code.
+- A wallet that asks a server for its tags tells the server which notes are
+  its own. Wallets download every `Notes` event instead.
+- Ethereum clients will stop serving history older than a few months
+  (EIP-4444). Recovering older notes needs an archive, which a wallet can check
+  against block headers but which nobody guarantees to keep. ethrex leaves out
+  of `eth_getLogs` every log of a frame transaction whose fourth frame failed,
+  although its settlement stands. `notes.py scan` rebuilds such calls from
+  block receipts once a later leaf of the same epoch shows the gap, and stops if
+  leaves are still missing. A left-out spend that appended no leaf, such as a
+  full withdrawal, leaves no gap: its note shows as unspent, and spending it
+  fails because its nullifier is used. The scanner does not ask the node about
+  single nullifiers, which would link a wallet's notes to their spends.
+- ML-KEM-768 and ChaCha20-Poly1305 come from `cryptography` 50.0.2 (OpenSSL).
+  Keys derive from the seed through FIPS 203's 64-byte seed form;
+  encapsulation uses OpenSSL's randomness.
 
 ## Assumptions and remaining gates
 
@@ -337,11 +404,12 @@ unpinned validation limits, the fee check that covers them, and hybrid
 compression, including fresh proofs over a statement value plus the field
 modulus that only the dispatcher's range checks refuse, and malformed envelopes
 that only the dispatcher's key, signature, settlement, recent-root and domain
-checks refuse. The highest measured settlement execution cost is 1,423,709;
-the old 1.4M limit fails after consuming input keys. The new 2M limit includes
-additional margin, not a formal proof of a universal bound. These runs use
-ethrex `247e2dd2`; the live chain runs `bdfc5d8f`, 88 commits older, where
-the same scenarios give identical results, gas included. See
+checks refuse. The highest measured settlement execution cost, with a first
+payment's notes, is 1,435,539; the old 1.4M limit fails after consuming input
+keys. The new 2M limit includes additional margin, not a formal proof of a
+universal bound. These runs use ethrex `247e2dd2`; the live chain runs
+`bdfc5d8f`, 88 commits older, where the same scenarios gave identical results,
+gas included, before notes were added. See
 [`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
 
 The earlier profile's gas derivation is recorded in

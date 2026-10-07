@@ -10,6 +10,11 @@ spend_key itself. Following notes from spend to spend traces funds from a
 public deposit to a withdrawal. A receipt proves these links and amounts, not
 who presents it or where the funds came from before the deposit.
 
+Notes paid to one address (wallet/notes.py) share its spend key, so their
+nullifier key K covers every note of that address in the epoch. Export refuses
+such a key unless --address-wide accepts that, and marks those notes in the
+receipt.
+
   disclosure.py export --rpc URL --config CONFIG --fixture FIXTURE (--only CM,... | --all) --output PATH
   disclosure.py verify --rpc URL --config CONFIG --receipt PATH
 """
@@ -26,6 +31,8 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "reference"))
 import wallet as w  # noqa: E402
 from eth_hash.auto import keccak  # noqa: E402
+sys.path.insert(0, str(HERE.parent / "devnet"))
+from gas_profile import SETTLE_FRAME_DATA_BYTES  # noqa: E402
 from poseidon_bn254 import TAG_LEAF, hex32, p2, tagged  # noqa: E402
 
 RECEIPT, VERSION = "minimal-shielded-pool/disclosure", 1
@@ -108,7 +115,28 @@ def appended(log):
     return int(log["topics"][1], 16), int(log["topics"][2], 16), int(log["data"][2:66], 16)
 
 
-def export(chain, chain_id, pool, fixture, only, from_block=0):
+def address_spend_keys(fixture, notes):
+    """Spend keys that more than one note shares: an address's, under note delivery.
+
+    A fixture made with wallet/notes.py names its wallets' seeds, and any key two
+    notes of the fixture share is one too. Revealing such a key's nullifier key
+    reveals when every note of that key in the epoch is spent.
+    """
+    shared = set()
+    wallets = fixture.get("wallets", {})
+    if wallets:
+        import notes as delivery
+        for wallet in wallets.values():
+            shared.add(delivery.WalletKeys(bytes.fromhex(wallet["seed"][2:])).spend_key)
+    seen = {}
+    for cm, note in notes.items():
+        if note["value"]:
+            seen.setdefault(note["sk"], set()).add(cm)
+    shared.update(sk for sk, cms in seen.items() if len(cms) > 1)
+    return shared
+
+
+def export(chain, chain_id, pool, fixture, only, from_block=0, address_wide=False):
     """A receipt for the chosen notes a generator fixture opens: `only` is a set
     of commitments, or None for all. It reads the pool's LeafAppended and
     NoteSpent logs once and matches them locally, so the RPC does not learn
@@ -136,6 +164,7 @@ def export(chain, chain_id, pool, fixture, only, from_block=0):
                                     {"sk": sk, "inner": w.inner(sk, rho), "value": value, "places": set()})
             if index is not None:
                 note["places"].add((epoch, index))
+    shared_keys = address_spend_keys(fixture, notes)
     out = []
     for cm, n in sorted(notes.items(), key=lambda item: (item[1]["value"] == 0, item[0])):
         if only is not None and cm not in only:
@@ -162,6 +191,13 @@ def export(chain, chain_id, pool, fixture, only, from_block=0):
                     "value": str(n["value"])}
             note.update({"dummy": True} if n["value"] == 0 else {"created": created})
             if spent is not None:
+                if n["sk"] in shared_keys:
+                    if not address_wide:
+                        raise ReceiptError(
+                            f"note {hex32(cm)[:18]}... shares its spend key with other notes, as notes "
+                            f"paid to one address do: its nullifier key would show when every note of "
+                            f"that key in epoch {epoch} is spent. Pass --address-wide to disclose that")
+                    note["keyScope"] = "address"
                 note.update({"spent": spent, "nullifierKey": hex32(key)})
             out.append(note)
     return {"receipt": RECEIPT, "version": VERSION, "chainId": chain_id,
@@ -173,7 +209,8 @@ def decode_spend(tx, pool):
     if tx["sender"] != pool:
         raise ReceiptError(f"{tx['hash']} is not a spend of this pool")
     frames = [f for f in tx["frames"] if f["mode"] == 2 and f["to"] == pool and f["data"][:4] == SETTLE_SELECTOR]
-    if len(frames) != 1 or len(frames[0]["data"]) != 4 + 32 * len(SPEND_FIELDS):
+    # settle(Spend) is followed by the spend's notes, which receipts do not need.
+    if len(frames) != 1 or len(frames[0]["data"]) not in SETTLE_FRAME_DATA_BYTES:
         raise ReceiptError(f"{tx['hash']} has no canonical settlement frame")
     if frames[0]["status"] != 1:
         raise ReceiptError(f"{tx['hash']}'s settlement did not succeed")
@@ -290,6 +327,8 @@ def main():
     parser.add_argument("--fixture", help="export: the wallet fixture holding the openings")
     parser.add_argument("--only", help="export: comma-separated commitments of the notes to disclose")
     parser.add_argument("--all", action="store_true", help="export: disclose every note the fixture opens")
+    parser.add_argument("--address-wide", action="store_true",
+                        help="export: allow nullifier keys shared by every note of an address in the epoch")
     parser.add_argument("--output", help="export: where to write the receipt")
     parser.add_argument("--receipt", help="verify: the receipt to check")
     args = parser.parse_args()
@@ -307,7 +346,8 @@ def main():
                     raise ReceiptError("--only takes full commitments: 0x and 64 hex digits each")
                 only = {int(c, 16) for c in chosen}
             receipt = export(chain, int(cfg["chainId"]), int(cfg["pool"], 16),
-                             json.loads(Path(args.fixture).read_text()), only, int(cfg.get("deploymentBlock", 0)))
+                             json.loads(Path(args.fixture).read_text()), only, int(cfg.get("deploymentBlock", 0)),
+                             address_wide=args.address_wide)
             write_new_private(args.output, json.dumps(receipt, indent=1) + "\n")
             print(f"wrote {args.output}: {len(receipt['notes'])} notes")
         else:

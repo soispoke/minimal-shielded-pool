@@ -90,11 +90,14 @@ PROFILES["position-notes-v1"] = {
 # The dispatcher stops pinning the validation frames' limits. These are the wallet
 # defaults the manifest records, sized from measurement with headroom.
 PROFILES["position-notes-v2"] = {
-    **PROFILES["position-notes-v1"], "pool_profile": POOL_PROFILE,
+    **PROFILES["position-notes-v1"], "pool_profile": "position-notes-v2",
     "recent_root_frame_gas": RECENT_ROOT_FRAME_GAS,
     "verify_frame_gas": VERIFY_FRAME_GAS,
     "verify_frame_state_gas": VERIFY_FRAME_STATE_GAS,
 }
+# Same budgets; settlement and shield carry notes, so the wire format changes and a
+# fresh deployment is required.
+PROFILES["position-notes-v3"] = {**PROFILES["position-notes-v2"], "pool_profile": POOL_PROFILE}
 
 
 # Every active artifact must be pinned. A manifest that omits one would
@@ -310,7 +313,7 @@ def main():
         raise SystemExit("signature gas does not match the immutable dispatcher profile")
     if required > profile["hegota_profile_2_budget"]:
         raise SystemExit("transaction exceeds the configured Hegota Profile 2 budget")
-    if profile["wire_profile"] == "position-notes-v2":
+    if profile["wire_profile"] in ("position-notes-v2", "position-notes-v3"):
         # The pre-PR 12279 figure charged keyed-nonce creation as execution gas and no
         # longer applies. The measurement on this dispatcher, native ethrex 247e2dd2,
         # must fit the default.

@@ -14,6 +14,14 @@ contract ShieldedPoolLogic {
     bytes32 public constant SINK_0 = 0x23f1b896ada6ee5dac80945b11329e7ab64412c2be9f5c87cfa3261cc1d8216f;
     bytes32 public constant SINK_1 = 0x2fd476622c67c880b3049a76c7337192362834c9d6dfb55c5060bb96c98932bb;
     address public constant RECENT_ROOT_PREDEPLOY = address(0x8272);
+    /// A note is a 16-byte tag, a 16-byte encrypted amount and a 16-byte
+    /// authentication tag. A sender's first payment to a public address puts its
+    /// ML-KEM-768 ciphertext before the notes. The pool publishes notes and never
+    /// reads them: a wrong note only stops the recipient from finding its payment.
+    uint256 public constant NOTE_BYTES = 48;
+    uint256 public constant KEM_CIPHERTEXT_BYTES = 1088;
+    /// settle(Spend) calldata is the selector and twelve words; the notes follow.
+    uint256 internal constant SETTLE_SPEND_BYTES = 4 + 12 * 32;
 
     address private immutable IMPLEMENTATION_SELF = address(this);
     address public immutable POSEIDON_T3;
@@ -48,6 +56,7 @@ contract ShieldedPoolLogic {
     event RootPublished(uint64 indexed epoch, bytes32 indexed source, bytes32 root);
     event WithdrawalCredited(address indexed recipient, uint256 amount);
     event Withdrawn(address indexed recipient, uint256 amount);
+    event Notes(bytes notes);
 
     error DirectImplementationCall();
     error ZeroValueShield();
@@ -66,6 +75,7 @@ contract ShieldedPoolLogic {
     error PayoutFailed();
     error InvalidHashLibrary();
     error HashFailed();
+    error InvalidNotes();
 
     modifier onlyDelegate() {
         if (address(this) == IMPLEMENTATION_SELF) revert DirectImplementationCall();
@@ -94,10 +104,12 @@ contract ShieldedPoolLogic {
         );
     }
 
-    function shield(bytes32 inner) external payable onlyDelegate returns (uint32 index) {
+    /// @param note One note for the new leaf, optionally after an ML-KEM ciphertext.
+    function shield(bytes32 inner, bytes calldata note) external payable onlyDelegate returns (uint32 index) {
         if (msg.value == 0) revert ZeroValueShield();
         if (msg.value >= MAX_VALUE) revert ValueTooLarge();
         if (uint256(inner) >= P) revert NotCanonical();
+        if (note.length != NOTE_BYTES && note.length != KEM_CIPHERTEXT_BYTES + NOTE_BYTES) revert InvalidNotes();
 
         bytes32 cm = bytes32(_hash3(2, uint256(inner), msg.value));
         if (cm == SINK_0 || cm == SINK_1) revert ReservedSink();
@@ -106,13 +118,21 @@ contract ShieldedPoolLogic {
         index = _insert(cm);
         currentRoot = _computeRoot();
         emit LeafAppended(cm, currentEpoch, index, currentRoot);
+        emit Notes(note);
     }
 
     /// @notice The only post-approval settlement entrypoint.
     /// The immutable dispatcher has already checked the proof, complete
     /// envelope, signature, nonce keys, recent-root tuple, and gas constants.
+    /// The calldata is settle(Spend) followed by two notes, optionally after an
+    /// ML-KEM ciphertext. The one-time authorizer's signature covers them.
     function settle(Spend calldata s) external onlyDelegate {
         if (msg.sender != address(this)) revert NotPoolSender();
+        // The dispatcher admits the same two lengths before approval.
+        uint256 notesLength = msg.data.length - SETTLE_SPEND_BYTES;
+        if (notesLength != 2 * NOTE_BYTES && notesLength != KEM_CIPHERTEXT_BYTES + 2 * NOTE_BYTES) {
+            revert InvalidNotes();
+        }
         if (s.nf1 == bytes32(0) || s.nf2 == bytes32(0)) revert ZeroNullifier();
         if (s.authorizer == address(0)) revert InvalidAuthorizer();
         if (s.domain != domain(s.epoch)) revert InvalidDomain();
@@ -154,6 +174,7 @@ contract ShieldedPoolLogic {
             withdrawalCredit[s.recipient] += s.publicAmount;
             emit WithdrawalCredited(s.recipient, s.publicAmount);
         }
+        emit Notes(msg.data[SETTLE_SPEND_BYTES:]);
     }
 
     /// @notice Publish an authenticated active or finalized epoch root.

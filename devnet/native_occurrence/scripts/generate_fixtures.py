@@ -77,8 +77,19 @@ def tree_of(*notes):
     return tree
 
 BASE = tree_of(NA, NB)
+
+# The pool publishes notes without reading them, so these vectors carry fixed test
+# bytes. The worst settlement shapes carry a first payment's 1,184 bytes, so the
+# native run measures settlement gas with the largest notes.
+TEST_NOTE = keccak(b"minimal-shielded-pool:native-test-note")[:16] * 3
+TEST_NOTES = "0x" + (TEST_NOTE * 2).hex()
+TEST_FIRST_PAYMENT_NOTES = "0x" + (keccak(b"minimal-shielded-pool:native-test-ciphertext") * 34 + TEST_NOTE * 2).hex()
+MAX_NOTES_CASES = ("long-carry", "rollover", "full-tree-rollover")  # every settlement gas case
+
 def deposit(name, n, nonce, tree, slot=SLOT):
-    return save(name, ordinary(nonce, POOL, calldata("shield(bytes32)", "0x" + word(n["inner"]).hex()), n["value"]),
+    inner = "0x" + word(n["inner"]).hex()
+    shield = builder.shield_calldata(inner, {"note": "0x" + TEST_NOTE.hex()})
+    return save(name, ordinary(nonce, POOL, shield, n["value"]),
         slot_number=slot, storage={addr(POOL): {"21": str(len(tree.leaves)), "22": str(tree.root())}},
         balance_delta_before_gas={addr(POOL): str(n["value"])})
 def publish(name, nonce, epoch=0, slot=SLOT):
@@ -90,12 +101,14 @@ entries = {}
 KEY_HASH = hashlib.sha256((REPO / "build/spend_final.zkey").read_bytes()).hexdigest()
 WASM_HASH = hashlib.sha256((REPO / "build/spend_js/spend.wasm").read_bytes()).hexdigest()
 
+
 def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=SLOT, alias=None):
     outputs = w.sink_outputs() if outputs is None else outputs
     public = n["value"] - FEE - sum(v for _, v in outputs)
     assert public >= 0
     if not public: recipient = 0
     inputs = [{key: n[key] for key in ("sk", "rho", "value")} | {"idx": index}, w.dummy_input()]
+    notes = TEST_FIRST_PAYMENT_NOTES if name.startswith(MAX_NOTES_CASES) else TEST_NOTES
     private_key, authorizer = w.new_authorizer()
     domain = w.domain_scalar(CHAIN, addr(POOL), epoch)
     witness = w.build_witness(tree, inputs, outputs, domain, authorizer=authorizer, public_amount=public, fee=FEE, recipient=addr(recipient))
@@ -119,10 +132,12 @@ def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=
     if alias is not None:
         honest = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer,
                                    private_key, prove_publics_honest(inputs, outputs, tree, domain, public, recipient,
-                                                                     authorizer, publics), proof, root_slot=str(root_slot))
+                                                                     authorizer, publics), proof, root_slot=str(root_slot),
+                                   notes=notes)
         entries[name] = honest
         return honest
-    entry = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer, private_key, publics, proof, root_slot=str(root_slot))
+    entry = smoke.spend_entry(tree, domain, inputs, outputs, epoch, public, FEE, recipient, authorizer, private_key,
+                              publics, proof, root_slot=str(root_slot), notes=notes)
     entries[name] = entry
     return entry
 
@@ -138,7 +153,7 @@ def prove_publics_honest(inputs, outputs, tree, domain, public, recipient, autho
 def frame_tx(entry, settle_gas=SETTLE_FRAME_GAS, mutate=None, max_fee=2, nonce_seq=0, nonce_keys=None):
     source = keccak(POOL.to_bytes(20, "big") + word(int(entry["epoch"])))
     recent = source + int(entry["root_slot"]).to_bytes(8, "big") + word(int(entry["root"], 16))
-    settle = builder.cast_calldata(f"settle({builder.SPEND_TUPLE})", builder.spend_args(entry))
+    settle = builder.settle_calldata(entry)
     frames = [Frame(1, 0, 0x8272, RECENT_ROOT_FRAME_GAS, 0, recent),
         Frame(1, 3, POOL, VERIFY_FRAME_GAS, 0, builder.proof_bytes(entry), VERIFY_FRAME_STATE_GAS),
         Frame(2, 0, POOL, settle_gas, 0, settle, SETTLE_FRAME_STATE_GAS)]

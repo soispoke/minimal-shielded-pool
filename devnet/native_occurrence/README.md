@@ -19,9 +19,9 @@ Generated vectors and proof files are ignored by Git; the reports are kept.
 
 The recorded run passes 77 native scenarios and two client-policy tests, using
 32 real Groth16 proofs. The highest measured settlement execution cost is
-1,423,709 gas (long carry plus withdrawal credit). The conservative five-slot
-state test uses 489,600 state gas, below the 550,000 cap. The reports contain
-each transaction hash and per-frame results.
+1,435,539 gas (long carry plus withdrawal credit, with a first payment's
+notes). The conservative five-slot state test uses 489,600 state gas, below the
+550,000 cap. The reports contain each transaction hash and per-frame results.
 
 The scenarios cover both copies of identical funded deposits being withdrawn
 in one history, an identical private output and its original both being spent,
