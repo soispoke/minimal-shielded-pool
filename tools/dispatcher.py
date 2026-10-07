@@ -12,17 +12,16 @@ rejected by ethrex's validation observer.
 Usage:
   dispatcher.py --initcode 0x<impl> 0x<verifier>   deploy initcode
   dispatcher.py --artifact            write the bare initcode (no tail) to
-                                      core/artifacts/shielded_pool_dispatcher_init.hex
-                                      for the forge suite
-                                      (core/contracts/test/DispatcherPool.t.sol).
-                                      Rerun after any ShieldedPoolDispatcher.yul
-                                      change.
+                                      core/artifacts/shielded_pool_dispatcher_init.hex,
+                                      which the deployment script and the CLI's
+                                      deployed-code check read. Rerun after any
+                                      ShieldedPoolDispatcher.yul change.
 
 There is deliberately no --runtime mode. The optimizer appends a data segment
 after the runtime subobject, so the naive 0xfe split is unsound. Derive the
 expected deployed code by simulating the deployment:
 
-  cast call --rpc-url <rpc> --create "$(dispatcher.py --initcode 0x<impl>)"
+  cast call --rpc-url <rpc> --create "$(dispatcher.py --initcode 0x<impl> 0x<verifier>)"
 
 run_live_dispatcher.sh verifies the deployed dispatcher this way.
 """
@@ -104,7 +103,8 @@ def main():
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--initcode", action="store_true")
     g.add_argument("--artifact", action="store_true")
-    ap.add_argument("addrs", nargs="*", help="implementation (ShieldedPoolLogic) address")
+    ap.add_argument("addrs", nargs="*",
+                    help="ShieldedPoolLogic implementation and Groth16 verifier addresses")
     a = ap.parse_args()
     if a.artifact:
         print(write_artifact())

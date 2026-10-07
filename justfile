@@ -54,6 +54,13 @@ test-contracts:
     forge lint --root core/contracts --deny warnings
     forge test --root core/contracts --force -vv
 
+# Regenerate the Poseidon contracts from sdk/poseidon_bn254_constants.json. The
+# pinned files match only after forge fmt.
+poseidon:
+    python3 tools/gen_poseidon_sol.py
+    python3 tools/split_poseidon.py
+    cd core/contracts && forge fmt src/PoseidonBN254.sol src/PoseidonT3.sol src/PoseidonT4.sol
+
 # The native suite: real proofs through the pinned ethrex VM (see test/native/README.md).
 # The ethrex path may be relative to the directory you run just from.
 native ethrex_source:

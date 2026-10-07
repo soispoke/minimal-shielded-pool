@@ -1,8 +1,9 @@
-"""Generates ../core/contracts/src/PoseidonBN254.sol from ../sdk/poseidon_bn254_constants.json.
+"""Generates core/contracts/src/PoseidonBN254.sol from sdk/poseidon_bn254_constants.json.
 
-After regenerating, run split_poseidon.py: the committed layout
-is the PoseidonT3/PoseidonT4 split (each half fits the hegota devnet's 2^24
-per-tx deploy budget) with PoseidonBN254.sol as a thin facade.
+`just poseidon` runs this, then split_poseidon.py and forge fmt. The committed
+layout is the PoseidonT3/PoseidonT4 split (each half fits the hegota devnet's
+2^24 per-tx deploy budget) with PoseidonBN254.sol as a thin facade, and the
+pinned files match only after forge fmt.
 
 The committed Solidity is generated from the exact constants the circuit uses
 (exported from circomlibjs by export_vectors.js) and differentially
@@ -13,7 +14,7 @@ state = [0, in...]; per round: add constants, x^5 S-box (all lanes in the 4
 initial and 4 terminal rounds, lane 0 otherwise), then
 new_state[i] = sum_j M[i][j] * state[j]; output state[0].
 
-    python3 gen_poseidon_sol.py && (cd ../core/contracts && forge test)
+    just poseidon && just test-contracts
 """
 import json
 from pathlib import Path
