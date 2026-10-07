@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -44,97 +45,26 @@ jobs:
         with:
           version: v1.7.1
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just@1.58.0
+
       - name: Install pinned dependencies
-        run: |
-          npm ci --prefix tools
-          python -m pip install --requirement requirements.txt
+        run: just install
 
       - name: Reject high dependency advisories
         run: npm audit --prefix tools --omit=dev --audit-level=high
 
-      - name: Compile circuit
-        run: |
-          mkdir -p /tmp/shielded-pool-circuit
-          tools/node_modules/.bin/circom2 core/circuits/spend.circom \
-            --r1cs --wasm --sym -l tools/node_modules \
-            -o /tmp/shielded-pool-circuit
-          tools/node_modules/.bin/snarkjs r1cs info /tmp/shielded-pool-circuit/spend.r1cs
-          cmp /tmp/shielded-pool-circuit/spend.r1cs core/artifacts/spend.r1cs
-          cmp /tmp/shielded-pool-circuit/spend_js/spend.wasm core/artifacts/spend_js/spend.wasm
+      # The checks themselves live in the justfile, so CI and `just test` run
+      # the same list.
+      - name: Check generated artifacts and the archived profile
+        run: just check-artifacts
 
-      - name: Check generated dispatcher bytecode
-        run: |
-          forge build --root core/contracts
-          python tools/dispatcher.py --artifact >/dev/null
-          git diff --exit-code -- core/artifacts/shielded_pool_dispatcher_init.hex
-          python tools/dispatcher.py --initcode \
-            0x0000000000000000000000000000000000000001 \
-            0x0000000000000000000000000000000000000002 >/dev/null
-
-      - name: Check Python and frame-vector code
-        run: |
-          python -m py_compile \
-            tools/dispatcher.py sdk/frametx.py sdk/gas_profile.py \
-            sdk/pool_frametx.py \
-            test/test_pool_envelope_binding.py \
-            test/test_gas_only_action.py \
-            test/test_recent_root_window.py \
-            test/test_occurrence_profile.py test/test_deploy_checks.py \
-            test/test_occurrence.py \
-            test/test_wallet_occurrence.py test/test_generators.py \
-            sdk/disclosure.py test/test_disclosure.py \
-            sdk/notes.py test/test_notes.py \
-            sdk/gen_nonce_race.py sdk/gen_smoke.py sdk/wallet.py \
-            tools/gen_poseidon_sol.py sdk/poseidon_bn254.py \
-            tools/check_activation.py tools/check_forge_config.py tools/check_gas_profile.py \
-            tools/check_formal_pins.py \
-            test/test_check_activation.py \
-            tools/patch_verifier.py
-          python sdk/frametx.py
-          python test/test_pool_envelope_binding.py
-          python test/test_gas_only_action.py
-          python test/test_recent_root_window.py
-          python test/test_occurrence_profile.py
-          python test/test_deploy_checks.py
-          python test/test_occurrence.py
-          python test/test_wallet_occurrence.py
-          python test/test_generators.py
-          python test/test_disclosure.py
-          python test/test_notes.py
-          python tools/check_gas_profile.py
-          python tools/check_activation.py core/activation_manifest.testbed.json --allow-testbed
-          python tools/check_forge_config.py core/activation_manifest.testbed.json core/contracts
-          python test/test_check_activation.py
-          python sdk/wallet.py
-          python sdk/poseidon_bn254.py
-
-      - name: Preserve historical deployment evidence
-        run: |
-          # The archived manifest names artifacts from before this circuit change.
-          # Check that snapshot, without rewriting it to describe the new pool.
-          python - <<'PY'
-          import hashlib, json, subprocess
-          from pathlib import Path
-          base = '6c5c77b171e08ad0987a06c44d0488ab385f36dd'
-          archive = 'evidence/vectors/2026-09-01-hegota-final-profile'
-          subprocess.run(['git', 'diff', '--exit-code', f'{base}:devnet/vectors/2026-09-01-hegota-final-profile', f'HEAD:{archive}'], check=True)
-          subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--', archive], check=True)
-          manifest = json.loads(Path(archive, 'activation_manifest.testbed.json').read_text())
-          for path, expected in manifest['artifacts'].items():
-              data = subprocess.check_output(['git', 'show', f'{base}:{path}'])
-              assert hashlib.sha256(data).hexdigest() == expected, path
-          print('Historical artifact hashes match their original snapshot')
-          PY
+      - name: Python tests and checks
+        run: just test-python
 
       - name: Test contracts
-        working-directory: core/contracts
-        run: |
-          forge fmt --check
-          forge lint --deny warnings
-          # A preceding `forge build` can leave ABI-only test artifacts in
-          # Foundry's cache. Force recompilation so test discovery cannot
-          # silently collapse to a partial suite.
-          forge test --force -vv
+        run: just test-contracts
 
   native:
     runs-on: ubuntu-latest

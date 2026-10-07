@@ -298,37 +298,18 @@ per-transaction budget.
 
 ## Test
 
-With [just](https://just.systems), `just install` and `just test` run the
-commands below, and `just --list` shows the rest.
+With [just](https://just.systems) installed:
 
 ```sh
-npm ci --prefix tools
-python3 -m pip install --requirement requirements.txt
-
-python3 sdk/frametx.py
-python3 test/test_pool_envelope_binding.py
-python3 test/test_gas_only_action.py
-python3 test/test_recent_root_window.py
-python3 test/test_occurrence_profile.py
-python3 test/test_deploy_checks.py
-python3 test/test_occurrence.py
-python3 test/test_wallet_occurrence.py
-python3 test/test_generators.py
-python3 test/test_disclosure.py
-python3 test/test_notes.py
-python3 tools/check_gas_profile.py
-python3 tools/check_activation.py core/activation_manifest.testbed.json --allow-testbed
-python3 tools/check_forge_config.py core/activation_manifest.testbed.json core/contracts
-python3 test/test_check_activation.py
-python3 sdk/wallet.py
-python3 sdk/poseidon_bn254.py
-
-forge fmt --root core/contracts --check
-forge lint --root core/contracts --deny warnings
-forge test --root core/contracts --force -vv
+just install   # the pinned npm toolchain and the Python dependencies
+just test      # what CI's test job runs
 ```
 
-CI also rebuilds the circuit and requires byte-identical R1CS and WASM. The
+`just --list` shows the other recipes: the native suite, the formal-pin report,
+Poseidon regeneration and deployment. The [justfile](justfile) lists every
+command they run.
+
+The tests rebuild the circuit and require byte-identical R1CS and WASM. The
 committed artifacts come from circom2 0.2.8; 0.2.23 does not reproduce them
 byte for byte, so a compiler upgrade means a new reviewed artifact set. 
 `tools/setup.sh` runs a new single-party test setup, not a ceremony. Run it
