@@ -14,12 +14,7 @@ from pool_frametx import (
     EIP7825_TX_GAS_CAP,
     ETHEX_MEMPOOL_MAX_BYTES,
     RECENT_ROOT_ADDRESS,
-    RECENT_ROOT_FRAME_GAS,
-    SETTLE_FRAME_GAS,
-    SETTLE_FRAME_STATE_GAS,
     SPEND_TUPLE,
-    VERIFY_FRAME_GAS,
-    VERIFY_FRAME_STATE_GAS,
     PRECOMPILES,
     UNCLAIMABLE_RECIPIENTS,
     _keccak,
@@ -27,7 +22,11 @@ from pool_frametx import (
     check_tx_resource_limits,
     spend_tail_frame,
 )
-from frametx import Frame, FrameSig, FrameTx
+from frametx import Frame, FrameSig, FrameTx, rlp_bytes, rlp_int, rlp_items, rlp_list
+# The expected limits come from the wallet defaults, not from the client module,
+# so a limit the client overrides cannot follow itself into the expectation.
+from gas_profile import (RECENT_ROOT_FRAME_GAS, SETTLE_FRAME_GAS, SETTLE_FRAME_STATE_GAS,
+                         VERIFY_FRAME_GAS, VERIFY_FRAME_STATE_GAS)
 
 
 POOL = 0xBEEF
@@ -77,9 +76,10 @@ def exits(fn, text):
 
 
 def run_broadcast_case(simulation, receipt, action, rpc_calls, allow_failed_claim=False,
-                       calldata=None):
-    """Run the real send path against fixed RPC/simulation responses."""
-    def fake_rpc(_url, method, _params):
+                       calldata=None, sent=None):
+    """Run the real send path against fixed RPC/simulation responses, keeping
+    any raw transaction it broadcasts in `sent`."""
+    def fake_rpc(_url, method, params):
         rpc_calls.append(method)
         if method == "eth_chainId":
             return "0x1"
@@ -88,6 +88,8 @@ def run_broadcast_case(simulation, receipt, action, rpc_calls, allow_failed_clai
         if method == "eth_getBlockByNumber":
             return {"baseFeePerGas": "0x1"}
         if method == "eth_sendRawTransaction":
+            if sent is not None:
+                sent.append(bytes.fromhex(params[0][2:]))
             return "0x" + "12" * 32
         if method == "eth_getTransactionReceipt":
             return receipt
@@ -110,6 +112,19 @@ def run_broadcast_case(simulation, receipt, action, rpc_calls, allow_failed_clai
             )
     finally:
         builder.rpc, builder.simulate, builder.time.sleep = old_rpc, old_simulate, old_sleep
+
+
+def assert_signed_spend(raw, tail):
+    """The transaction the client signed has exactly the frames, nonce keys and
+    sender this file writes out independently in _spend_tx."""
+    assert raw[0] == 0x06, "not a frame transaction"
+    fields = rlp_items(raw[1:])
+    expected = _spend_tx(tail)
+    assert fields[0] == rlp_int(1), "chain id"
+    assert fields[1] == rlp_list([rlp_int(k) for k in expected.nonce_keys]), "nonce keys"
+    assert fields[2] == rlp_int(0), "nonce sequence"
+    assert fields[3] == rlp_bytes(POOL.to_bytes(20, "big")), "sender"
+    assert fields[4] == rlp_list([f.rlp() for f in expected.frames]), "frames"
 
 
 def main():
@@ -264,13 +279,16 @@ def main():
             {"status": "0x1"}, {"status": "0x0"},
         ],
     }
-    mined_calls = []
+    mined_calls, mined_sent = [], []
 
     def mined_action_failure():
-        run_broadcast_case(successful_simulation, failed_action_receipt, action, mined_calls)
+        run_broadcast_case(successful_simulation, failed_action_receipt, action, mined_calls,
+                           sent=mined_sent)
 
     checked += exits(mined_action_failure, "notes were consumed")
     assert mined_calls.count("eth_sendRawTransaction") == 1
+    checked += 1
+    assert_signed_spend(mined_sent[0], Frame(0, 0, ACCOUNT, ACTION_GAS, 0, b""))
     checked += 1
 
     missing_action_receipt = {
