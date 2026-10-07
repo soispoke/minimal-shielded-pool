@@ -53,6 +53,11 @@ def main():
                                                  "--pool=0x01", out], "fixed seed is public")
         checked += refused("gen_nonce_race.py", ["--random", "--chain-id=8141", *race, over_live],
                            "holds a fixture for chain 8141")
+        # A mistyped flag stops the run instead of falling back to a default,
+        # such as the committed test chain's fixture path.
+        checked += refused("gen_smoke.py", ["--random", "--chain_id=8141", out], "unrecognized arguments")
+        checked += refused("gen_smoke.py", ["--rand", out], "unrecognized arguments")
+        checked += refused("gen_nonce_race.py", [*race, "--note_wei=1", out], "unrecognized arguments")
 
         # A new secret file is owner-only, and replacing an old world-readable
         # one gives a new file, so a reader holding the old one open sees none of it.

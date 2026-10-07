@@ -272,8 +272,35 @@ def check_shield_binds_fixture():
         assert error and expected in error and not sent, error
     return len(refused) + 3
 
+def check_cli_rejects_unknown_flags():
+    """A flag the CLI does not know stops it before any file or RPC, so a typo
+    of --dry-run cannot send a real transaction; abbreviations are refused too.
+    --flag=value parses like --flag value, the custom tail included."""
+    fixture = str(ROOT / "test/fixtures/smoke_fixture.json")
+    runs = 0
+    for typo in ("--dryrun", "--dry", "--dry_run", "--no-tails", "--action-gaas=1"):
+        for operation in ("shield", "publish", "transfer", "withdraw"):
+            result = subprocess.run([
+                sys.executable, str(ROOT / "sdk/pool_frametx.py"),
+                "http://127.0.0.1:1", "missing-config.json", fixture, operation, typo,
+            ], capture_output=True, text=True)
+            assert result.returncode == 2 and "unrecognized arguments" in result.stderr, \
+                (typo, operation, result.stderr[-300:])
+            runs += 1
+    head = ["http://node", "config.json", fixture, "transfer"]
+    tail = {"--action-target": "0x" + "ab" * 20, "--action-call": "0x1234",
+            "--action-gas": "300000", "--action-state-gas": "0"}
+    spaced = builder.parse_args(head + [x for pair in tail.items() for x in pair])
+    joined = builder.parse_args(head + [f"{flag}={value}" for flag, value in tail.items()])
+    assert spaced.action == joined.action == {
+        "target": 0xAB * int("01" * 20, 16), "data": bytes.fromhex("1234"),
+        "gas_limit": 300_000, "state_limit": 0}, (spaced.action, joined.action)
+    return runs
+
+
 def main():
     assert POOL_PROFILE == "position-notes-v3"
+    typo_runs = check_cli_rejects_unknown_flags()
     runs = check_profile_labels()
     check_recorded_deployment()
     check_deployed_pool_gate()
@@ -285,7 +312,8 @@ def main():
           "codeless, wrong-domain and wrong-chain pools refused; "
           "shield, transfer and withdraw refuse a relabeled previous-profile pool before sending; "
           f"shield refuses {shield_cases} fixtures that cannot spend the note it would fund "
-          "and reports a note that landed elsewhere")
+          "and reports a note that landed elsewhere; "
+          f"{typo_runs} CLI runs with an unknown flag stop before reading a file")
 
 
 if __name__ == "__main__":

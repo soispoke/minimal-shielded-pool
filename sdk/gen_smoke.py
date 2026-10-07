@@ -30,6 +30,7 @@ secret, Bob's payment through his public address (the transfer carries the
 ML-KEM ciphertext), and random notes in the withdrawals' unused places. The
 fixture records each wallet's seed, so a scan rebuilds the notes from it.
 """
+import argparse
 import json
 import os
 import secrets
@@ -218,48 +219,60 @@ def spend_entry(
     return e
 
 
+def int_arg(value):
+    """An integer in any form int(value, 0) reads."""
+    try:
+        return int(value, 0)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not an integer: {value}") from None
+
+
+def path_arg(value):
+    return Path(value).expanduser().resolve()
+
+
+def parse_args(argv):
+    """The command line. Every flag must be one this script knows, so a mistyped
+    --chain-id stops the run instead of falling back to the test chain."""
+    ap = argparse.ArgumentParser(prog="gen_smoke.py", allow_abbrev=False,
+                                 description="Generate the smoke fixture with real Groth16 proofs.")
+    ap.add_argument("--random", action="store_true",
+                    help="fresh seeds and witnesses (required off the test chain and pool)")
+    ap.add_argument("--chain-id", type=int_arg, default=TEST_CHAIN_ID)
+    ap.add_argument("--pool-address", default=TEST_POOL)
+    ap.add_argument("--epoch", type=int_arg, default=0)
+    ap.add_argument("--shield-wei", type=int_arg, default=ETH)
+    ap.add_argument("--payment-wei", type=int_arg, default=ETH * 60 // 100)
+    ap.add_argument("--fee-wei", type=int_arg, default=ETH * 5 // 100)
+    ap.add_argument("--recipient")
+    ap.add_argument("--output", type=path_arg)
+    return ap.parse_args(argv)
+
+
 def main():
+    args = parse_args(sys.argv[1:])
     zkey = BUILD / "spend_final.zkey"
     if not zkey.exists():
         raise SystemExit("run the setup first: (cd ../tools && ./setup.sh)")
     WORK.mkdir(exist_ok=True)
-    if "--random" not in sys.argv:
+    if not args.random:
         w.set_seed(20260702)
-    chain_id = TEST_CHAIN_ID
-    pool_address = TEST_POOL
-    epoch = 0
-    shield_wei = ETH
-    payment_wei = ETH * 60 // 100
-    fee_wei = ETH * 5 // 100
-    output_path = None
+    chain_id, pool_address, epoch = args.chain_id, args.pool_address, args.epoch
+    shield_wei, payment_wei, fee_wei = args.shield_wei, args.payment_wei, args.fee_wei
+    output_path = args.output
     recipient = RECIPIENT
-    for arg in sys.argv[1:]:
-        if arg.startswith("--chain-id="):
-            chain_id = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--pool-address="):
-            pool_address = arg.split("=", 1)[1]
-        elif arg.startswith("--epoch="):
-            epoch = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--shield-wei="):
-            shield_wei = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--payment-wei="):
-            payment_wei = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--fee-wei="):
-            fee_wei = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--recipient="):
-            recipient = arg.split("=", 1)[1]
-            if not recipient.startswith("0x"):
-                recipient = "0x" + recipient
-            if w.address_scalar(recipient) == 0 or w.address_scalar(recipient) >= 1 << 160:
-                raise SystemExit(f"invalid --recipient: {recipient}")
-            recipient = f"0x{w.address_scalar(recipient):040x}"
-        elif arg.startswith("--output="):
-            output_path = Path(arg.split("=", 1)[1]).expanduser().resolve()
+    if args.recipient is not None:
+        recipient = args.recipient
+        if not recipient.startswith("0x"):
+            recipient = "0x" + recipient
+        if w.address_scalar(recipient) == 0 or w.address_scalar(recipient) >= 1 << 160:
+            raise SystemExit(f"invalid --recipient: {recipient}")
+        recipient = f"0x{w.address_scalar(recipient):040x}"
     # The fixed seed is public, so anyone could rebuild these notes and spend
     # them. Keep it, and the placeholder recipient, for the committed fixture's
     # test chain and pool.
     if (chain_id, int(pool_address, 16)) != (TEST_CHAIN_ID, int(TEST_POOL, 16)):
-        if "--random" not in sys.argv:
+        if not args.random:
             raise SystemExit("the fixed seed is public, so anyone could spend these notes; "
                              "pass --random for another chain or pool")
         if recipient == RECIPIENT:
@@ -279,7 +292,7 @@ def main():
 
     # The wallets. The fixed seeds are as public as the fixed proving seed, and
     # refused off the test chain above.
-    if "--random" in sys.argv:
+    if args.random:
         alice_seed, bob_seed = secrets.token_bytes(32), secrets.token_bytes(32)
     else:
         alice_seed = w.keccak(b"minimal-shielded-pool:smoke:alice:v1")

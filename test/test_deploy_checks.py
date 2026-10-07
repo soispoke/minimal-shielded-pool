@@ -137,6 +137,12 @@ def keys_off_command_lines():
         old = subprocess.run([sys.executable, str(cli), "http://127.0.0.1:1", "cfg.json", "fix.json", op, "01" * 32],
                              capture_output=True, text=True)
         assert old.returncode != 0 and "no longer takes a key argument" in old.stderr, (op, old.stderr[-300:])
+        # Anywhere else on the line, the key is refused without being printed.
+        for argv in ([op, "--dry-run", "01" * 32], [op, "--", "0x" + "01" * 32], [op, "--dry-run=" + "01" * 32],
+                     [op, "--epoch", "01" * 32], [op, "--sender", "0x" + "01" * 32 + "01"]):
+            stray = subprocess.run([sys.executable, str(cli), "http://127.0.0.1:1", "cfg.json", "fix.json", *argv],
+                                   capture_output=True, text=True)
+            assert stray.returncode != 0 and "01" * 32 not in stray.stdout + stray.stderr, (argv, stray.stderr[-300:])
     return len(scripts) + 2
 
 
