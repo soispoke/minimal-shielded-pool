@@ -43,7 +43,7 @@
     "core/artifacts/shielded_pool_dispatcher_init.hex": "a506c59cc30fda7c700943c181dd39419f99d2a5c6908d668d9aa52daa1a5820",
     "sdk/frametx.py": "78e33ae23344fd818c7ed4ed1bf05affb86f92bdfec02ba899333576c18a1514",
     "sdk/gas_profile.py": "2eb50b822d9695a81f573bf637bf928424f965909801c8951bea07e49e562c9d",
-    "sdk/pool_frametx.py": "5b9423d6a331ec4efb2e747b51087aa2814c8c7ad5009ebcf67f0be5fc8fb364",
+    "sdk/pool_frametx.py": "b3446f73446edb076728f2a13552b3f18c1ffc64476237c32ee37a753da59021",
     "tools/check_gas_profile.py": "b6f0f28e2a0a47a1be078aa172bf28b8d643dca254e5bbe21b823efe2ca71e41"
   },
   "compiler": {

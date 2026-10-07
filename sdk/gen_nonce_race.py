@@ -30,6 +30,7 @@ secrets; Alice pays Bob through his public address (her transfer carries the
 ML-KEM ciphertext), and Carol pays Dave with a secret Dave handed her out of
 band. The fixture records the wallets' seeds.
 """
+import argparse
 import json
 import secrets
 import sys
@@ -39,7 +40,8 @@ from pathlib import Path
 import notes as n
 import wallet as w
 from poseidon_bn254 import hex32
-from gen_smoke import prove, refuse_overwrite, spend_entry, write_private, ETH, WORK
+from gen_smoke import (int_arg, path_arg, prove, refuse_overwrite, spend_entry, write_private,
+                       ETH, WORK)
 
 DEFAULT_OUTPUT = WORK / "nonce_race_fixture.json"
 
@@ -91,37 +93,33 @@ def seeded_tree(url, pool, expected_epoch):
     return tree
 
 
+def parse_args(argv):
+    """The command line. Every flag must be one this script knows, so a mistyped
+    flag stops the run instead of being dropped."""
+    ap = argparse.ArgumentParser(prog="gen_nonce_race.py", allow_abbrev=False,
+                                 description="Generate the shared-sender nonce-race fixture.")
+    ap.add_argument("--random", action="store_true",
+                    help="fresh seeds and witnesses (required off the test chain or with --rpc)")
+    ap.add_argument("--chain-id", type=int_arg, default=31337)
+    ap.add_argument("--pool-address")
+    ap.add_argument("--root-slot", type=int_arg)
+    ap.add_argument("--epoch", type=int_arg, default=0)
+    ap.add_argument("--note-wei", type=int_arg, default=ETH)
+    ap.add_argument("--rpc", help="seed the tree from this node (with --pool)")
+    ap.add_argument("--pool", help="pool whose live tree to seed (with --rpc)")
+    ap.add_argument("--output", type=path_arg, default=DEFAULT_OUTPUT)
+    return ap.parse_args(argv)
+
+
 def main():
-    chain_id = 31337
-    pool_address = None
-    root_slot = None
-    epoch = 0
-    note_wei = ETH
-    rpc_url = None
-    pool = None
-    output_path = DEFAULT_OUTPUT
-    for arg in sys.argv[1:]:
-        if arg.startswith("--chain-id="):
-            chain_id = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--pool-address="):
-            pool_address = arg.split("=", 1)[1]
-        elif arg.startswith("--root-slot="):
-            root_slot = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--epoch="):
-            epoch = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--note-wei="):
-            note_wei = int(arg.split("=", 1)[1], 0)
-        elif arg.startswith("--rpc="):
-            rpc_url = arg.split("=", 1)[1]
-        elif arg.startswith("--pool="):
-            pool = arg.split("=", 1)[1]
-        elif arg.startswith("--output="):
-            output_path = Path(arg.split("=", 1)[1]).expanduser().resolve()
+    args = parse_args(sys.argv[1:])
+    chain_id, pool_address, root_slot, epoch = args.chain_id, args.pool_address, args.root_slot, args.epoch
+    note_wei, rpc_url, pool, output_path = args.note_wei, args.rpc, args.pool, args.output
     if pool_address is None or root_slot is None:
         raise SystemExit("--pool-address=0x... and --root-slot=N are required")
     if (rpc_url is None) != (pool is None):
         raise SystemExit("--rpc= and --pool= must be given together (seed the live tree)")
-    if "--random" not in sys.argv:
+    if not args.random:
         # Anyone could rebuild notes made from the public seed and spend them.
         if chain_id != 31337 or rpc_url is not None:
             raise SystemExit("the fixed seed is public, so anyone could spend these notes; "
@@ -135,7 +133,7 @@ def main():
 
     # The wallets: fixed public seeds on the test chain, refused anywhere else.
     names = ("alice", "bob", "carol", "dave")
-    if "--random" in sys.argv:
+    if args.random:
         seeds = {name: secrets.token_bytes(32) for name in names}
     else:
         seeds = {name: w.keccak(f"minimal-shielded-pool:nonce-race:{name}:v1".encode()) for name in names}

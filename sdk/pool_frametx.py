@@ -46,9 +46,11 @@ withdrawal whose default claim tail is expected to revert, leaving
 withdrawalCredit for a later claim. Negative-vector flags include
 `--flip-proof`, `--nonce-keys`, `--settle-gas`, and `--sender`.
 """
+import argparse
 import getpass
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -826,13 +828,99 @@ def funded_key():
         raise SystemExit("standard input did not hold a private key") from None
 
 
-def main():
-    url, cfg_path, fix_path, op = sys.argv[1:5]
-    if len(sys.argv) > 5 and not sys.argv[5].startswith("--"):
+def _int(value):
+    """An integer in any form int(value, 0) reads."""
+    try:
+        return int(value, 0)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not an integer: {value}") from None
+
+
+def _wei(value):
+    amount = _int(value)
+    if amount < 0:
+        raise argparse.ArgumentTypeError(f"must be non-negative: {value}")
+    return amount
+
+
+def _sender(value):
+    try:
+        address = int(value, 16)
+    except ValueError:
+        address = 0
+    if address == 0 or address >= 1 << 160:
+        raise argparse.ArgumentTypeError(f"invalid sender address: {value}")
+    return address
+
+
+def _nonce_keys(value):
+    try:
+        nonce_keys = sorted(int(x, 16) for x in value.split(","))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid nonce keys: {value}") from None
+    if len(nonce_keys) != 2:
+        raise argparse.ArgumentTypeError("--nonce-keys requires exactly two keys")
+    return nonce_keys
+
+
+class _Parser(argparse.ArgumentParser):
+    """argparse echoes arguments it rejects; never echo a value shaped like a key."""
+
+    def error(self, message):
+        super().error(re.sub(r"(0x)?[0-9a-fA-F]{64,}", "<redacted>", message))
+
+
+def parse_args(argv):
+    """The command line. Every flag must be one this CLI knows: a mistyped
+    --dry-run must stop the run, not send a real transaction."""
+    # A key on the command line can be read by other local users. Refuse it
+    # before argparse, whose error would print it.
+    if len(argv) > 4 and not argv[4].startswith("--"):
         raise SystemExit("the CLI no longer takes a key argument, which other local users could "
                          "read: shield and publish read the funded key from standard input")
-    cfg = json.loads(open(cfg_path).read())
-    fix = json.loads(open(fix_path).read())
+    ap = _Parser(prog="pool_frametx.py", allow_abbrev=False,
+                 description="Build and submit the minimal pool's frame transactions.")
+    ap.add_argument("rpc")
+    ap.add_argument("config", help="deployment config, such as core/deploy_config.json")
+    ap.add_argument("fixture", help="fixture from sdk/gen_smoke.py or sdk/gen_nonce_race.py")
+    ap.add_argument("op", choices=("shield", "publish", "transfer", "withdraw"))
+    ap.add_argument("--dry-run", action="store_true", help="simulate without submitting")
+    ap.add_argument("--epoch", type=_int, default=0, help="epoch to publish")
+    ap.add_argument("--note", type=_int, help="index into the fixture's shields")
+    ap.add_argument("--spend-key", help="fixture key of the spend entry (e.g. transfer_c)")
+    ap.add_argument("--root-slot", type=_int, help="consensus slot that published the root")
+    ap.add_argument("--no-tail", action="store_true", help="send a spend without a fourth frame")
+    ap.add_argument("--allow-failed-claim", action="store_true",
+                    help="send a withdrawal whose default claim is expected to revert")
+    for flag in ACTION_OPTION_FLAGS:
+        ap.add_argument(flag, action="append", help="custom DEFAULT tail (all four together)")
+    ap.add_argument("--save-raw", metavar="PATH", help="also write the signed transaction here")
+    ap.add_argument("--max-fee-per-gas", type=_wei)
+    ap.add_argument("--max-priority-fee-per-gas", type=_wei)
+    negative = ap.add_argument_group("negative vectors")
+    negative.add_argument("--flip-proof", action="store_true")
+    negative.add_argument("--nonce-keys", type=_nonce_keys, metavar="0x..,0x..")
+    negative.add_argument("--settle-gas", type=_int)
+    negative.add_argument("--sender", type=_sender)
+    args = ap.parse_args(argv)
+    # action_options keeps the tail's all-or-none and exactly-once rules. It reads
+    # flag-value pairs, so hand it what argparse parsed, including --flag=value forms.
+    pairs = []
+    for flag in ACTION_OPTION_FLAGS:
+        for value in getattr(args, flag[2:].replace("-", "_")) or ():
+            pairs += [flag, value]
+    try:
+        args.action = action_options(pairs)
+    except ValueError as error:
+        raise SystemExit(str(error)) from None
+    return args
+
+
+def main():
+    args = parse_args(sys.argv[1:])
+    url, op = args.rpc, args.op
+    cfg = json.loads(open(args.config).read())
+    fix = json.loads(open(args.fixture).read())
     pool = int(cfg["pool"], 16)
     # A config for another profile describes a pool this tooling cannot spend from,
     # so neither shield into it nor spend against it. The label is only a first
@@ -847,91 +935,24 @@ def main():
     if op in ("transfer", "withdraw"):
         if cfg.get("claimGas") != CLAIM_FRAME_GAS or cfg.get("claimStateGas") != CLAIM_FRAME_STATE_GAS:
             raise SystemExit(f"spends require claimGas/claimStateGas matching {POOL_PROFILE}")
-    omit_tail = "--no-tail" in sys.argv
-    try:
-        action = action_options(sys.argv[5:])
-    except ValueError as error:
-        raise SystemExit(str(error)) from None
+    omit_tail, action = args.no_tail, args.action
     if omit_tail and action is not None:
         raise SystemExit("--no-tail cannot be combined with action options")
     if (action is not None or omit_tail) and op not in ("transfer", "withdraw"):
         raise SystemExit("action options and --no-tail are valid only for transfer or withdraw")
-    dry = "--dry-run" in sys.argv
-    sender_override = None
-    if "--sender" in sys.argv:
-        i = sys.argv.index("--sender")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--sender requires an address")
-        try:
-            sender_override = int(sys.argv[i + 1], 16)
-        except ValueError:
-            raise SystemExit(f"invalid sender address: {sys.argv[i + 1]}") from None
-        if sender_override == 0 or sender_override >= 1 << 160:
-            raise SystemExit(f"invalid sender address: {sys.argv[i + 1]}")
-    max_fee_override = None
-    max_priority_override = None
-    settle_gas_override = None
-    save_raw = None
-    nonce_keys_override = None
-    note_index = None
-    spend_key_override = None
-    root_slot_override = None
-    epoch_override = 0
-    flip_proof = "--flip-proof" in sys.argv
-    allow_failed_claim = "--allow-failed-claim" in sys.argv
-    if "--note" in sys.argv:
-        i = sys.argv.index("--note")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--note requires an index into fixture['shields']")
-        note_index = int(sys.argv[i + 1], 0)
-    if "--spend-key" in sys.argv:
-        i = sys.argv.index("--spend-key")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--spend-key requires a fixture key (e.g. transfer_c)")
-        spend_key_override = sys.argv[i + 1]
-    if "--root-slot" in sys.argv:
-        i = sys.argv.index("--root-slot")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--root-slot requires the consensus slot that published the root")
-        root_slot_override = int(sys.argv[i + 1], 0)
-    if "--epoch" in sys.argv:
-        i = sys.argv.index("--epoch")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--epoch requires the epoch to publish")
-        epoch_override = int(sys.argv[i + 1], 0)
-    if "--settle-gas" in sys.argv:
-        i = sys.argv.index("--settle-gas")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--settle-gas requires a gas value")
-        settle_gas_override = int(sys.argv[i + 1], 0)
-    if "--save-raw" in sys.argv:
-        i = sys.argv.index("--save-raw")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--save-raw requires a path")
-        save_raw = sys.argv[i + 1]
-    if "--nonce-keys" in sys.argv:
-        i = sys.argv.index("--nonce-keys")
-        if i + 1 >= len(sys.argv):
-            raise SystemExit("--nonce-keys requires 0x..,0x..")
-        nonce_keys_override = sorted(int(x, 16) for x in sys.argv[i + 1].split(","))
-        if len(nonce_keys_override) != 2:
-            raise SystemExit("--nonce-keys requires exactly two keys")
-    for flag, target in (("--max-fee-per-gas", "max_fee"),
-                         ("--max-priority-fee-per-gas", "max_priority")):
-        if flag in sys.argv:
-            i = sys.argv.index(flag)
-            if i + 1 >= len(sys.argv):
-                raise SystemExit(f"{flag} requires a wei value")
-            try:
-                value = int(sys.argv[i + 1], 0)
-            except ValueError:
-                raise SystemExit(f"invalid {flag} value: {sys.argv[i + 1]}") from None
-            if value < 0:
-                raise SystemExit(f"{flag} must be non-negative")
-            if target == "max_fee":
-                max_fee_override = value
-            else:
-                max_priority_override = value
+    dry = args.dry_run
+    sender_override = args.sender
+    max_fee_override = args.max_fee_per_gas
+    max_priority_override = args.max_priority_fee_per_gas
+    settle_gas_override = args.settle_gas
+    save_raw = args.save_raw
+    nonce_keys_override = args.nonce_keys
+    note_index = args.note
+    spend_key_override = args.spend_key
+    root_slot_override = args.root_slot
+    epoch_override = args.epoch
+    flip_proof = args.flip_proof
+    allow_failed_claim = args.allow_failed_claim
     if op in ("transfer", "withdraw"):
         if sender_override is None:
             sender_override = pool
@@ -1029,8 +1050,6 @@ def main():
                        settle_gas_override=settle_gas_override, save_raw=save_raw,
                        frame0_data=proof_bytes(e), allow_failed_claim=allow_failed_claim,
                        action=action, omit_tail=omit_tail)
-    else:
-        raise SystemExit(f"unknown op {op}")
 
 
 if __name__ == "__main__":
