@@ -136,7 +136,7 @@ epoch root to EIP-8272.
 A recipient needs each note's amount and `rho` to spend it. Notes carry them on
 chain, encrypted under a 32-byte secret `K` that the sender and recipient share,
 so a payment can go to a reusable address and the recipient can recover
-everything from its seed. `wallet/notes.py` implements the format with
+everything from its seed. `sdk/notes.py` implements the format with
 ML-KEM-768 and ChaCha20-Poly1305 from `cryptography` (OpenSSL):
 
 ```text
@@ -178,13 +178,13 @@ with the same note. It also keeps fewer than 20 payments per channel past the
 last one it has seen final, since the recipient watches 20 indices ahead.
 
 ```sh
-python3 wallet/notes.py address --seed-file SEED
-python3 wallet/notes.py scan --config CONFIG --state STATE --seed-file SEED
-python3 wallet/notes.py direct-secret --config CONFIG --state STATE --seed-file SEED
+python3 sdk/notes.py address --seed-file SEED
+python3 sdk/notes.py scan --config CONFIG --state STATE --seed-file SEED
+python3 sdk/notes.py direct-secret --config CONFIG --state STATE --seed-file SEED
 ```
 
 `scan` and `direct-secret` need the config of a `position-notes-v3` pool. No
-such deployment exists yet, and `devnet/deploy_config.json` records the v2 pool,
+such deployment exists yet, and `core/deploy_config.json` records the v2 pool,
 which publishes no notes.
 
 The seed file must be readable by its owner only; without `--seed-file` the
@@ -204,26 +204,30 @@ A normal spend grows by 96 bytes and about 4,000 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
 1,184 bytes and is visibly larger. See [SECURITY.md](SECURITY.md#note-delivery).
 
-## Code
+## Layout
 
+```text
+core/          what is deployed and what the formal proofs cover, with the
+               activation manifest and the deployment record
+  circuits/    the spend circuit
+  contracts/   the Foundry project: settlement logic, verifier, Poseidon, tests
+  dispatcher/  the Yul dispatcher, the pool's own account code
+  artifacts/   R1CS, WASM, proving key, verification key, dispatcher initcode
+sdk/           Python client: wallet, note delivery, transaction builder and
+               CLI, disclosure receipts, fixture generators
+test/          Python tests, fixtures, vectors and the native ethrex suite
+tools/         setup, deployment, generators, activation and formal-pin
+               checks, and the pinned npm toolchain
+evidence/      dated records of earlier devnet runs and reviews
+docs/          design notes
 ```
-circuits/spend.circom
-contracts/src/Groth16Verifier.sol
-contracts/src/ShieldedPoolLogic.sol
-contracts/src/PoseidonT3.sol
-contracts/src/PoseidonT4.sol
-devnet/ShieldedPoolDispatcher.yul
-devnet/dispatcher.py
-devnet/pool_frametx.py
-wallet/wallet.py
-wallet/notes.py
-wallet/gen_smoke.py
-wallet/disclosure.py
-```
+
+[docs/design.md](docs/design.md) explains why the pool is built this way and
+what a change to the tree or the statement has to touch.
 
 ## Disclosure receipts
 
-`wallet/disclosure.py` lets a user show, after the fact, where funds in the
+`sdk/disclosure.py` lets a user show, after the fact, where funds in the
 pool came from and where they went, like Tornado Cash's compliance tool but
 without giving anyone the power to spend. For each note you spent, a receipt
 gives its nullifier key `K = Poseidon2(D, spend_key)`. With `K` and the
@@ -233,9 +237,9 @@ deposit through private transfers to a withdrawal, and fully explains a
 spend when both of its inputs are disclosed.
 
 ```sh
-python3 wallet/disclosure.py export --rpc URL --config devnet/deploy_config.json \
+python3 sdk/disclosure.py export --rpc URL --config core/deploy_config.json \
   --fixture FIXTURE --only CM[,CM...] --output receipt.json
-python3 wallet/disclosure.py verify --rpc URL --config devnet/deploy_config.json \
+python3 sdk/disclosure.py verify --rpc URL --config core/deploy_config.json \
   --receipt receipt.json
 ```
 
@@ -256,12 +260,12 @@ This is pool profile `position-notes-v3`. It follows EIP-8141 at
 with separate execution and state gas limits for each frame. Because the EIPs
 are drafts, each supported combination is a separate profile, and profiles are
 not wire compatible. The format chain 8141 used before its relaunch is archived byte for byte
-under `devnet/vectors/2026-09-01-hegota-final-profile/`.
+under `evidence/vectors/2026-09-01-hegota-final-profile/`.
 
 Each profile needs its own deployment, because a deployed pool cannot be
 upgraded. A `position-notes-v2` pool rejects this profile's settlement and
 shield calldata, which carry notes. This profile has no deployment yet:
-`devnet/deploy_config.json` still records the `position-notes-v2` testnet
+`core/deploy_config.json` still records the `position-notes-v2` testnet
 deployment on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`), which
 completed shield, transfer, withdrawal and claim calls on September 25, 2026,
 and the CLI refuses to shield into or spend from it. The earlier
@@ -294,44 +298,28 @@ per-transaction budget.
 
 ## Test
 
+With [just](https://just.systems) installed:
+
 ```sh
-npm ci --prefix tooling
-python3 -m pip install --requirement requirements.txt
-
-python3 devnet/frametx.py
-python3 devnet/test_pool_envelope_binding.py
-python3 devnet/test_gas_only_action.py
-python3 devnet/test_recent_root_window.py
-python3 devnet/test_occurrence_profile.py
-python3 devnet/test_deploy_checks.py
-python3 wallet/test_occurrence.py
-python3 wallet/test_wallet_occurrence.py
-python3 wallet/test_generators.py
-python3 wallet/test_disclosure.py
-python3 wallet/test_notes.py
-python3 tooling/check_gas_profile.py
-python3 tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
-python3 tooling/check_forge_config.py activation_manifest.testbed.json contracts
-python3 tooling/test_check_activation.py
-python3 wallet/wallet.py
-python3 reference/poseidon_bn254.py
-
-forge fmt --root contracts --check
-forge lint --root contracts --deny warnings
-forge test --root contracts --force -vv
+just install   # the pinned npm toolchain and the Python dependencies
+just test      # what CI's test job runs
 ```
 
-CI also rebuilds the circuit and requires byte-identical R1CS and WASM. The
+`just --list` shows the other recipes: the native suite, the formal-pin report,
+Poseidon regeneration and deployment. The [justfile](justfile) lists every
+command they run.
+
+The tests rebuild the circuit and require byte-identical R1CS and WASM. The
 committed artifacts come from circom2 0.2.8; 0.2.23 does not reproduce them
 byte for byte, so a compiler upgrade means a new reviewed artifact set. 
-`tooling/setup.sh` runs a new single-party test setup, not a ceremony. Run it
+`tools/setup.sh` runs a new single-party test setup, not a ceremony. Run it
 only to replace the test setup on purpose, then rebuild the activation manifest
 and proof fixtures. The activation gate checks that the proving key's A and B
 terms come from the committed R1CS and that the verifier holds the key's
 verification key; the rest of the key needs the phase-1 file (`--ptau`, see
 [SECURITY.md](SECURITY.md)).
 
-The native tests in [`devnet/native_occurrence/`](devnet/native_occurrence/README.md)
+The native tests in [`test/native/`](test/native/README.md)
 run real proofs through the pinned ethrex VM. They cover duplicate notes,
 replay, a reorg simulated by database rollback, settlement gas and the fourth-frame rules, but not networking,
 other clients or FOCIL.
@@ -340,6 +328,6 @@ A Lean formal verification of this pool at `8835be7` lives in
 [verified-shielded-pool](https://github.com/soispoke/verified-shielded-pool),
 with its own CI. It is checked out as `formal/` inside a pool checkout, which
 git ignores here. CI's `formal-pins` job warns, without failing, when a change
-touches a file those proofs pin (`python3 tooling/check_formal_pins.py`).
+touches a file those proofs pin (`python3 tools/check_formal_pins.py`).
 
 See [SECURITY.md](SECURITY.md) for trust and failure boundaries.

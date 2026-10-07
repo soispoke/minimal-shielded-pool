@@ -2,5 +2,5 @@
 # raises ImportError at first use. Pin pycryptodome via the extra.
 eth-hash[pycryptodome]==0.7.1
 eth-keys==0.7.0
-# ML-KEM-768 and ChaCha20-Poly1305 for note delivery (wallet/notes.py), backed by OpenSSL.
+# ML-KEM-768 and ChaCha20-Poly1305 for note delivery (sdk/notes.py), backed by OpenSSL.
 cryptography==50.0.2
