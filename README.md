@@ -204,22 +204,26 @@ A normal spend grows by 96 bytes and about 4,000 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
 1,184 bytes and is visibly larger. See [SECURITY.md](SECURITY.md#note-delivery).
 
-## Code
+## Layout
 
+```text
+core/          what is deployed and what the formal proofs cover, with the
+               activation manifest and the deployment record
+  circuits/    the spend circuit
+  contracts/   the Foundry project: settlement logic, verifier, Poseidon, tests
+  dispatcher/  the Yul dispatcher, the pool's own account code
+  artifacts/   R1CS, WASM, proving key, verification key, dispatcher initcode
+sdk/           Python client: wallet, note delivery, transaction builder and
+               CLI, disclosure receipts, fixture generators
+test/          Python tests, fixtures, vectors and the native ethrex suite
+tools/         setup, deployment, generators, activation and formal-pin
+               checks, and the pinned npm toolchain
+evidence/      dated records of earlier devnet runs and reviews
+docs/          design notes
 ```
-core/circuits/spend.circom
-core/contracts/src/Groth16Verifier.sol
-core/contracts/src/ShieldedPoolLogic.sol
-core/contracts/src/PoseidonT3.sol
-core/contracts/src/PoseidonT4.sol
-core/dispatcher/ShieldedPoolDispatcher.yul
-tools/dispatcher.py
-sdk/pool_frametx.py
-sdk/wallet.py
-sdk/notes.py
-sdk/gen_smoke.py
-sdk/disclosure.py
-```
+
+[docs/design.md](docs/design.md) explains why the pool is built this way and
+what a change to the tree or the statement has to touch.
 
 ## Disclosure receipts
 
@@ -293,6 +297,9 @@ The public mempool counts the two validation frames' declared limits plus
 per-transaction budget.
 
 ## Test
+
+With [just](https://just.systems), `just install` and `just test` run the
+commands below, and `just --list` shows the rest.
 
 ```sh
 npm ci --prefix tools
