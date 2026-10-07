@@ -76,4 +76,5 @@ def main():
            "boundaries_checked": USABLE_WINDOW + 3})
 
 
-main()
+if __name__ == "__main__":
+    main()

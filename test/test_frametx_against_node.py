@@ -30,7 +30,7 @@ _frozen_spec = importlib.util.spec_from_file_location("frametx_frozen", _arch)
 frozen = importlib.util.module_from_spec(_frozen_spec)
 _frozen_spec.loader.exec_module(frozen)
 
-RPC = sys.argv[1]
+RPC = None  # set from the command line
 FAILURES = []
 
 
@@ -101,4 +101,6 @@ def main() -> int:
     return 0
 
 
-sys.exit(main())
+if __name__ == "__main__":
+    RPC = sys.argv[1]
+    sys.exit(main())
