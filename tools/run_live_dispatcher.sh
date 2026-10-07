@@ -188,27 +188,17 @@ cfg = dict(zip(keys, sys.argv[1:]))
 # 2,000,000 single budget would hand the spend wallet budgets belonging to a contract it
 # is not talking to, and the resulting settlement failures look like proof errors.
 manifest = json.load(open(os.environ["MANIFEST_PATH"]))["profile"]
+# This file is the deployment record, and tools/check_gas_profile.py reads the
+# budgets back.
 cfg.update({"chainId": manifest["chain_id"], "profile": manifest["wire_profile"],
             "verifyGas": manifest["verify_frame_gas"],
             "settleGas": manifest["settle_frame_gas"],
-            "testbedProvingKey": True})
-if "settle_frame_state_gas" in manifest:
-    cfg["settleStateGas"] = manifest["settle_frame_state_gas"]
-    cfg["verifyStateGas"] = manifest["verify_frame_state_gas"]
-# The recent-root verifier frame's budget belongs here for the same reason as the
-# other four: this file is the deployment record, and `tools/check_gas_profile.py`
-# reads it back. Omitting it left every live deployment with a config the checker
-# then died on with a bare KeyError, which reads as a broken checker rather than an
-# incomplete record.
-if "recent_root_frame_gas" in manifest:
-    cfg["recentRootGas"] = manifest["recent_root_frame_gas"]
-if "claim_frame_gas" in manifest:
-    cfg["claimGas"] = manifest["claim_frame_gas"]
-    cfg["claimStateGas"] = manifest["claim_frame_state_gas"]
-if "action_frame_max_gas" in manifest:
-    cfg["actionMaxGas"] = manifest["action_frame_max_gas"]
-    cfg["actionMaxStateGas"] = manifest["action_frame_max_state_gas"]
-    cfg["actionMaxCalldata"] = manifest["action_frame_max_calldata"]
+            "testbedProvingKey": True,
+            "settleStateGas": manifest["settle_frame_state_gas"],
+            "verifyStateGas": manifest["verify_frame_state_gas"],
+            "recentRootGas": manifest["recent_root_frame_gas"],
+            "claimGas": manifest["claim_frame_gas"],
+            "claimStateGas": manifest["claim_frame_state_gas"]})
 with open("../core/deploy_config.json", "w") as f:
     json.dump(cfg, f, indent=1)
 print("wrote ../core/deploy_config.json")
@@ -219,19 +209,15 @@ echo "    fixture=$SMOKE_OUTPUT"
 echo "    root slot=$ROOT_SLOT_DEC (EIP-7843 slotNumber, not block timestamp)"
 
 # A deployment that only shields proves the pool can take money, not that it can pay it
-# out. The spends are the half that exercises the proof, the nullifier, the recent-root
-# reference and the settlement frame's gas — the parts a wire-profile change actually
-# threatens — so run them here rather than leaving "fully deployed" to mean "half tested".
-# SPEND=0 skips them for a deployment that is only publishing a pool.
+# out. The spends exercise the proof, the nullifiers, the recent-root reference and the
+# settlement frame's gas. SPEND=0 skips them for a deployment that only publishes a pool.
 if [[ ${SPEND:-1} == 1 ]]; then
   echo "==> transfer (shielded spend, note -> note)"
   python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" transfer
 
   # The transfer inserted two commitments, so the root the withdraw proof was generated
   # against is the post-transfer one, not the post-shield one already published. Publish
-  # again and record its slot under the key the withdraw reads. Without this a withdraw
-  # after a fresh deployment dies on a missing `_slot_withdraw`, which is why the flow
-  # had only ever been run against a config edited by hand.
+  # again and record its slot under the key the withdraw reads.
   echo "==> publish authenticated post-transfer root"
   WITHDRAW_SLOT=$(publish_root) || exit 1
   python3 - "$WITHDRAW_SLOT" <<'PY'

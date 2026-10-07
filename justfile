@@ -54,6 +54,12 @@ test-contracts:
     forge lint --root core/contracts --deny warnings
     forge test --root core/contracts --force -vv
 
+# Deploy a fresh testbed pool, then shield, transfer and withdraw through it. The
+# script lists the variables it needs (RPC_URL, a Foundry keystore and its
+# password file, ALLOW_TESTBED_SETUP=1) and rewrites core/deploy_config.json.
+deploy:
+    tools/run_live_dispatcher.sh
+
 # Regenerate the Poseidon contracts from sdk/poseidon_bn254_constants.json. The
 # pinned files match only after forge fmt.
 poseidon:
