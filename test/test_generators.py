@@ -3,7 +3,7 @@
 notes at risk: the public seed off the test chain, a recipient that strands its
 credit, and overwriting a fixture that may hold the only secrets of unspent
 notes. Their secrets are written readable by the owner only.
-Run: python3 wallet/test_generators.py."""
+Run: python3 test/test_generators.py."""
 import http.server
 import json
 import os
@@ -15,7 +15,7 @@ import threading
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "sdk"))
 import gen_nonce_race  # noqa: E402
 import gen_smoke  # noqa: E402
 import wallet as w  # noqa: E402
@@ -25,8 +25,8 @@ RECIPIENT = "--recipient=0x00000000000000000000000000000000000000ff"
 
 
 def refused(script, args, expected):
-    result = subprocess.run([sys.executable, str(HERE / script), *args],
-                            cwd=HERE, capture_output=True, text=True)
+    result = subprocess.run([sys.executable, str(HERE.parent / "sdk" / script), *args],
+                            cwd=HERE.parent / "sdk", capture_output=True, text=True)
     assert result.returncode != 0 and expected in result.stderr, (script, args, result.stderr[-500:])
     return 1
 
@@ -91,7 +91,7 @@ def main():
         checked += 4
 
         # Live fixtures default to the ignored artifacts directory.
-        assert gen_smoke.default_output(31337, gen_smoke.TEST_POOL) == HERE / "smoke_fixture.json"
+        assert gen_smoke.default_output(31337, gen_smoke.TEST_POOL) == HERE / "fixtures" / "smoke_fixture.json"
         for live in (gen_smoke.default_output(8141, gen_smoke.TEST_POOL), gen_nonce_race.DEFAULT_OUTPUT):
             assert live.parent == gen_smoke.WORK, live
             ignored = subprocess.run(["git", "check-ignore", "-q", str(live)], cwd=HERE)
@@ -103,8 +103,8 @@ def main():
         race_out = Path(tmp, "race.json")
         gen_smoke.WORK.mkdir(exist_ok=True)
         work_before = set(os.listdir(gen_smoke.WORK))
-        result = subprocess.run([sys.executable, str(HERE / "gen_nonce_race.py"), "--chain-id=31337", *race,
-                                 f"--output={race_out}"], cwd=HERE, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, str(HERE.parent / "sdk" / "gen_nonce_race.py"), "--chain-id=31337", *race,
+                                 f"--output={race_out}"], cwd=HERE.parent / "sdk", capture_output=True, text=True)
         assert result.returncode == 0, result.stderr[-500:]
         # Each proof ran in its own directory, removed afterwards with the
         # witness it held, so concurrent runs cannot swap proofs.

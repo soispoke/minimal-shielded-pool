@@ -4,7 +4,12 @@
 memory (slot 0x00) so each library's runtime fits the hegota devnet's 2^24 per-tx gas cap
 (code deposit costs ~1545 gas/byte there under EIP-8037 accounting).
 PoseidonBN254.sol becomes a thin internal wrapper; callers are unchanged."""
+import os
 import re
+
+# The script rewrites the Foundry project's sources, which no longer sit next
+# to it; work from that project whatever the caller's directory.
+os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "core", "contracts"))
 
 SRC = "src/PoseidonBN254.sol"
 LIT = "21888242871839275222246405745257275088548364400416034343698204186575808495617"

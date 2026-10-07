@@ -9,13 +9,13 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sdk"))
 import pool_frametx as builder
+import wallet as w
 from gas_profile import POOL_PROFILE, PREVIOUS_POOL_PROFILE
 
 ROOT = Path(__file__).resolve().parent.parent
 FUNDED = "01" * 32
-sys.path.insert(0, str(ROOT / "wallet"))
-import wallet as w  # noqa: E402
 
 
 ABSENT = object()
@@ -23,7 +23,7 @@ ABSENT = object()
 
 def check_profile_labels():
     """Every operation refuses a config for another profile, or without one, before RPC."""
-    original = json.loads((ROOT / "devnet/deploy_config.json").read_text())
+    original = json.loads((ROOT / "core/deploy_config.json").read_text())
     runs = 0
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.json"
@@ -35,8 +35,8 @@ def check_profile_labels():
             path.write_text(json.dumps(cfg))
             for operation in ("shield", "transfer", "withdraw"):
                 result = subprocess.run([
-                    sys.executable, str(ROOT / "devnet/pool_frametx.py"),
-                    "http://127.0.0.1:1", str(path), str(ROOT / "wallet/smoke_fixture.json"),
+                    sys.executable, str(ROOT / "sdk/pool_frametx.py"),
+                    "http://127.0.0.1:1", str(path), str(ROOT / "test/fixtures/smoke_fixture.json"),
                     operation, "--dry-run",
                 ], capture_output=True, text=True)
                 assert result.returncode != 0, (profile, operation)
@@ -46,7 +46,7 @@ def check_profile_labels():
 
 
 def check_recorded_deployment():
-    cfg = json.loads((ROOT / "devnet/deploy_config.json").read_text())
+    cfg = json.loads((ROOT / "core/deploy_config.json").read_text())
     # Until this profile is deployed the record names the previous one, which the
     # spend CLI refuses. Both profiles share the domain formula checked here.
     assert cfg["profile"] in (POOL_PROFILE, PREVIOUS_POOL_PROFILE)
@@ -109,8 +109,8 @@ def fake_node(chain_id, pool_code, domain, verifier="committed"):
 def recorded_pool():
     """The recorded chain 8141 pool, and the stand-in code of the previous profile's
     dispatcher there: same logic, verifier and domain, different dispatcher code."""
-    cfg = json.loads((ROOT / "devnet/deploy_config.json").read_text())
-    initcode = (ROOT / "devnet/build/shielded_pool_dispatcher_init.hex").read_text().strip()
+    cfg = json.loads((ROOT / "core/deploy_config.json").read_text())
+    initcode = (ROOT / "core/artifacts/shielded_pool_dispatcher_init.hex").read_text().strip()
     logic, verifier = int(cfg["logic"], 16), int(cfg["verifier"], 16)
     previous = initcode[:-2] + f"{int(initcode[-2:], 16) ^ 1:02x}"
     return cfg, initcode, logic, verifier, deployed(linked(previous, logic, verifier))
@@ -182,7 +182,7 @@ def check_cli_runs_deployed_gate():
 
     for operation in ("shield", "transfer", "withdraw"):
         argv = ["pool_frametx.py", "http://node", str(cfg_path),
-                str(ROOT / "wallet/smoke_fixture.json"), operation]
+                str(ROOT / "test/fixtures/smoke_fixture.json"), operation]
         with mock.patch.object(builder, "rpc", rpc), mock.patch.object(sys, "argv", argv), \
                 contextlib.redirect_stdout(io.StringIO()):
             try:
@@ -196,7 +196,7 @@ def check_cli_runs_deployed_gate():
 def check_shield_binds_fixture():
     """shield refuses, before sending, a fixture made for another chain, pool, epoch,
     leaf or tree, and reports a note that landed somewhere its proofs cannot spend."""
-    fixture = json.loads((ROOT / "wallet/smoke_fixture.json").read_text())
+    fixture = json.loads((ROOT / "test/fixtures/smoke_fixture.json").read_text())
     chain_id, pool = fixture["chain_id"], int(fixture["pool_address"], 16)
     cfg = {"rpc": "http://node", "pool": fixture["pool_address"], "chainId": chain_id,
            "logic": "0x01", "verifier": "0x02", "profile": POOL_PROFILE}

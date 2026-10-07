@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "devnet"))
+sys.path.insert(0, str(ROOT / "sdk"))
 
 from gas_profile import (  # noqa: E402
     CLAIM_FRAME_GAS,
@@ -105,26 +105,26 @@ PROFILES["position-notes-v3"] = {**PROFILES["position-notes-v2"], "pool_profile"
 # check_forge_config.py compares the settings forge actually resolves, which
 # environment variables, .env files and the global config can also change.
 REQUIRED_ARTIFACTS = (
-    "build/spend.r1cs",
-    "build/spend_final.zkey",
-    "build/spend_js/spend.wasm",
-    "circuits/spend.circom",
-    "contracts/foundry.toml",
-    "contracts/src/Groth16Verifier.sol",
-    "contracts/src/PoseidonT3.sol",
-    "contracts/src/PoseidonT4.sol",
-    "contracts/src/ShieldedPoolLogic.sol",
-    "devnet/ShieldedPoolDispatcher.yul",
-    "devnet/build/shielded_pool_dispatcher_init.hex",
-    "devnet/frametx.py",
-    "devnet/gas_profile.py",
-    "devnet/pool_frametx.py",
-    "tooling/check_gas_profile.py",
+    "core/artifacts/spend.r1cs",
+    "core/artifacts/spend_final.zkey",
+    "core/artifacts/spend_js/spend.wasm",
+    "core/circuits/spend.circom",
+    "core/contracts/foundry.toml",
+    "core/contracts/src/Groth16Verifier.sol",
+    "core/contracts/src/PoseidonT3.sol",
+    "core/contracts/src/PoseidonT4.sol",
+    "core/contracts/src/ShieldedPoolLogic.sol",
+    "core/dispatcher/ShieldedPoolDispatcher.yul",
+    "core/artifacts/shielded_pool_dispatcher_init.hex",
+    "sdk/frametx.py",
+    "sdk/gas_profile.py",
+    "sdk/pool_frametx.py",
+    "tools/check_gas_profile.py",
 )
-R1CS = "build/spend.r1cs"
-ZKEY = "build/spend_final.zkey"
-VERIFIER = "contracts/src/Groth16Verifier.sol"
-SNARKJS = ROOT / "tooling/node_modules/.bin/snarkjs"
+R1CS = "core/artifacts/spend.r1cs"
+ZKEY = "core/artifacts/spend_final.zkey"
+VERIFIER = "core/contracts/src/Groth16Verifier.sol"
+SNARKJS = ROOT / "tools/node_modules/.bin/snarkjs"
 
 
 def sections(path, magic, *needed):
@@ -254,7 +254,7 @@ def verify_with_ptau(ptau, pinned):
     if sha256(ptau) != pinned:
         raise SystemExit("ptau hash does not match ceremony.phase1_ptau_sha256")
     if not SNARKJS.exists():
-        raise SystemExit("--ptau requires the pinned snarkjs: npm ci --prefix tooling")
+        raise SystemExit("--ptau requires the pinned snarkjs: npm ci --prefix tools")
     command = [SNARKJS, "zkey", "verify", ROOT / R1CS, ptau, ROOT / ZKEY]
     result = subprocess.run([str(part) for part in command], capture_output=True, text=True)
     if result.returncode != 0:

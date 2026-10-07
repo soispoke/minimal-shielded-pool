@@ -5,7 +5,7 @@ The envelope as published at ethereum/EIPs `7d1c8bfb94` and implemented by ethre
 dialect the pre-relaunch chain-8141
 deployment uses; the two envelopes are mutually unreadable and each needs its own encoder,
 dispatcher, and gas profile is archived byte-exact under
-`devnet/vectors/2026-09-01-hegota-final-profile/`, the record of what was deployed.
+`evidence/vectors/2026-09-01-hegota-final-profile/`, the record of what was deployed.
 
 What changed, and why each matters to a signer:
 
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     import importlib.util as _ilu
     _spec = _ilu.spec_from_file_location(
         "frametx_frozen",
-        pathlib.Path(__file__).resolve().parent.parent / "devnet/vectors/2026-09-01-hegota-final-profile/frametx.py",
+        pathlib.Path(__file__).resolve().parent.parent / "evidence/vectors/2026-09-01-hegota-final-profile/frametx.py",
     )
     frozen = _ilu.module_from_spec(_spec)
     _spec.loader.exec_module(frozen)

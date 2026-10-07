@@ -2,11 +2,13 @@
 """Executable complete-intent binding vector for the one-time authorizer."""
 import copy
 import json
+import sys
 from pathlib import Path
 
 from eth_hash.auto import keccak
 from eth_keys import keys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sdk"))
 from frametx import Frame, FrameSig, FrameTx
 from pool_frametx import (
     CLAIM_FRAME_GAS,
@@ -23,7 +25,7 @@ from pool_frametx import (
 )
 
 HERE = Path(__file__).parent
-FIXTURE = HERE.parent / "wallet" / "smoke_fixture.json"
+FIXTURE = HERE / "fixtures" / "smoke_fixture.json"
 
 
 def root_tuple(source, slot, root):

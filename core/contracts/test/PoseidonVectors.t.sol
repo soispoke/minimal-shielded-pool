@@ -13,14 +13,14 @@ interface Vm {
 }
 
 /// Differential tests against vectors exported from circomlibjs (the package
-/// the circuit's poseidon.circom pairs with) by ../../tooling/export_vectors.js.
+/// the circuit's poseidon.circom pairs with) by ../../../tools/export_vectors.js.
 /// Every Poseidon(2) and Poseidon(3) vector, the pool's tagged
 /// owner_pk/cm/nf/out_cm chain, a soundness check that a single flipped input
 /// changes the output, and a gas-regression ceiling.
 contract PoseidonVectorsTest {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    string constant PATH = "../vectors/poseidon_bn254_vectors.json";
+    string constant PATH = "../../test/vectors/poseidon_bn254_vectors.json";
 
     function _u(string memory json, string memory key) internal pure returns (uint256) {
         return vm.parseUint(vm.parseJsonString(json, key));

@@ -1,9 +1,12 @@
-"""Wallet reconstruction checks. Run: python3 wallet/test_wallet_occurrence.py."""
+"""Wallet reconstruction checks. Run: python3 test/test_wallet_occurrence.py."""
+import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-import gen_nonce_race as race
-import wallet as w
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sdk"))
+import gen_nonce_race as race  # noqa: E402
+import wallet as w  # noqa: E402
 
 
 class WalletOccurrenceTest(unittest.TestCase):
@@ -76,7 +79,7 @@ class WalletOccurrenceTest(unittest.TestCase):
         # owner prove the same spend, with the same nullifiers, on a newer root.
         import json
         from pathlib import Path
-        fixture = json.loads((Path(__file__).parent / "smoke_fixture.json").read_text())
+        fixture = json.loads((Path(__file__).parent / "fixtures" / "smoke_fixture.json").read_text())
         for name in ("transfer", "withdraw_seed", "withdraw"):
             entry = fixture[name]
             inputs = [{"sk": int(i["spend_key"], 16), "rho": int(i["rho"], 16),

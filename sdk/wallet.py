@@ -7,7 +7,7 @@ commitment on-chain, so a deposit's value is what was actually deposited.
 
 A spend consumes two inputs (a zero-value dummy stands in when only one real
 note is spent) and creates two outputs. `build_witness` returns the circom
-input map that ../tooling proves with snarkjs against build/spend_final.zkey.
+input map that ../tools proves with snarkjs against core/artifacts/spend_final.zkey.
 """
 import random
 import secrets
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from eth_hash.auto import keccak
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "reference"))
+sys.path.insert(0, str(Path(__file__).parent))
 from poseidon_bn254 import P, p2, poseidon, tagged, TAG_PK, TAG_LEAF  # noqa: E402
 
 DEPTH = 20
@@ -43,7 +43,7 @@ def rand_fe():
     return _RNG.randrange(P)
 
 
-# ---- note cryptography (mirrors ../circuits/spend.circom) ----
+# ---- note cryptography (mirrors ../core/circuits/spend.circom) ----
 
 def owner_pk(spend_key):
     return tagged(TAG_PK, spend_key, 0)
@@ -269,7 +269,7 @@ def _selfcheck():
     """The wallet tree must agree with the exported incremental-tree fixture,
     and a value note's auth path must reproduce the root."""
     import json
-    fx = json.loads((Path(__file__).parent.parent / "vectors"
+    fx = json.loads((Path(__file__).parent.parent / "test" / "vectors"
                      / "poseidon_bn254_vectors.json").read_text())["tree"]
     t = Tree()
     assert t.root() == int(fx["root_empty"]), "empty root mismatch"

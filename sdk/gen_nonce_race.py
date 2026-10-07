@@ -16,16 +16,16 @@ The fixture is shaped so pool_frametx.py can drive both spends: it exposes the
 two transfers under the keys `transfer` (A) and a second entry the harness
 reads directly. Both carry the same recent-root reference (R at R's slot).
 
-Run from wallet/: python3 gen_nonce_race.py --chain-id=N --pool-address=0x...
+Run from sdk/: python3 gen_nonce_race.py --chain-id=N --pool-address=0x...
                    --root-slot=N [--epoch=N] [--random]
                    [--output=PATH]
 
 The fixed seed is public, so it is refused outside the local test chain and
 whenever --rpc reads a live tree: pass --random there. The fixture holds the
 only openings of its notes, inputs and outputs alike, so it is written under
-the ignored wallet/artifacts/ and never over a fixture for another chain.
+the ignored sdk/artifacts/ and never over a fixture for another chain.
 
-Notes come from wallet/notes.py. Alice and Carol shield from their own
+Notes come from sdk/notes.py. Alice and Carol shield from their own
 secrets; Alice pays Bob through his public address (her transfer carries the
 ML-KEM ciphertext), and Carol pays Dave with a secret Dave handed her out of
 band. The fixture records the wallets' seeds.

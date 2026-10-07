@@ -3,9 +3,12 @@
 import contextlib
 import io
 import json
+import sys
+from pathlib import Path
 
 from eth_keys import keys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sdk"))
 import pool_frametx as builder
 from pool_frametx import (
     EIP7825_TX_GAS_CAP,

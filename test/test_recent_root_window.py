@@ -12,7 +12,7 @@ proof and the operator sees only a mempool refusal.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sdk"))
 
 from gas_profile import RECENT_ROOT_TUPLE_BYTES
 from pool_frametx import RECENT_ROOT_LENGTH, recent_root_window_error

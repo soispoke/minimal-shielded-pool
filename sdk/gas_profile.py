@@ -23,7 +23,7 @@ POOL_PROFILE = "position-notes-v3"
 # deployed, and the CLI refuses to spend against it.
 PREVIOUS_POOL_PROFILE = "position-notes-v2"
 # A note is a 16-byte tag, a 16-byte encrypted amount and a 16-byte authentication tag
-# (wallet/notes.py). Settlement calldata is settle(Spend) followed by two notes, and a
+# (sdk/notes.py). Settlement calldata is settle(Spend) followed by two notes, and a
 # sender's first payment to a public address puts its ML-KEM-768 ciphertext before them.
 # A shield carries one note, optionally after a ciphertext.
 NOTE_BYTES = 48

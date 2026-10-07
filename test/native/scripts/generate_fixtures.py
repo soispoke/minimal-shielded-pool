@@ -13,7 +13,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent.parent
 REPO = HERE.parent.parent
-sys.path[:0] = [str(REPO / "wallet"), str(REPO / "devnet")]
+sys.path[:0] = [str(REPO / "sdk"), str(REPO / "tools")]
 from eth_hash.auto import keccak
 from eth_keys import keys
 import gen_smoke as smoke
@@ -57,7 +57,7 @@ def save(name, raw, **expect):
     return {"raw": f"{name}.hex", **expect}
 
 def artifact(name, small=False):
-    path = REPO / "contracts" / ("out-libsmall" if small else "out") / f"{name}.sol" / f"{name}.json"
+    path = REPO / "core" / "contracts" / ("out-libsmall" if small else "out") / f"{name}.sol" / f"{name}.json"
     return bytes.fromhex(json.loads(path.read_text())["bytecode"]["object"].removeprefix("0x"))
 
 constructors = [artifact("PoseidonT3", True), artifact("PoseidonT4", True), artifact("Groth16Verifier"),
@@ -98,8 +98,8 @@ def publish(name, nonce, epoch=0, slot=SLOT):
 setup += [deposit("deposit-a", NA, 5, tree_of(NA)), deposit("deposit-b", NB, 6, BASE), publish("publish-initial", 7)]
 NEXT = 8
 entries = {}
-KEY_HASH = hashlib.sha256((REPO / "build/spend_final.zkey").read_bytes()).hexdigest()
-WASM_HASH = hashlib.sha256((REPO / "build/spend_js/spend.wasm").read_bytes()).hexdigest()
+KEY_HASH = hashlib.sha256((REPO / "core/artifacts/spend_final.zkey").read_bytes()).hexdigest()
+WASM_HASH = hashlib.sha256((REPO / "core/artifacts/spend_js/spend.wasm").read_bytes()).hexdigest()
 
 
 def prove(name, tree, n, index, outputs=None, recipient=EOA, epoch=0, root_slot=SLOT, alias=None):

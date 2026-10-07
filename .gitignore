@@ -4,13 +4,19 @@ __pycache__/
 .venv/
 venv/
 build/
+sdk/artifacts/
+# Left in older checkouts by the layout change. wallet/artifacts/ may hold note
+# secrets; the rest are build outputs that would otherwise show as untracked.
 wallet/artifacts/
+/tooling/node_modules/
+/contracts/out/
+/contracts/out-libsmall/
+/contracts/cache/
+/contracts/broadcast/
+/devnet/native_occurrence/
 
-# the immutable dispatcher initcode is read by the forge suites; keep it tracked
-!devnet/build/
-!devnet/build/shielded_pool_dispatcher_init.hex
 # The archived profile's initcode is a deployment record, tracked like the live one.
-!devnet/vectors/*/build/
-!devnet/vectors/*/build/shielded_pool_dispatcher_init.hex
+!evidence/vectors/*/build/
+!evidence/vectors/*/build/shielded_pool_dispatcher_init.hex
 # The formal verification repository, checked out here to run its checks.
 /formal/

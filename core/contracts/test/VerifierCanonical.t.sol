@@ -20,7 +20,7 @@ contract VerifierCanonicalTest {
 
     function setUp() public {
         verifier = new Groth16Verifier();
-        fixture = vm.readFile("../wallet/smoke_fixture.json");
+        fixture = vm.readFile("../../test/fixtures/smoke_fixture.json");
     }
 
     function _u(string memory path) internal view returns (uint256) {

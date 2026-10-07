@@ -18,12 +18,12 @@ export ETH_KEYSTORE=$DEPLOYER_KEYSTORE ETH_PASSWORD=$DEPLOYER_PASSWORD_FILE
   echo "a production deployment requires a separately verified multi-party zkey" >&2
   exit 1
 }
-MANIFEST=../activation_manifest.testbed.json
-python3 ../tooling/check_activation.py "$MANIFEST" --allow-testbed
+MANIFEST=../core/activation_manifest.testbed.json
+python3 check_activation.py "$MANIFEST" --allow-testbed
 
-BN=../contracts
+BN=../core/contracts
 PRICE=(--gas-price 3000000000 --priority-gas-price 1000000000)
-SMOKE_OUTPUT=${SMOKE_OUTPUT:-../wallet/artifacts/smoke_fixture.live.json}
+SMOKE_OUTPUT=${SMOKE_OUTPUT:-../sdk/artifacts/smoke_fixture.live.json}
 # An earlier run's fixture holds the only secrets of the notes it left behind.
 [[ ! -e $SMOKE_OUTPUT ]] || {
   echo "$SMOKE_OUTPUT exists and may hold the only secrets of unspent notes; move it or set SMOKE_OUTPUT" >&2
@@ -32,7 +32,7 @@ SMOKE_OUTPUT=${SMOKE_OUTPUT:-../wallet/artifacts/smoke_fixture.live.json}
 # forge resolves its settings from foundry.toml, FOUNDRY_* variables in any case,
 # .env files and the global config, and every check below compares the chain with
 # that same local build. Compare what forge would use with the manifest's pins.
-python3 ../tooling/check_forge_config.py "$MANIFEST" "$BN"
+python3 check_forge_config.py "$MANIFEST" "$BN"
 deployed() { grep -oE 'Deployed to: 0x[0-9a-fA-F]{40}' | awk '{print $3}'; }
 addr_of() { python3 -c 'import json,sys; print(json.load(sys.stdin)["contractAddress"])'; }
 # Cast annotates large ints as "550000000000000000 [5.5e17]". int() needs the first token.
@@ -128,7 +128,7 @@ echo "    logic=$LOGIC"
 echo "==> immutable dispatcher/pool"
 # The pinned initcode, not a fresh compile, linked to the verified logic and verifier.
 DISP_ARGS=$(cast abi-encode 'f(address,address)' "$LOGIC" "$VERIFIER")
-DISP_INIT="$(cat build/shielded_pool_dispatcher_init.hex)${DISP_ARGS#0x}"
+DISP_INIT="$(cat ../core/artifacts/shielded_pool_dispatcher_init.hex)${DISP_ARGS#0x}"
 POOL=$(cast send --rpc-url "$RPC" "${PRICE[@]}" --gas-limit 4000000 \
   --create "$DISP_INIT" --json | addr_of)
 verify_created_runtime "$POOL" "$DISP_INIT" || {
@@ -147,7 +147,7 @@ echo "    rejecter=$REJECTER"
 echo "==> deployment-bound proofs"
 # Fresh secrets: with the fixed fixture seed, anyone could rebuild these notes'
 # keys and one-time authorizers and sweep what a live run leaves behind.
-python3 ../wallet/gen_smoke.py --random --chain-id="$CHAIN_ID" --pool-address="$POOL" \
+python3 ../sdk/gen_smoke.py --random --chain-id="$CHAIN_ID" --pool-address="$POOL" \
   --recipient="$REJECTER" --output="$SMOKE_OUTPUT"
 
 # The shield below checks the label, chain, and deployed code against this stub, so it
@@ -155,21 +155,21 @@ python3 ../wallet/gen_smoke.py --random --chain-id="$CHAIN_ID" --pool-address="$
 MANIFEST_PATH=$MANIFEST python3 - "$RPC" "$POOL" "$LOGIC" "$VERIFIER" <<'PY'
 import json, os, sys
 manifest = json.load(open(os.environ["MANIFEST_PATH"]))["profile"]
-with open("deploy_config.json", "w") as f:
+with open("../core/deploy_config.json", "w") as f:
     json.dump({"rpc": sys.argv[1], "pool": sys.argv[2], "logic": sys.argv[3],
                "verifier": sys.argv[4], "chainId": manifest["chain_id"],
                "profile": manifest["wire_profile"]}, f, indent=1)
 PY
 
 echo "==> shield fixture note"
-funded_key | python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" shield
+funded_key | python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" shield
 
 # Publish the current tree root and echo the EIP-7843 slot its block landed in. Each
 # spend proof is bound to the root that existed when it was generated, so a spend that
 # changes the tree invalidates the root the next one needs: the transfer and the withdraw
 # are bound to different roots and each needs its own publication.
 publish_root() {
-  funded_key | python3 -u pool_frametx.py "$RPC" deploy_config.json deploy_config.json publish --epoch 0 \
+  funded_key | python3 -u ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json ../core/deploy_config.json publish --epoch 0 \
     | tee /dev/stderr \
     | sed -n 's/^ROOT_SLOT //p' | tail -1
 }
@@ -196,7 +196,7 @@ if "settle_frame_state_gas" in manifest:
     cfg["settleStateGas"] = manifest["settle_frame_state_gas"]
     cfg["verifyStateGas"] = manifest["verify_frame_state_gas"]
 # The recent-root verifier frame's budget belongs here for the same reason as the
-# other four: this file is the deployment record, and `tooling/check_gas_profile.py`
+# other four: this file is the deployment record, and `tools/check_gas_profile.py`
 # reads it back. Omitting it left every live deployment with a config the checker
 # then died on with a bare KeyError, which reads as a broken checker rather than an
 # incomplete record.
@@ -209,9 +209,9 @@ if "action_frame_max_gas" in manifest:
     cfg["actionMaxGas"] = manifest["action_frame_max_gas"]
     cfg["actionMaxStateGas"] = manifest["action_frame_max_state_gas"]
     cfg["actionMaxCalldata"] = manifest["action_frame_max_calldata"]
-with open("deploy_config.json", "w") as f:
+with open("../core/deploy_config.json", "w") as f:
     json.dump(cfg, f, indent=1)
-print("wrote deploy_config.json")
+print("wrote ../core/deploy_config.json")
 PY
 
 echo "==> deployed testbed pool"
@@ -225,7 +225,7 @@ echo "    root slot=$ROOT_SLOT_DEC (EIP-7843 slotNumber, not block timestamp)"
 # SPEND=0 skips them for a deployment that is only publishing a pool.
 if [[ ${SPEND:-1} == 1 ]]; then
   echo "==> transfer (shielded spend, note -> note)"
-  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" transfer
+  python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" transfer
 
   # The transfer inserted two commitments, so the root the withdraw proof was generated
   # against is the post-transfer one, not the post-shield one already published. Publish
@@ -236,9 +236,9 @@ if [[ ${SPEND:-1} == 1 ]]; then
   WITHDRAW_SLOT=$(publish_root) || exit 1
   python3 - "$WITHDRAW_SLOT" <<'PY'
 import json, sys
-cfg = json.load(open("deploy_config.json"))
+cfg = json.load(open("../core/deploy_config.json"))
 cfg["_slot_withdraw"] = sys.argv[1]
-json.dump(cfg, open("deploy_config.json", "w"), indent=1)
+json.dump(cfg, open("../core/deploy_config.json", "w"), indent=1)
 print(f"    withdraw root slot={sys.argv[1]}")
 PY
 
@@ -246,7 +246,7 @@ PY
   # credit_before + publicAmount check is not vacuously 0 + publicAmount.
   # Alice's change exits to the same recipient; sinks do not change the root.
   echo "==> seed prior credit (withdraw_seed claim expected to revert)"
-  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw \
+  python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" withdraw \
     --spend-key withdraw_seed --allow-failed-claim
 
   RECIPIENT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["recipient"])' "$SMOKE_OUTPUT")
@@ -260,7 +260,7 @@ PY
   BEFORE=$(cast_uint "$(cast balance "$RECIPIENT" --rpc-url "$RPC")")
   EXPECTED=$(python3 -c 'import sys; print(int(sys.argv[1]) + int(sys.argv[2]))' "$CREDIT_BEFORE" "$PUBLIC_AMOUNT")
   echo "==> withdraw (shielded spend + claim, note -> recipient $RECIPIENT, expecting +$EXPECTED wei including prior credit $CREDIT_BEFORE)"
-  python3 pool_frametx.py "$RPC" deploy_config.json "$SMOKE_OUTPUT" withdraw
+  python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" withdraw
   AFTER=$(cast_uint "$(cast balance "$RECIPIENT" --rpc-url "$RPC")")
   CREDIT_AFTER=$(cast_uint "$(cast call "$POOL" 'withdrawalCredit(address)(uint256)' "$RECIPIENT" --rpc-url "$RPC")")
   # Balances outgrow bash's 64-bit arithmetic after a few ETH, so subtract in python.

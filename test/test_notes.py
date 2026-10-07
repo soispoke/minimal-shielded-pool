@@ -7,7 +7,7 @@ transaction are read apart, calls a node leaves out of eth_getLogs are rebuilt
 from receipts or caught, and secrets stay in owner-only files. The chain is an
 in-memory list of what the pool emits, and the CLI runs against a local
 JSON-RPC server serving the same logs and receipts.
-Run: python3 wallet/test_notes.py."""
+Run: python3 test/test_notes.py."""
 import contextlib
 import http.server
 import io
@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "sdk"))
 import notes as n  # noqa: E402
 import wallet as w  # noqa: E402
 from gas_profile import POOL_PROFILE, SHIELD_NOTE_BYTES, SPEND_NOTES_BYTES  # noqa: E402
@@ -391,7 +391,7 @@ def check_log_decoding():
 def check_smoke_fixture():
     """The committed fixture's notes open for its wallets: replaying the story
     as the pool would emit it, each wallet finds and then sees spent its notes."""
-    fixture = json.loads((HERE / "smoke_fixture.json").read_text())
+    fixture = json.loads((HERE / "fixtures" / "smoke_fixture.json").read_text())
     alice, bob = (n.WalletKeys(bytes.fromhex(fixture["wallets"][name]["seed"][2:])) for name in ("alice", "bob"))
     for name, keys in (("alice", alice), ("bob", bob)):
         assert fixture["wallets"][name]["address"] == keys.address().hex()

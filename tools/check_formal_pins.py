@@ -19,6 +19,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC_URL = 'https://raw.githubusercontent.com/soispoke/verified-shielded-pool/main/SPEC.md'
+# SPEC.md names the pinned files by their paths at the verified commit, before
+# the repository was reorganized. Look each one up where it lives now; a path
+# not listed here (for example one SPEC.md already gives in the new layout) is
+# used as is.
+MOVED = {
+    'build/spend.r1cs': 'core/artifacts/spend.r1cs',
+    'build/spend_final.zkey': 'core/artifacts/spend_final.zkey',
+    'circuits/spend.circom': 'core/circuits/spend.circom',
+    'devnet/build/shielded_pool_dispatcher_init.hex': 'core/artifacts/shielded_pool_dispatcher_init.hex',
+    'devnet/ShieldedPoolDispatcher.yul': 'core/dispatcher/ShieldedPoolDispatcher.yul',
+    'contracts/src/ShieldedPoolLogic.sol': 'core/contracts/src/ShieldedPoolLogic.sol',
+    'contracts/src/Groth16Verifier.sol': 'core/contracts/src/Groth16Verifier.sol',
+    'contracts/vectors/spend_vkey.json': 'core/artifacts/spend_vkey.json',
+    'contracts/foundry.toml': 'core/contracts/foundry.toml',
+    'activation_manifest.testbed.json': 'core/activation_manifest.testbed.json',
+    'contracts/src/PoseidonT3.sol': 'core/contracts/src/PoseidonT3.sol',
+    'contracts/src/PoseidonT4.sol': 'core/contracts/src/PoseidonT4.sol',
+}
 
 
 def read_spec():
@@ -54,9 +72,10 @@ def main():
         return 0
     changed = []
     for name, want in pins:
-        path = ROOT / name
+        local = MOVED.get(name, name)
+        path = ROOT / local
         if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != want:
-            changed.append(name)
+            changed.append(local)
     verified = re.search(r'at `([0-9a-f]{7,40})`', spec)
     commit = verified.group(1) if verified else 'the pinned commit'
     if changed:

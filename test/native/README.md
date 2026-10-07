@@ -8,7 +8,7 @@ storage, withdrawal credits, recipient balances and gas payments.
 Run after installing the repository's Python, Node, Foundry and Rust dependencies:
 
 ```sh
-ETHREX_SOURCE=/path/to/pinned/ethrex python3 devnet/native_occurrence/run.py
+ETHREX_SOURCE=/path/to/pinned/ethrex python3 test/native/run.py
 ```
 
 Add `--offline` when Cargo dependencies are cached. `--skip-generate` reuses

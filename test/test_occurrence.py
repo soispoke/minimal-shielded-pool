@@ -1,6 +1,6 @@
 """Focused occurrence-nullifier circuit checks, using generated R1CS/WASM.
 
-Run after compiling/setup: python3 wallet/test_occurrence.py
+Run after compiling/setup: python3 test/test_occurrence.py
 This exercises real witness constraints and one real Groth16 proof. It does
 not emulate the protocol's consumed-key registry or authenticate epoch roots;
 the native integration tests cover those boundaries separately.
@@ -9,14 +9,16 @@ import copy
 import json
 import struct
 import subprocess
+import sys
 import time
 from pathlib import Path
 
-import wallet as w
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sdk"))
+import wallet as w  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-BUILD = ROOT / "build"
-WORK = BUILD / "occurrence-tests"
+BUILD = ROOT / "core" / "artifacts"
+WORK = ROOT / "build" / "occurrence-tests"
 RESULTS = []
 STATEMENT_INPUTS = ["root", "domain", "public_amount", "fee", "recipient", "authorizer"]
 
@@ -30,7 +32,7 @@ def statement_for(witness, nullifiers):
 
 
 def run(args):
-    return subprocess.run([str(x) for x in args], cwd=ROOT / "tooling",
+    return subprocess.run([str(x) for x in args], cwd=ROOT / "tools",
                           capture_output=True, text=True)
 
 
@@ -73,7 +75,7 @@ def compile_variant(variant):
     """WASM and symbols of the circuit without the constraints the variant names."""
     out = WORK / f"variant-{variant}"
     if not (out / "spend.sym").exists():
-        source = (ROOT / "circuits/spend.circom").read_text()
+        source = (ROOT / "core/circuits/spend.circom").read_text()
         if variant == "unchecked":
             for line in UNCHECKED:
                 assert source.count(line) == 1, line
@@ -85,7 +87,7 @@ def compile_variant(variant):
         (out / "circuits").mkdir(parents=True, exist_ok=True)
         (out / "circuits/spend.circom").write_text(source)
         must(["npx", "circom2", out / "circuits/spend.circom", "--wasm", "--sym",
-              "-l", ROOT / "tooling/node_modules", "-o", out])
+              "-l", ROOT / "tools/node_modules", "-o", out])
     return out / "spend_js/spend.wasm", out / "spend.sym"
 
 
@@ -163,8 +165,8 @@ def wire_names(names):
     sym = sym_dir / "spend.sym"
     if not sym.exists():
         sym_dir.mkdir(exist_ok=True)
-        must(["npx", "circom2", ROOT / "circuits/spend.circom", "--r1cs", "--sym",
-              "-l", ROOT / "tooling/node_modules", "-o", sym_dir])
+        must(["npx", "circom2", ROOT / "core/circuits/spend.circom", "--r1cs", "--sym",
+              "-l", ROOT / "tools/node_modules", "-o", sym_dir])
         assert (sym_dir / "spend.r1cs").read_bytes() == (BUILD / "spend.r1cs").read_bytes(), \
             "symbol file does not come from the committed R1CS"
     found = {}
@@ -228,14 +230,14 @@ def no_unconstrained_assignments():
     circuit ends up accepting forged values. The circuit uses neither, so a new
     one fails here until it gets its own constraint and review."""
     lines = [number for number, line in enumerate(
-        (ROOT / "circuits/spend.circom").read_text().splitlines(), 1)
+        (ROOT / "core/circuits/spend.circom").read_text().splitlines(), 1)
         if "<--" in line.split("//")[0] or "-->" in line.split("//")[0]]
-    assert not lines, f"circuits/spend.circom assigns without a constraint at lines {lines}"
+    assert not lines, f"core/circuits/spend.circom assigns without a constraint at lines {lines}"
     print("PASS circuit has no unconstrained assignment", flush=True)
 
 
 def main():
-    WORK.mkdir(exist_ok=True)
+    WORK.mkdir(parents=True, exist_ok=True)
     no_unconstrained_assignments()
     w.set_seed(20260921)
     pool = "0x" + "12" * 20
@@ -406,7 +408,7 @@ def main():
     must(["npx", "snarkjs", "groth16", "prove", BUILD / "spend_final.zkey",
           WORK / "first-occurrence.wtns", proof, publics])
     prove_seconds = time.monotonic() - start
-    key = ROOT / "contracts/vectors/spend_vkey.json"
+    key = ROOT / "core/artifacts/spend_vkey.json"
     must(["npx", "snarkjs", "groth16", "verify", key, publics, proof])
     RESULTS.append({"name": "real-groth16-proof", "passed": True,
                     "prove_seconds": round(prove_seconds, 4)})

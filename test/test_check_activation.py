@@ -8,11 +8,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-import check_activation as gate
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+import check_activation as gate  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-CHECK = ROOT / "tooling/check_activation.py"
-BASE = json.loads((ROOT / "activation_manifest.testbed.json").read_text())
+CHECK = ROOT / "tools/check_activation.py"
+BASE = json.loads((ROOT / "core/activation_manifest.testbed.json").read_text())
 
 
 def run(manifest, *flags):
@@ -82,8 +83,8 @@ def main():
 
     cases = {
         "empty artifacts": (lambda m: m.update(artifacts={}), "required artifacts"),
-        "missing proving key": (lambda m: m["artifacts"].pop("build/spend_final.zkey"),
-                                "build/spend_final.zkey"),
+        "missing proving key": (lambda m: m["artifacts"].pop("core/artifacts/spend_final.zkey"),
+                                "core/artifacts/spend_final.zkey"),
         "string production": (lambda m: m.update(production="false"), "JSON boolean"),
         "string contribution count": (ceremony(phase2_contributions="1"), "JSON integer"),
         "boolean contribution count": (ceremony(phase2_contributions=True), "JSON integer"),

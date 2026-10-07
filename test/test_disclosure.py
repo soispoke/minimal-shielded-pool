@@ -3,14 +3,14 @@
 altered claim. The chain here is a small in-memory copy of what the pool
 emits after a proof verifies: LeafAppended and NoteSpent, in the frames that
 emit them, plus the EIP-8250 keys spends consume.
-Run: python3 wallet/test_disclosure.py."""
+Run: python3 test/test_disclosure.py."""
 import copy
 import json
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "sdk"))
 import disclosure as d  # noqa: E402
 import wallet as w  # noqa: E402
 from poseidon_bn254 import hex32  # noqa: E402
@@ -72,7 +72,7 @@ def story(shared_key=False):
     shields 5 ETH. Bob later withdraws his note. The same commitment as Alice's
     deposit also lands at leaf 3, and at leaf 0 of epoch 1 after a rollover.
     With shared_key, Alice's change uses her deposit's spend key, as two notes
-    paid to one address (wallet/notes.py) do."""
+    paid to one address (sdk/notes.py) do."""
     w.set_seed(7)
     D = w.domain_scalar(CHAIN, f"0x{POOL:040x}", 0)
     notes = {k: w.new_note() for k in ("a", "b", "c", "d1", "d2", "d3", "e")}
@@ -269,7 +269,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         cfg = Path(tmp, "config.json")
         cfg.write_text(json.dumps({"chainId": CHAIN, "pool": f"0x{POOL:040x}"}))
-        base = [sys.executable, str(HERE / "disclosure.py"), "export", "--rpc", "http://127.0.0.1:1",
+        base = [sys.executable, str(HERE.parent / "sdk" / "disclosure.py"), "export", "--rpc", "http://127.0.0.1:1",
                 "--config", str(cfg), "--fixture", str(cfg), "--output", str(Path(tmp, "r.json"))]
         for extra, expected in (([], "--only with the notes to disclose, or --all"),
                                 (["--all", "--only", hex32(cm["a"])], "--only with the notes to disclose, or --all"),

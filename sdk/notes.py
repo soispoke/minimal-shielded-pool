@@ -2,7 +2,7 @@
 """Note delivery: a secret per sender and recipient, and 48-byte notes on chain.
 
 A recipient needs each note's amount and rho to spend it. The pool publishes
-notes and never reads them (contracts/src/ShieldedPoolLogic.sol): settlement
+notes and never reads them (core/contracts/src/ShieldedPoolLogic.sol): settlement
 carries two notes, one per output, and a shield carries one. A sender's first
 payment to a public address puts its ML-KEM-768 ciphertext before the notes.
 
@@ -52,7 +52,7 @@ not depend on the deployment, so a seed is used with one pool only.
 
 All notes paid to one address share its spend key. A disclosure receipt for one
 of them reveals Poseidon2(D, spend_key), which identifies every spend of that
-address in epoch D, so wallet/disclosure.py refuses such a receipt unless asked
+address in epoch D, so sdk/disclosure.py refuses such a receipt unless asked
 for it explicitly.
 
   notes.py address [--account N] [--seed-file PATH]
@@ -85,7 +85,6 @@ from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "devnet"))
 import wallet as w  # noqa: E402
 from gas_profile import (KEM_CIPHERTEXT_BYTES, NOTE_BYTES, POOL_PROFILE, SHIELD_NOTE_BYTES,  # noqa: E402
                          SPEND_NOTES_BYTES)

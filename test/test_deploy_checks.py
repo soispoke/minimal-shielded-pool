@@ -13,7 +13,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parent / "run_live_dispatcher.sh"
+SCRIPT = Path(__file__).resolve().parent.parent / "tools" / "run_live_dispatcher.sh"
 T3, T4 = "0x00000000000000000000000000000000000000A3", "0x00000000000000000000000000000000000000A4"
 LIB = "0x00000000000000000000000000000000000000b1"
 LIB_CODE = "0x73" + LIB[2:] + "3014"
@@ -72,7 +72,7 @@ def call_sites():
     assert calls == 4, calls
     assert not re.search(r"\[\[ *\$\(.*\) *== *\$\(", source), "inline comparison of two reads"
     # The dispatcher deployed is the pinned initcode, not a fresh compile.
-    assert 'DISP_INIT="$(cat build/shielded_pool_dispatcher_init.hex)' in source, "dispatcher not from the pinned hex"
+    assert 'DISP_INIT="$(cat ../core/artifacts/shielded_pool_dispatcher_init.hex)' in source, "dispatcher not from the pinned hex"
     assert "dispatcher.py --initcode" not in source, "dispatcher compiled at deploy time"
     return calls
 
@@ -81,7 +81,7 @@ def early_guards():
     """The script stops before calling cast, or building with forge, when its
     fixture path already exists or forge would build with unpinned settings."""
     checked = 0
-    manifest = json.loads((SCRIPT.parent.parent / "activation_manifest.testbed.json").read_text())
+    manifest = json.loads((SCRIPT.parent.parent / "core/activation_manifest.testbed.json").read_text())
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp, "bin")
         bin_dir.mkdir()
@@ -127,12 +127,12 @@ def keys_off_command_lines():
     """Any local user can read a process's arguments, so no key may be one.
     forge and cast sign from a keystore named in the environment, and the CLI
     reads the funded key from standard input, filled by the builtin printf."""
-    scripts = sorted(SCRIPT.parent.glob("*.sh")) + sorted((SCRIPT.parent.parent / "wallet").glob("*.sh"))
+    scripts = sorted(SCRIPT.parent.glob("*.sh")) + sorted((SCRIPT.parent.parent / "test").glob("*.sh"))
     for script in scripts:
         assert "--private-key" not in script.read_text(), script
     uses = [line.strip() for line in SCRIPT.read_text().splitlines() if re.search(r"\$DEPLOYER_KEY\b", line)]
     assert uses == ["funded_key() { printf '%s\\n' \"$DEPLOYER_KEY\"; }"], uses
-    cli = SCRIPT.parent / "pool_frametx.py"
+    cli = SCRIPT.parent.parent / "sdk" / "pool_frametx.py"
     for op in ("shield", "publish", "transfer", "withdraw"):
         old = subprocess.run([sys.executable, str(cli), "http://127.0.0.1:1", "cfg.json", "fix.json", op, "01" * 32],
                              capture_output=True, text=True)
@@ -142,9 +142,9 @@ def keys_off_command_lines():
 
 def real_forge_settings():
     """Against the real forge, a lowercase variable that changes the build is caught."""
-    checker = SCRIPT.parent.parent / "tooling/check_forge_config.py"
-    manifest = SCRIPT.parent.parent / "activation_manifest.testbed.json"
-    contracts = SCRIPT.parent.parent / "contracts"
+    checker = SCRIPT.parent.parent / "tools/check_forge_config.py"
+    manifest = SCRIPT.parent.parent / "core/activation_manifest.testbed.json"
+    contracts = SCRIPT.parent.parent / "core/contracts"
     clean = {k: v for k, v in os.environ.items() if not k.lower().startswith(("foundry_", "dapp_"))}
     ok = subprocess.run([sys.executable, str(checker), str(manifest), str(contracts)],
                         env=clean, capture_output=True, text=True)

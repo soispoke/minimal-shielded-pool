@@ -1,5 +1,5 @@
-// Regenerate ../vectors/poseidon_bn254_vectors.json and
-// ../reference/poseidon_bn254_constants.json from circomlibjs itself.
+// Regenerate ../test/vectors/poseidon_bn254_vectors.json and
+// ../sdk/poseidon_bn254_constants.json from circomlibjs itself.
 //
 //   node export_vectors.js
 //
@@ -68,7 +68,7 @@ async function main() {
   // Poseidon(10): hybrid compression's beta over the ten-value statement.
   const vec10 = cases(10).map((c) => ({ in: c.map(String), out: hash(c).toString() }));
 
-  // ---- the pool's tagged chain (mirrors circuits/spend.circom), seed 2026 ----
+  // ---- the pool's tagged chain (mirrors core/circuits/spend.circom), seed 2026 ----
   // note chain: the value-carrying note and the join-split outputs
   const lcg = new Lcg(2026);
   const [spend_key, rho, out_inner1, out_inner2] =
@@ -83,7 +83,7 @@ async function main() {
   const owner_pk = p3(1n, spend_key, 0n);
   const inner = p2(owner_pk, rho);
   const cm = p3(2n, inner, value);
-  // Position-bound nullifiers, mirroring circuits/spend.circom. Even with
+  // Position-bound nullifiers, mirroring core/circuits/spend.circom. Even with
   // the same secret and position, a zero-value dummy has a different identity.
   const nf = p3(4n, p2(domain, spend_key), p2(cm, index));
   const nf2 = p3(4n, p2(domain, spend_key), p2(p3(2n, inner, 0n), index));
@@ -127,7 +127,7 @@ async function main() {
   };
 
   const here = __dirname;
-  const vpath = path.join(here, "..", "vectors", "poseidon_bn254_vectors.json");
+  const vpath = path.join(here, "..", "test", "vectors", "poseidon_bn254_vectors.json");
   fs.mkdirSync(path.dirname(vpath), { recursive: true });
   fs.writeFileSync(vpath, JSON.stringify(vectors, null, 1));
 
@@ -135,7 +135,7 @@ async function main() {
   // C[t-2] is (8 + N_ROUNDS_P[t-2]) * t round constants, M[t-2] is t x t,
   // new_state[i] = sum_j M[i][j] * state[j] (poseidon_reference.js).
   const toDec = (x) => BigInt(x).toString();
-  const cpath = path.join(here, "..", "reference", "poseidon_bn254_constants.json");
+  const cpath = path.join(here, "..", "sdk", "poseidon_bn254_constants.json");
   fs.mkdirSync(path.dirname(cpath), { recursive: true });
   fs.writeFileSync(cpath, JSON.stringify({
     prime: p.toString(),

@@ -16,7 +16,7 @@ Each honest proof is verified off-chain against the committed verification
 key before it lands in the fixture. Groth16 proving is randomised, so the
 fixture pairs with the committed Groth16Verifier.sol from the same setup.
 
-Run from the wallet/ directory:
+Run from the sdk/ directory:
   python3 gen_smoke.py [--random] [--chain-id=N] [--pool-address=0x...]
                        [--shield-wei=N] [--payment-wei=N] [--fee-wei=N]
                        [--output=PATH] [--recipient=0x...] [--epoch=N]
@@ -25,7 +25,7 @@ The value overrides preserve the same flow at a smaller scale. They are useful
 for disposable devnet deployments and envelope boundary tests; defaults remain
 1.0 ETH shielded, 0.6 ETH paid privately, and a 0.05 ETH fee.
 
-Every note comes from wallet/notes.py: Alice's deposit and change from her own
+Every note comes from sdk/notes.py: Alice's deposit and change from her own
 secret, Bob's payment through his public address (the transfer carries the
 ML-KEM ciphertext), and random notes in the withdrawals' unused places. The
 fixture records each wallet's seed, so a scan rebuilds the notes from it.
@@ -44,8 +44,8 @@ import wallet as w
 from poseidon_bn254 import hex32
 
 HERE = Path(__file__).parent
-TOOLING = HERE.parent / "tooling"
-BUILD = HERE.parent / "build"
+TOOLING = HERE.parent / "tools"
+BUILD = HERE.parent / "core" / "artifacts"
 WORK = HERE / "artifacts"
 RECIPIENT = "0x00000000000000000000000000000000cafebabe"
 ETH = 10**18
@@ -114,16 +114,16 @@ def refuse_overwrite(path):
 
 def default_output(chain_id, pool_address):
     """The committed fixture for the test chain and pool; anything else goes
-    under the ignored wallet/artifacts/, never into a tracked file."""
+    under the ignored sdk/artifacts/, never into a tracked file."""
     if (chain_id, int(pool_address, 16)) == (TEST_CHAIN_ID, int(TEST_POOL, 16)):
-        return HERE / "smoke_fixture.json"
+        return HERE.parent / "test" / "fixtures" / "smoke_fixture.json"
     return WORK / f"smoke_fixture.{chain_id}.json"
 
 
 def refuse_recipient(recipient, pool_address):
     """A credit to the pool, a precompile or a system contract can never be
     claimed; refuse it before proving rather than at withdrawal."""
-    sys.path.insert(0, str(HERE.parent / "devnet"))
+    sys.path.insert(0, str(HERE))
     from pool_frametx import PRECOMPILES, UNCLAIMABLE_RECIPIENTS
     value = w.address_scalar(recipient)
     if value == w.address_scalar(pool_address) or value in PRECOMPILES or value in UNCLAIMABLE_RECIPIENTS:
@@ -155,7 +155,7 @@ def prove(witness, tag):
              proofpath, pubpath])
         # the real proof check, against the committed verification key
         run(["npx", "snarkjs", "groth16", "verify",
-             HERE.parent / "contracts" / "vectors" / "spend_vkey.json", pubpath, proofpath])
+             HERE.parent / "core" / "artifacts" / "spend_vkey.json", pubpath, proofpath])
         call = run(["npx", "snarkjs", "zkey", "export", "soliditycalldata", pubpath, proofpath])
         pa, pb, pc, _pub = json.loads("[" + call.stdout.strip() + "]")
         publics = [int(x) for x in json.loads(pubpath.read_text())]
@@ -221,7 +221,7 @@ def spend_entry(
 def main():
     zkey = BUILD / "spend_final.zkey"
     if not zkey.exists():
-        raise SystemExit("run the setup first: (cd ../tooling && ./setup.sh)")
+        raise SystemExit("run the setup first: (cd ../tools && ./setup.sh)")
     WORK.mkdir(exist_ok=True)
     if "--random" not in sys.argv:
         w.set_seed(20260702)

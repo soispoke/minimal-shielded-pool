@@ -5,11 +5,11 @@ field, x^5 S-box, 8 full rounds plus 57 (t=3), 56 (t=4) or 66 (t=11) partial rou
 state initialised as [0, in_0, ..., in_{n-1}], output state[0]. Constants and
 the mix convention (new_state[i] = sum_j M[i][j] * state[j]) are exactly
 circomlibjs's poseidon_reference.js; both live in
-poseidon_bn254_constants.json, exported by ../tooling/export_vectors.js from
+poseidon_bn254_constants.json, exported by ../tools/export_vectors.js from
 the same circomlibjs package the circuit's poseidon.circom pairs with.
 
 `python3 poseidon_bn254.py` checks every vector in
-../vectors/poseidon_bn254_vectors.json (computed by two independent
+../test/vectors/poseidon_bn254_vectors.json (computed by two independent
 circomlibjs implementations and asserted equal at export), including the
 pool's tagged owner_pk / cm / domain-separated nf / out_cm chain and the depth-20
 incremental-tree fixtures. This file is the wallet-side building block and
@@ -46,7 +46,7 @@ def poseidon(inputs):
     return state[0]
 
 
-# ---- the pool's tagged-hash shapes (mirrors ../circuits/spend.circom) ----
+# ---- the pool's tagged-hash shapes (mirrors ../core/circuits/spend.circom) ----
 TAG_PK, TAG_LEAF, TAG_NULL = 1, 2, 3
 
 
@@ -68,7 +68,7 @@ def hex32(x):
 
 
 def _check():
-    vecs = json.loads((Path(__file__).parent.parent / "vectors" /
+    vecs = json.loads((Path(__file__).parent.parent / "test" / "vectors" /
                        "poseidon_bn254_vectors.json").read_text())
     for v in vecs["poseidon2"]:
         assert poseidon([int(x) for x in v["in"]]) == int(v["out"]), "poseidon2 mismatch"

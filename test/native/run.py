@@ -41,10 +41,10 @@ def main():
     verify_ethrex(source)
 
     if not args.skip_generate:
-        run(["forge", "build", "--root", "contracts", "--force"])
+        run(["forge", "build", "--root", "core/contracts", "--force"])
         small = dict(os.environ)
         small["FOUNDRY_PROFILE"] = "libsmall"
-        run(["forge", "build", "--root", "contracts", "--force"], env=small)
+        run(["forge", "build", "--root", "core/contracts", "--force"], env=small)
         run(["python3", HERE / "scripts" / "generate_fixtures.py"])
 
     manifest = (HERE / "Cargo.toml.in").read_text().replace("@ETHREX@", str(source))

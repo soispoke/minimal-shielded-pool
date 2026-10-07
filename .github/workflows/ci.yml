@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Report changes to formally verified files
-        run: python tooling/check_formal_pins.py
+        run: python tools/check_formal_pins.py
 
   test:
     runs-on: ubuntu-latest
@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: tooling/package-lock.json
+          cache-dependency-path: tools/package-lock.json
 
       - uses: actions/setup-python@v7
         with:
@@ -46,67 +46,67 @@ jobs:
 
       - name: Install pinned dependencies
         run: |
-          npm ci --prefix tooling
+          npm ci --prefix tools
           python -m pip install --requirement requirements.txt
 
       - name: Reject high dependency advisories
-        run: npm audit --prefix tooling --omit=dev --audit-level=high
+        run: npm audit --prefix tools --omit=dev --audit-level=high
 
       - name: Compile circuit
         run: |
           mkdir -p /tmp/shielded-pool-circuit
-          tooling/node_modules/.bin/circom2 circuits/spend.circom \
-            --r1cs --wasm --sym -l tooling/node_modules \
+          tools/node_modules/.bin/circom2 core/circuits/spend.circom \
+            --r1cs --wasm --sym -l tools/node_modules \
             -o /tmp/shielded-pool-circuit
-          tooling/node_modules/.bin/snarkjs r1cs info /tmp/shielded-pool-circuit/spend.r1cs
-          cmp /tmp/shielded-pool-circuit/spend.r1cs build/spend.r1cs
-          cmp /tmp/shielded-pool-circuit/spend_js/spend.wasm build/spend_js/spend.wasm
+          tools/node_modules/.bin/snarkjs r1cs info /tmp/shielded-pool-circuit/spend.r1cs
+          cmp /tmp/shielded-pool-circuit/spend.r1cs core/artifacts/spend.r1cs
+          cmp /tmp/shielded-pool-circuit/spend_js/spend.wasm core/artifacts/spend_js/spend.wasm
 
       - name: Check generated dispatcher bytecode
         run: |
-          forge build --root contracts
-          python devnet/dispatcher.py --artifact >/dev/null
-          git diff --exit-code -- devnet/build/shielded_pool_dispatcher_init.hex
-          python devnet/dispatcher.py --initcode \
+          forge build --root core/contracts
+          python tools/dispatcher.py --artifact >/dev/null
+          git diff --exit-code -- core/artifacts/shielded_pool_dispatcher_init.hex
+          python tools/dispatcher.py --initcode \
             0x0000000000000000000000000000000000000001 \
             0x0000000000000000000000000000000000000002 >/dev/null
 
       - name: Check Python and frame-vector code
         run: |
           python -m py_compile \
-            devnet/dispatcher.py devnet/frametx.py devnet/gas_profile.py \
-            devnet/pool_frametx.py \
-            devnet/test_pool_envelope_binding.py \
-            devnet/test_gas_only_action.py \
-            devnet/test_recent_root_window.py \
-            devnet/test_occurrence_profile.py devnet/test_deploy_checks.py \
-            wallet/test_occurrence.py \
-            wallet/test_wallet_occurrence.py wallet/test_generators.py \
-            wallet/disclosure.py wallet/test_disclosure.py \
-            wallet/notes.py wallet/test_notes.py \
-            wallet/gen_nonce_race.py wallet/gen_smoke.py wallet/wallet.py \
-            reference/gen_poseidon_sol.py reference/poseidon_bn254.py \
-            tooling/check_activation.py tooling/check_forge_config.py tooling/check_gas_profile.py \
-            tooling/check_formal_pins.py \
-            tooling/test_check_activation.py \
-            tooling/patch_verifier.py
-          python devnet/frametx.py
-          python devnet/test_pool_envelope_binding.py
-          python devnet/test_gas_only_action.py
-          python devnet/test_recent_root_window.py
-          python devnet/test_occurrence_profile.py
-          python devnet/test_deploy_checks.py
-          python wallet/test_occurrence.py
-          python wallet/test_wallet_occurrence.py
-          python wallet/test_generators.py
-          python wallet/test_disclosure.py
-          python wallet/test_notes.py
-          python tooling/check_gas_profile.py
-          python tooling/check_activation.py activation_manifest.testbed.json --allow-testbed
-          python tooling/check_forge_config.py activation_manifest.testbed.json contracts
-          python tooling/test_check_activation.py
-          python wallet/wallet.py
-          python reference/poseidon_bn254.py
+            tools/dispatcher.py sdk/frametx.py sdk/gas_profile.py \
+            sdk/pool_frametx.py \
+            test/test_pool_envelope_binding.py \
+            test/test_gas_only_action.py \
+            test/test_recent_root_window.py \
+            test/test_occurrence_profile.py test/test_deploy_checks.py \
+            test/test_occurrence.py \
+            test/test_wallet_occurrence.py test/test_generators.py \
+            sdk/disclosure.py test/test_disclosure.py \
+            sdk/notes.py test/test_notes.py \
+            sdk/gen_nonce_race.py sdk/gen_smoke.py sdk/wallet.py \
+            tools/gen_poseidon_sol.py sdk/poseidon_bn254.py \
+            tools/check_activation.py tools/check_forge_config.py tools/check_gas_profile.py \
+            tools/check_formal_pins.py \
+            test/test_check_activation.py \
+            tools/patch_verifier.py
+          python sdk/frametx.py
+          python test/test_pool_envelope_binding.py
+          python test/test_gas_only_action.py
+          python test/test_recent_root_window.py
+          python test/test_occurrence_profile.py
+          python test/test_deploy_checks.py
+          python test/test_occurrence.py
+          python test/test_wallet_occurrence.py
+          python test/test_generators.py
+          python test/test_disclosure.py
+          python test/test_notes.py
+          python tools/check_gas_profile.py
+          python tools/check_activation.py core/activation_manifest.testbed.json --allow-testbed
+          python tools/check_forge_config.py core/activation_manifest.testbed.json core/contracts
+          python test/test_check_activation.py
+          python sdk/wallet.py
+          python sdk/poseidon_bn254.py
 
       - name: Preserve historical deployment evidence
         run: |
@@ -116,8 +116,9 @@ jobs:
           import hashlib, json, subprocess
           from pathlib import Path
           base = '6c5c77b171e08ad0987a06c44d0488ab385f36dd'
-          archive = 'devnet/vectors/2026-09-01-hegota-final-profile'
-          subprocess.run(['git', 'diff', '--exit-code', base, '--', archive], check=True)
+          archive = 'evidence/vectors/2026-09-01-hegota-final-profile'
+          subprocess.run(['git', 'diff', '--exit-code', f'{base}:devnet/vectors/2026-09-01-hegota-final-profile', f'HEAD:{archive}'], check=True)
+          subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--', archive], check=True)
           manifest = json.loads(Path(archive, 'activation_manifest.testbed.json').read_text())
           for path, expected in manifest['artifacts'].items():
               data = subprocess.check_output(['git', 'show', f'{base}:{path}'])
@@ -126,7 +127,7 @@ jobs:
           PY
 
       - name: Test contracts
-        working-directory: contracts
+        working-directory: core/contracts
         run: |
           forge fmt --check
           forge lint --deny warnings
@@ -159,9 +160,9 @@ jobs:
       - name: Install native test dependencies
         run: |
           rustup toolchain install 1.93.0 --profile minimal
-          npm ci --prefix tooling
+          npm ci --prefix tools
           python -m pip install --requirement requirements.txt
       - name: Test duplicate notes, reorgs, settlement gas and client policy
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
-        run: python devnet/native_occurrence/run.py --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
+        run: python test/native/run.py --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"

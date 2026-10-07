@@ -9,7 +9,7 @@ Spends use one base grammar:
   VERIFY(0x…8272, tuple) -> VERIFY(pool, proof, execution+payment)
     -> SENDER(pool, settle(Spend) || notes)
 
-The notes are the fixture entry's `notes`, made by wallet/notes.py: the CLI
+The notes are the fixture entry's `notes`, made by sdk/notes.py: the CLI
 refuses a fixture without them.
 
 Every spend is three frames and may append one DEFAULT tail. The wallet
@@ -135,8 +135,8 @@ def spend_args(entry):
 def _notes_field(entry, key, sizes, what):
     """The hex note bytes a wallet stored in the fixture entry, checked for length."""
     if key not in entry:
-        raise SystemExit(f"the fixture's {what} has no `{key}`: regenerate it with wallet/gen_smoke.py "
-                         "or wallet/gen_nonce_race.py so its recipients can find their notes")
+        raise SystemExit(f"the fixture's {what} has no `{key}`: regenerate it with sdk/gen_smoke.py "
+                         "or sdk/gen_nonce_race.py so its recipients can find their notes")
     data = bytes.fromhex(entry[key].removeprefix("0x"))
     if len(data) not in sizes:
         raise SystemExit(f"the {what}'s notes must be {' or '.join(map(str, sizes))} bytes, not {len(data)}")
@@ -144,7 +144,7 @@ def _notes_field(entry, key, sizes, what):
 
 
 def settle_calldata(entry):
-    """settle(Spend) calldata followed by the spend's notes (wallet/notes.py), as the
+    """settle(Spend) calldata followed by the spend's notes (sdk/notes.py), as the
     SENDER frame carries them. The pool publishes the notes and never reads them."""
     return (cast_calldata(f"settle({SPEND_TUPLE})", spend_args(entry))
             + _notes_field(entry, "notes", SPEND_NOTES_BYTES, "spend"))
@@ -189,11 +189,11 @@ def expected_domain(chain_id, pool, epoch=0):
 
 
 DISPATCHER_INITCODE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   "build", "shielded_pool_dispatcher_init.hex")
+                                   "..", "core", "artifacts", "shielded_pool_dispatcher_init.hex")
 # A proof from the committed proving key, used to check the verifier a pool is
 # linked to. verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[3]).
 REFERENCE_FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                 "..", "wallet", "smoke_fixture.json")
+                                 "..", "test", "fixtures", "smoke_fixture.json")
 VERIFY_PROOF_SELECTOR = bytes.fromhex("11479fea")
 
 

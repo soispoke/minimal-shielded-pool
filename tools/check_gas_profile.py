@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "devnet"))
+sys.path.insert(0, str(ROOT / "sdk"))
 
 from gas_profile import (  # noqa: E402
     CLAIM_FRAME_GAS,
@@ -81,7 +81,7 @@ MAX_NEW_STORAGE_SLOTS = 5
 
 # Pinned ethrex 247e2dd2, long carry at index 2^19-1, two outputs and credit,
 # carrying a first payment's 1,184 note bytes (11,830 gas more than without notes).
-# See devnet/native_occurrence/native-report.json. The previous rollover-only
+# See test/native/native-report.json. The previous rollover-only
 # Foundry measurement missed this 39-hash path and did not bound native gas.
 NATIVE_MAX_OBSERVED_SETTLEMENT_GAS = 1_435_539
 # EIP-8038: cold access (2,100) + STORAGE_WRITE (10,000).
@@ -171,7 +171,7 @@ def main():
     # The dispatcher must enforce the same settlement pins the wallet emits. Yul
     # cannot import the Python module, so check its unavoidable literals here.
     # The optional DEFAULT tail has no pool-specific gas or calldata ceiling.
-    dispatcher = (ROOT / "devnet" / "ShieldedPoolDispatcher.yul").read_text()
+    dispatcher = (ROOT / "core" / "dispatcher" / "ShieldedPoolDispatcher.yul").read_text()
     # The validation frames' limits are wallet defaults, not dispatcher pins.
     for unpinned in ("frameParam(0, 0x01)", "frameParam(1, 0x01)", "frameParam(1, 0x09)"):
         assert unpinned not in dispatcher, f"dispatcher pins {unpinned}"
@@ -180,21 +180,21 @@ def main():
         f"if iszero(eq(frameParam(2, 0x09), {SETTLE_FRAME_STATE_GAS})) {{ fail(errShape()) }}",
     )
     assert all(pin in dispatcher for pin in dispatcher_pins), \
-        "dispatcher gas limits differ from devnet/gas_profile.py"
+        "dispatcher gas limits differ from sdk/gas_profile.py"
     # The settlement frame admits exactly settle(Spend) plus either note length, and the
     # gas bound above charges the larger.
     short, long_ = SETTLE_FRAME_DATA_BYTES
     assert SPEND_NOTES_BYTES == (96, 1184) and (short, long_) == (484, 1572)
     length_pin = (f"if iszero(or(eq(settleLength, {short}), eq(settleLength, {long_}))) "
                   "{ fail(errShape()) }")
-    assert length_pin in dispatcher, "dispatcher settlement lengths differ from devnet/gas_profile.py"
+    assert length_pin in dispatcher, "dispatcher settlement lengths differ from sdk/gas_profile.py"
     assert "if gt(frameParam(3, 0x01)," not in dispatcher
     assert "if gt(frameParam(3, 0x09)," not in dispatcher
     assert "if gt(frameParam(3, 0x04)," not in dispatcher
 
     # The deployment record describes a deployment of this profile, or still the
     # previous one until this profile is deployed; the spend CLI refuses the latter.
-    cfg = json.loads((ROOT / "devnet" / "deploy_config.json").read_text())
+    cfg = json.loads((ROOT / "core" / "deploy_config.json").read_text())
     if cfg["profile"] == PREVIOUS_POOL_PROFILE:
         cfg = None
     else:

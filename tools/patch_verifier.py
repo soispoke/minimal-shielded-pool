@@ -10,7 +10,7 @@ changes shape.
 """
 from pathlib import Path
 
-VERIFIER = Path(__file__).parent.parent / "contracts" / "src" / "Groth16Verifier.sol"
+VERIFIER = Path(__file__).parent.parent / "core" / "contracts" / "src" / "Groth16Verifier.sol"
 NEEDLE = "staticcall(sub(gas(), 2000),"
 REPLACEMENT = "staticcall(500000,"
 LEGACY_REPLACEMENT = "staticcall(30000000,"

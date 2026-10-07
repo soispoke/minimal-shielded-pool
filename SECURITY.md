@@ -5,7 +5,7 @@
 Unaudited research software. Do not use the committed proving key or deployed
 testnet pool for real value. The committed key comes from a local test setup.
 Its phase 2 records one contribution, and its phase 1 is not recorded:
-`tooling/setup.sh` generates both phases locally unless given an external powers
+`tools/setup.sh` generates both phases locally unless given an external powers
 of tau. Whoever produced either phase could have kept the toxic waste and could
 forge arbitrary spends.
 
@@ -19,7 +19,7 @@ evidence, and fork-specific gas proof.
 The active transaction encoder and dispatcher target EIP-8141 as currently
 specified: nested fees and separate execution and state gas limits. The
 pre-relaunch Hegotá testnet profile they previously targeted is archived under
-`devnet/vectors/2026-09-01-hegota-final-profile/` and is not usable against any
+`evidence/vectors/2026-09-01-hegota-final-profile/` and is not usable against any
 live network. A client
 upgrade to that format requires a new immutable pool profile and deployment.
 
@@ -216,7 +216,7 @@ other spends:
 
 ## Note delivery
 
-`wallet/notes.py` posts each output's amount on chain, encrypted under a
+`sdk/notes.py` posts each output's amount on chain, encrypted under a
 secret `K` that the sender and recipient share (see the README). The pool only
 checks that settlement carries 96 or 1,184 note bytes and a shield 48 or 1,136,
 and emits them. The one-time authorizer's signature covers them, so no one can
@@ -256,7 +256,7 @@ swap them after signing.
   two pools: the same numbers and change indices would repeat.
 - All notes paid to one address share its spend key, so a nullifier key covers
   every spend of that address in the epoch, not only the note a receipt names.
-  `wallet/disclosure.py` refuses to export such a key unless `--address-wide`
+  `sdk/disclosure.py` refuses to export such a key unless `--address-wide`
   accepts it, and marks it in the receipt. A per-note nullifier key needs a
   circuit change, planned with the next circuit revision.
 - A secret sent out of band is only as private as its channel. If that
@@ -364,7 +364,7 @@ landing first leaves them unusable. Each spend entry therefore keeps its
 inputs' openings, and the nonce-race transfers their outputs', from which the
 notes can be proved again at the leaves they occupy. The generators write
 secrets readable by their owner only, put live fixtures under the ignored
-wallet/artifacts/, and never write over a fixture for another chain. Keep a
+sdk/artifacts/, and never write over a fixture for another chain. Keep a
 fixture as long as its notes are unspent.
 
 ## Evidence
@@ -410,13 +410,13 @@ keys. The new 2M limit includes additional margin, not a formal proof of a
 universal bound. These runs use ethrex `247e2dd2`; the live chain runs
 `bdfc5d8f`, 88 commits older, where the same scenarios gave identical results,
 gas included, before notes were added. See
-[`devnet/native_occurrence/README.md`](devnet/native_occurrence/README.md).
+[`test/native/README.md`](test/native/README.md).
 
 The earlier profile's gas derivation is recorded in
-[`devnet/vectors/2026-08-14-tight-gas-profile.md`](devnet/vectors/2026-08-14-tight-gas-profile.md).
+[`evidence/vectors/2026-08-14-tight-gas-profile.md`](evidence/vectors/2026-08-14-tight-gas-profile.md).
 
 On 2026-09-25 the `position-notes-v2` pool recorded in
-`devnet/deploy_config.json` (commit `08bb034`, block 143402) completed a
+`core/deploy_config.json` (commit `08bb034`, block 143402) completed a
 shield, two root publications, a transfer, a withdrawal whose fourth-frame
 claim failed and left its credit, and a withdrawal whose fourth-frame claim
 paid the recipient both credits, on the chain 8141 testnet.

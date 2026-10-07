@@ -10,7 +10,7 @@ spend_key itself. Following notes from spend to spend traces funds from a
 public deposit to a withdrawal. A receipt proves these links and amounts, not
 who presents it or where the funds came from before the deposit.
 
-Notes paid to one address (wallet/notes.py) share its spend key, so their
+Notes paid to one address (sdk/notes.py) share its spend key, so their
 nullifier key K covers every note of that address in the epoch. Export refuses
 such a key unless --address-wide accepts that, and marks those notes in the
 receipt.
@@ -28,10 +28,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "reference"))
 import wallet as w  # noqa: E402
 from eth_hash.auto import keccak  # noqa: E402
-sys.path.insert(0, str(HERE.parent / "devnet"))
 from gas_profile import SETTLE_FRAME_DATA_BYTES  # noqa: E402
 from poseidon_bn254 import TAG_LEAF, hex32, p2, tagged  # noqa: E402
 
@@ -118,7 +116,7 @@ def appended(log):
 def address_spend_keys(fixture, notes):
     """Spend keys that more than one note shares: an address's, under note delivery.
 
-    A fixture made with wallet/notes.py names its wallets' seeds, and any key two
+    A fixture made with sdk/notes.py names its wallets' seeds, and any key two
     notes of the fixture share is one too. Revealing such a key's nullifier key
     reveals when every note of that key in the epoch is spent.
     """
@@ -351,7 +349,6 @@ def main():
             write_new_private(args.output, json.dumps(receipt, indent=1) + "\n")
             print(f"wrote {args.output}: {len(receipt['notes'])} notes")
         else:
-            sys.path.insert(0, str(HERE.parent / "devnet"))
             from pool_frametx import check_deployed_profile
 
             def pool_check(pool):

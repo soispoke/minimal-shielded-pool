@@ -12,11 +12,11 @@ optimizer = true
 optimizer_runs = 5000
 via_ir = true
 fs_permissions = [
-    { access = "read", path = "../vectors" },
-    { access = "read", path = "../wallet" },
-    { access = "read", path = "../devnet/build" },
+    { access = "read", path = "../../test/vectors" },
+    { access = "read", path = "../../test/fixtures" },
+    { access = "read", path = "../artifacts" },
 ]
-# devnet/build holds the immutable dispatcher artifact read by the tests.
+# ../artifacts holds the immutable dispatcher artifact.
 
 # Legacy-codegen profile for the split Poseidon libraries (PoseidonT3/T4):
 # via-IR emits ~3KB of dispatch glue per library, which pushes PoseidonT4 past

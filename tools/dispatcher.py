@@ -12,9 +12,9 @@ rejected by ethrex's validation observer.
 Usage:
   dispatcher.py --initcode 0x<impl> 0x<verifier>   deploy initcode
   dispatcher.py --artifact            write the bare initcode (no tail) to
-                                      build/shielded_pool_dispatcher_init.hex
+                                      core/artifacts/shielded_pool_dispatcher_init.hex
                                       for the forge suite
-                                      (contracts/test/DispatcherPool.t.sol).
+                                      (core/contracts/test/DispatcherPool.t.sol).
                                       Rerun after any ShieldedPoolDispatcher.yul
                                       change.
 
@@ -77,7 +77,7 @@ def solc_binary() -> str:
 
 @lru_cache(maxsize=1)
 def _compiled() -> bytes:
-    source = Path(__file__).with_name("ShieldedPoolDispatcher.yul")
+    source = Path(__file__).resolve().parent.parent / "core" / "dispatcher" / "ShieldedPoolDispatcher.yul"
     result = subprocess.run(
         [solc_binary(), "--strict-assembly", "--optimize", "--optimize-runs", "200", "--bin", source.name],
         cwd=source.parent, capture_output=True, text=True, check=True,
@@ -93,7 +93,7 @@ def initcode(impl: int, verifier: int) -> bytes:
 
 
 def write_artifact() -> Path:
-    out = Path(__file__).with_name("build") / "shielded_pool_dispatcher_init.hex"
+    out = Path(__file__).resolve().parent.parent / "core" / "artifacts" / "shielded_pool_dispatcher_init.hex"
     out.parent.mkdir(exist_ok=True)
     out.write_text("0x" + _compiled().hex())  # no trailing newline: vm.parseBytes reads it whole
     return out

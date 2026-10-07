@@ -17,15 +17,15 @@ import pathlib
 import sys
 import urllib.request
 
-sys.path.insert(0, __file__.rsplit("/", 1)[0])
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "sdk"))
 import frametx as spec  # noqa: E402
 
 # The frozen control comes from the archived record, not from a live module: the whole
 # point of the check is that a pre-relaunch envelope must be rejected by a spec chain.
 import importlib.util  # noqa: E402
 
-_arch = (pathlib.Path(__file__).resolve().parent
-         / "vectors/2026-09-01-hegota-final-profile/frametx.py")
+_arch = (pathlib.Path(__file__).resolve().parent.parent
+         / "evidence/vectors/2026-09-01-hegota-final-profile/frametx.py")
 _frozen_spec = importlib.util.spec_from_file_location("frametx_frozen", _arch)
 frozen = importlib.util.module_from_spec(_frozen_spec)
 _frozen_spec.loader.exec_module(frozen)
