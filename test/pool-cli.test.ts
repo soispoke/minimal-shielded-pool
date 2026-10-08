@@ -6,7 +6,7 @@
  * read from standard input or a prompt that does not echo it. Runs in about 0.6 s, most of it
  * in 22 CLI subprocesses that pin the exit statuses.
  *
- *   node --test test/pool-occurrence-profile.test.ts
+ *   node --test test/pool-cli.test.ts
  */
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -58,7 +58,7 @@ const FUNDED = "01".repeat(32);
 
 let tmp = "";
 before(() => {
-  tmp = mkdtempSync(join(tmpdir(), "pool-occurrence-profile-"));
+  tmp = mkdtempSync(join(tmpdir(), "pool-cli-"));
 });
 after(() => rmSync(tmp, { recursive: true, force: true }));
 

@@ -397,7 +397,7 @@ per-transaction budget.
 The [justfile](justfile) lists every command the recipes under [Use](#use)
 run, and the header of each TypeScript test file says what it checks.
 [docs/design.md](docs/design.md#the-client-and-its-cross-checks) names the
-independent sources the client is checked against. `test/occurrence.test.ts`
+independent sources the client is checked against. `test/circuit.test.ts`
 checks every deliberately broken witness against the committed R1CS, not only
 the witness generator, and fails if the circuit gains an unconstrained
 assignment.
