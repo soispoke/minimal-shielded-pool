@@ -42,9 +42,10 @@ results. This suite, not Forge, bounds settlement gas, because it deploys the
 `libsmall` Poseidon builds a real pool uses, while the Forge suite runs the
 via-IR builds, about 10% cheaper per hash.
 
-The recorded run predates the port to TypeScript. The Python generator made its
-vectors, and the TypeScript generator draws its secrets from a different seeded
-stream, so the next run changes the hashes in both reports.
+The recorded reports come from a run on the TypeScript generator's fixtures.
+Regenerating them reproduces the hash of every transaction without a proof;
+a proof-carrying transaction matches only when the local proof cache still
+holds its proof, since Groth16 proving is randomized.
 
 The scenarios cover both copies of identical funded deposits being withdrawn
 in one history, an identical private output and its original both being spent,
