@@ -45,7 +45,12 @@ via-IR builds, about 10% cheaper per hash.
 The recorded reports come from a run on the TypeScript generator's fixtures.
 Regenerating them reproduces the hash of every transaction without a proof;
 a proof-carrying transaction matches only when the local proof cache still
-holds its proof, since Groth16 proving is randomized.
+holds its proof, since Groth16 proving is randomized. CI proves from scratch,
+reruns the suite, and checks with `compare-reports.ts` that the fresh reports
+match the committed ones: every case, result and per-frame gas figure exactly,
+and a re-proved transaction's hash, total gas and fee only as far as its new
+proof bytes can move them (a multiple of 12 gas, the EIP-2028 price gap between
+a zero and a nonzero calldata byte, over at most 288 bytes).
 
 The scenarios cover both copies of identical funded deposits being withdrawn
 in one history, an identical private output and its original both being spent,

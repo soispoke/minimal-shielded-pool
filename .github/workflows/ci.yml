@@ -112,7 +112,14 @@ jobs:
         run: |
           rustup toolchain install 1.93.0 --profile minimal
           npm ci
+      # run.ts rewrites the tracked reports, so keep the committed ones to compare against.
+      - name: Keep the committed reports
+        run: |
+          mkdir -p "$RUNNER_TEMP/committed"
+          cp test/native/native-report.json test/native/policy-report.json "$RUNNER_TEMP/committed/"
       - name: Test duplicate notes, reorgs, settlement gas and client policy
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
         run: node test/native/run.ts --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
+      - name: Check the run reproduces the committed reports
+        run: node test/native/compare-reports.ts "$RUNNER_TEMP/committed" test/native
