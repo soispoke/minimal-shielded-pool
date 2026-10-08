@@ -5,7 +5,6 @@
  * reaching the gate). Runtime: about 3 s.
  */
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,6 +22,7 @@ import {
   ZKEY,
 } from "../tools/check-activation.ts";
 import { ROOT } from "../tools/check.ts";
+import { runCli, type CliResult } from "./helpers.ts";
 
 const GATE = resolve(ROOT, "tools/check-activation.ts");
 const BASE_TEXT = readFileSync(resolve(ROOT, "core/activation_manifest.testbed.json"), "utf8");
@@ -55,18 +55,11 @@ function refused(text: string, message: string, options: Options) {
   assert.throws(() => checkActivation(parseManifest(text), options), checkError(message));
 }
 
-type Result = { code: number; stdout: string; stderr: string };
 /** Runs the gate CLI on the manifest, written to a file as the deploy script would. */
 function run(manifest: string | Uint8Array, ...flags: string[]) {
   const path = scratch("manifest.json");
   writeFileSync(path, manifest);
-  return new Promise<Result>((done) => {
-    execFile(process.execPath, [GATE, path, ...flags], (error, stdout, stderr) => {
-      // A gate that could not start, or was killed, has no exit status: -1.
-      const code = error === null ? 0 : typeof error.code === "number" ? error.code : -1;
-      done({ code, stdout, stderr });
-    });
-  });
+  return runCli(process.execPath, [GATE, path, ...flags]);
 }
 
 // The testbed manifest passes only with --allow-testbed, --ptau runs snarkjs only on a file
@@ -78,7 +71,7 @@ test("the gate CLI", async () => {
   // The label's U+00FF written as the single byte 0xff.
   const latin1 = Buffer.from(mutated(ceremony({ label: "\xff" })), "latin1");
   const accepted = run(mutated(), "--allow-testbed");
-  const refusals: [Promise<Result>, RegExp][] = [
+  const refusals: [Promise<CliResult>, RegExp][] = [
     [run(mutated()), /testbed-only/],
     [run(mutated(), ...ptau), /requires ceremony\.phase1_ptau_sha256/],
     [run(latin1, "--allow-testbed"), /not valid for encoding utf-8/],

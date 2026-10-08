@@ -1,14 +1,15 @@
 /**
  * The deployment script's code checks must reject every mismatch and failed read, its early
- * guards must stop it before cast or an unpinned build, and no key may go on a command line.
- * The script calls each code check on the left of `||`, where Bash ignores `set -e`; this runs
- * its own functions that way, against a fake `cast`, so a check whose failure is overwritten by
- * a later line is caught. The tools around a deployment are checked too: the dispatcher's
- * initcode, the verifier patch, and the gas profile and formal pins checks. Needs bash and a
- * real forge (1.7.1 in CI) on PATH; the initcode test is skipped without solc 0.8.30. About 2 s.
+ * guards must stop it before cast or an unpinned build, and no script may put a key on a command
+ * line. The script calls each code check on the left of `||`, where Bash ignores `set -e`; this
+ * runs its own functions that way, against a fake `cast`, so a check whose failure is overwritten
+ * by a later line is caught. The tools around a deployment are checked too: the dispatcher's
+ * initcode, the verifier patch, and the gas profile and formal pins checks. Needs bash and a real
+ * forge (1.7.1 in CI) on PATH. The initcode test needs solc 0.8.30: without it the test is
+ * skipped locally but fails when CI is set, so every CI job that runs these tests must install
+ * solc first (`forge build --root core/contracts` does). About 1.5 s.
  */
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
@@ -18,31 +19,15 @@ import { POOL_PROFILE } from "../src/gas.ts";
 import { report } from "../tools/check-formal-pins.ts";
 import { checkGasProfile } from "../tools/check-gas-profile.ts";
 import { patchVerifier } from "../tools/patch-verifier.ts";
+import { runCli, type Env } from "./helpers.ts";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const SCRIPT = join(ROOT, "tools/run_live_dispatcher.sh");
 const SOURCE = readFileSync(SCRIPT, "utf8");
 const MANIFEST = join(ROOT, "core/activation_manifest.testbed.json");
-const POOL_CLI = join(ROOT, "src/cli/pool.ts");
 const DISPATCHER = join(ROOT, "tools/dispatcher.ts");
 const tmp = mkdtempSync(join(tmpdir(), "msp-deploy-"));
 after(() => rmSync(tmp, { recursive: true, force: true }));
-
-type Env = Record<string, string | undefined>;
-type Result = { code: number; stdout: string; stderr: string };
-
-/** Runs a command with standard input closed, so that nothing can wait on it. */
-function run(command: string, args: string[], options: { env?: Env; cwd?: string } = {}) {
-  const settings = { ...options, maxBuffer: 1 << 24 };
-  return new Promise<Result>((done) => {
-    const child = execFile(command, args, settings, (error, stdout, stderr) => {
-      // A command that could not start, or was killed, has no exit status: -1.
-      const code = error === null ? 0 : typeof error.code === "number" ? error.code : -1;
-      done({ code, stdout, stderr });
-    });
-    child.stdin?.end();
-  });
-}
 
 // The caller's environment, without the variables forge reads its settings from.
 const clean: Env = Object.fromEntries(
@@ -90,7 +75,7 @@ async function accepts(call: string, env: Env): Promise<boolean> {
     `${call} || { echo REJECT; exit 7; }\necho ACCEPT\n`;
   const inherited = Object.entries(process.env).filter(([k]) => !FAKE_VARIABLES.test(k));
   const merged = { ...Object.fromEntries(inherited), ...env };
-  const result = await run("bash", ["-c", program], { env: merged });
+  const result = await runCli("bash", ["-c", program], { env: merged });
   assert.ok(["ACCEPT\n", "REJECT\n"].includes(result.stdout), JSON.stringify(result));
   return result.stdout === "ACCEPT\n";
 }
@@ -223,7 +208,7 @@ describe("the early guards", { concurrency: true }, () => {
   };
   const existing = join(tmp, "existing.json");
   writeFileSync(existing, "{}");
-  const deploy = (extra: Env) => run("bash", [SCRIPT], { env: { ...base, ...extra } });
+  const deploy = (extra: Env) => runCli("bash", [SCRIPT], { env: { ...base, ...extra } });
 
   // A pinned setting that forge does not report reads as null and does not match the pin.
   const unreported = { FAKE_CONFIG_default: settings("default", "unreported") };
@@ -260,7 +245,7 @@ describe("the early guards", { concurrency: true }, () => {
     writeFileSync(reported, JSON.stringify({ ...pinned, optimizer_details: { yul: false } }));
     const env = { ...base, FAKE_CONFIG_default: reported };
     const check = join(ROOT, "tools/check-forge-config.ts");
-    const { code, stderr } = await run(process.execPath, [check, own, tmp], { env });
+    const { code, stderr } = await runCli(process.execPath, [check, own, tmp], { env });
     assert.equal(code, 1, stderr);
     assert.ok(stderr.includes("from the manifest: optimizer_details="), stderr);
   });
@@ -272,7 +257,7 @@ describe("the early guards", { concurrency: true }, () => {
 test("the compiler settings check against the real forge", async () => {
   const args = ["check-forge-config.ts", "../core/activation_manifest.testbed.json"];
   const check = (env: Env) =>
-    run(process.execPath, [...args, "../core/contracts"], { cwd: join(ROOT, "tools"), env });
+    runCli(process.execPath, [...args, "../core/contracts"], { cwd: join(ROOT, "tools"), env });
   const [ok, bad] = await Promise.all([clean, { ...clean, foundry_via_ir: "false" }].map(check));
   assert.equal(ok.code, 0, ok.stderr);
   assert.equal(ok.stdout, '{"compiler": "match", "profiles": ["default", "libsmall"]}\n');
@@ -281,14 +266,17 @@ test("the compiler settings check against the real forge", async () => {
 });
 
 const initcode = (...addresses: string[]) =>
-  run(process.execPath, [DISPATCHER, "--initcode", ...addresses]);
+  runCli(process.execPath, [DISPATCHER, "--initcode", ...addresses]);
 
 // The dispatcher's runtime reads the implementation from the first appended word and the
-// verifier from the second (impl() and verifierAddr() in its Yul). CI's test job has solc
-// 0.8.30 because its forge build installs it.
+// verifier from the second (impl() and verifierAddr() in its Yul). Without solc 0.8.30 the test
+// is skipped locally, but fails when CI is set, since a skip there would hide a check that never
+// ran. So every CI job that runs these tests must install solc first, as
+// `forge build --root core/contracts` does by putting the pinned version under ~/.svm.
 test("the dispatcher initcode is the pinned artifact, the implementation, then the verifier", async (t) => {
   const { code, stdout, stderr } = await initcode("0x1", "0x2");
-  if (stderr.includes("solc 0.8.30 not found")) return t.skip("solc 0.8.30 not found");
+  const missing = stderr.includes("solc 0.8.30 not found");
+  if (missing && !process.env.CI) return t.skip("solc 0.8.30 not found");
   assert.equal(code, 0, stderr);
   const artifact = join(ROOT, "core/artifacts/shielded_pool_dispatcher_init.hex");
   const word = (n: number) => n.toString(16).padStart(64, "0");
@@ -348,52 +336,4 @@ test("the formal pins check reports a pinned file that no longer exists", () => 
   const spec = `| File | SHA-256 |\n|---|---|\n| \`core/gone.sol\` | \`${"0".repeat(64)}\` |\n`;
   const [warning] = report(spec, "SPEC.md", tmp).lines;
   assert.ok(warning.startsWith("::warning file=core/gone.sol::"), warning);
-});
-
-// The pool CLI reads the funded key from standard input. In the position where it once took the
-// key it names the change (exit status 1); anywhere else the parser refuses the key (exit status
-// 2, before any file is read); a key typed where a path belongs passes the parser and the failed
-// read follows. None of them prints the key.
-describe("the pool CLI never echoes a key", { concurrency: 8 }, () => {
-  const key = "01".repeat(32);
-  const cwd = mkdtempSync(join(tmp, "cli-"));
-  const cli = (...args: string[]) => run(process.execPath, [POOL_CLI, ...args], { cwd });
-  const head = ["http://127.0.0.1:1", "cfg.json", "fix.json"];
-  /** The run exited with status `expected`, its stderr holds `text`, and it printed no key. */
-  const refused = ({ code, stdout, stderr }: Result, expected: number, text = "") => {
-    assert.equal(code, expected, stderr);
-    assert.ok(stderr.includes(text), stderr);
-    assert.ok(!(stdout + stderr).includes(key), stderr);
-  };
-  const strays = [
-    ["--dry-run", key],
-    ["--", "0x" + key],
-    ["--dry-run=" + key],
-    ["--epoch", key],
-    ["--sender", "0x" + key + "01"],
-  ];
-  for (const op of ["shield", "publish", "transfer", "withdraw"]) {
-    test(`${op}: a key where the CLI once took it is refused`, async () => {
-      refused(await cli(...head, op, key), 1, "no longer takes a key argument");
-    });
-    for (const stray of strays) {
-      test(`${op} ${stray.join(" ").replaceAll(key, "<key>")} is refused`, async () => {
-        refused(await cli(...head, op, ...stray), 2, "pool.ts: error:");
-      });
-    }
-  }
-
-  test("a key in place of the config path is not printed", async () => {
-    refused(await cli("http://127.0.0.1:1", key, "f.json", "transfer"), 1);
-  });
-
-  test("a key in place of the op is refused as an invalid choice", async () => {
-    refused(await cli(...head, key), 2, "argument op: invalid choice");
-  });
-
-  // A flag is never an option's value: here --dry-run would stop being a dry run.
-  test("a flag where an option's value belongs is refused", async () => {
-    const args = [...head, "transfer", "--spend-key", "--dry-run"];
-    refused(await cli(...args), 2, "argument --spend-key: expected one argument");
-  });
 });

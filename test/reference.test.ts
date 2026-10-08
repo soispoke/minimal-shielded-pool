@@ -1,7 +1,9 @@
-// Checks the TypeScript client against the reference vectors in test/vectors/reference/, which
-// the Python client at 2386147 computed before the port (see the README there). Every expected
-// value comes from those files; nothing here asks the code under test for its own answer.
-// Runtime: about 0.4 s.
+// Checks the TypeScript client against the pinned reference vectors in test/vectors/reference/.
+// An earlier implementation, the Python client this one replaced (commit 2386147), computed them,
+// so they are never regenerated from the code under test: a deliberate encoding change updates the
+// affected vectors by hand, in the same commit, with the reason (see the README there). Every
+// expected value comes from those files; nothing here asks the code under test for its own
+// answer. Runtime: about 0.4 s.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
@@ -22,7 +24,7 @@ type Json = any; // the vector files are untyped JSON
 const load = (name: string): Json =>
   JSON.parse(readFileSync(new URL(`./vectors/reference/${name}`, import.meta.url), "utf8"));
 
-// Hex and keccak here are Node's and noble's, not the port's bytes.ts.
+// Hex and keccak here are Node's and noble's, not the client's bytes.ts.
 const bytes = (text: string): Uint8Array => new Uint8Array(Buffer.from(text.slice(2), "hex"));
 const hex = (data: Uint8Array): string => "0x" + Buffer.from(data).toString("hex");
 const big = (text: string): bigint => BigInt(text);
@@ -71,10 +73,10 @@ function each(cases: Json[], check: (c: Json) => void): void {
 }
 
 /**
- * Python refused this input: the port must refuse it too, with an error of `kind`. "bug" is a
- * broken caller invariant (Python asserted), any error but a UserError; "own" is one the function
- * checks itself and throws as a plain Error, so a TypeError or a helper's RangeError further
- * down does not count.
+ * The vector records a refusal of this input: the client must refuse it too, with an error of
+ * `kind`. "bug" is a broken caller invariant (recorded as an assertion failure), any error but a
+ * UserError; "own" is one the function checks itself and throws as a plain Error, so a TypeError
+ * or a helper's RangeError further down does not count.
  */
 type Kind = (new (...args: never[]) => Error) | "bug" | "own";
 function refuses(fn: () => unknown, kind: Kind): void {
@@ -92,15 +94,20 @@ function refuses(fn: () => unknown, kind: Kind): void {
   });
 }
 
-const PYTHON_ERRORS: Record<string, Kind> = { NotesError, OverflowError: RangeError };
+/**
+ * A vector's `error` names the exception class the reference implementation raised, which is a
+ * Python class name; this map translates it to the client's error kind. NotesError stays
+ * NotesError, OverflowError (an integer past its 32-byte word) becomes RangeError, and any other
+ * class may be any Error.
+ */
+const REFERENCE_ERROR_KINDS: Record<string, Kind> = { NotesError, OverflowError: RangeError };
 
 /**
- * {out} must equal what `run` returns and {error} must throw `kind`, by default the port's error
- * for the recorded Python one: NotesError stays NotesError, OverflowError (an integer past its
- * 32-byte word) becomes RangeError, and anything else may be any Error.
+ * {out} must equal what `run` returns and {error} must throw `kind`, by default the kind
+ * REFERENCE_ERROR_KINDS gives the recorded class.
  */
 function outcome(c: Json, run: () => unknown, kind?: Kind): void {
-  if ("error" in c) refuses(run, kind ?? PYTHON_ERRORS[c.error] ?? Error);
+  if ("error" in c) refuses(run, kind ?? REFERENCE_ERROR_KINDS[c.error] ?? Error);
   else same(run(), c.out);
 }
 const outcomes = (cases: Json[], run: (c: Json) => unknown, kind?: Kind) =>
@@ -186,11 +193,11 @@ describe("protocol hashes (protocol.json)", () => {
     const { EMPTY_TREE_ROOT, gas: profile, ...constants } = v.constants;
     same(new Tree().root(), EMPTY_TREE_ROOT);
     for (const [name, want] of Object.entries(constants)) same((pr as Json)[name], want, name);
-    // The port fixed the Python's ETHEX spelling and dropped CLAIM_WITHDRAWAL_CALLDATA, the
-    // claim's calldata length, which the encoder now fixes.
+    // The vectors spell ETHREX as ETHEX, and pin CLAIM_WITHDRAWAL_CALLDATA, the claim's
+    // calldata length, which the client has no constant for since its encoder fixes it.
     for (const [name, want] of Object.entries(profile)) {
-      const port = (gas as Json)[name.replace("ETHEX", "ETHREX")];
-      same(name === "CLAIM_WITHDRAWAL_CALLDATA" ? pr.encodeClaim(1n).length : port, want, name);
+      const ours = (gas as Json)[name.replace("ETHEX", "ETHREX")];
+      same(name === "CLAIM_WITHDRAWAL_CALLDATA" ? pr.encodeClaim(1n).length : ours, want, name);
     }
   });
 });
@@ -244,8 +251,9 @@ describe("trees and witnesses (wallet.json)", () => {
 
   test("full circuit witnesses", () => each(v.witnesses, (c) => same(witness(c), c.witness)));
 
-  // Each refusal must come from buildWitness's own checks, as Python's came from its asserts:
-  // a later step refusing the same input (compressionAlpha on a negative word) does not count.
+  // Each refusal must come from buildWitness's own checks, as each recorded one came from the
+  // witness builder's: a later step refusing the same input (compressionAlpha on a negative
+  // word) does not count.
   test("witnesses the circuit would refuse", () => {
     const { leaves, domain } = v.witnesses[0];
     outcomes(v.witnessErrors, (c) => witness(c, leaves, domain), "own");
@@ -321,7 +329,7 @@ describe("frame transactions (frametx.json)", () => {
   // TX_VALUE_COST applies only to a frame moving value to another account, and that the floor
   // prices zero and nonzero bytes alike. `frozen`, the old 11-field dialect's goldens for base,
   // is skipped here because test/frametx.test.ts pins the same goldens.
-  test("sdk/frametx.py's self-test transactions", () => {
+  test("the self-test transactions: a base and its variants", () => {
     const { shape, frozen: _, ...named } = v.selftest;
     for (const c of Object.values<Json>(named)) expectTx(txOf(c.tx), c.out);
     const fields = ft.rlpItems(ft.encodeTx(txOf(named.base.tx)));
@@ -571,7 +579,7 @@ describe("note delivery primitives (notes.json)", () => {
     });
   });
 
-  /** Replays a channel's recorded steps: reserve and finalized, as Python ran them. */
+  /** Replays a channel's recorded steps, reserve and finalized, in the recorded order. */
   function replay(channel: notes.Outgoing, [open, ...steps]: Json[]): void {
     same([open.op, notes.outgoingToJson(channel)], ["open", open.out]);
     each(steps, (step) => {

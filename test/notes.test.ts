@@ -10,7 +10,6 @@
  * checked here does not depend on them.
  */
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import {
   chmodSync,
   mkdirSync,
@@ -21,13 +20,10 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 import { after, test } from "node:test";
 
 import { compareBigint, concat, fromHex, hex32, hexPadded, keccak, toHex } from "../src/bytes.ts";
@@ -46,6 +42,7 @@ import {
   type PoolEvent,
   type ScannerOptions,
 } from "../src/scan.ts";
+import { rpcServer, runCli } from "./helpers.ts";
 
 const CHAIN = 8141n;
 const POOL = 0xcb83980f3cc99e258295814375b0a94fe0ac0e86n;
@@ -359,15 +356,10 @@ async function serve(chain: Chain, finalized: { block: bigint }, hiding: Hiding 
       return { transactionIndex: hexPadded(tx, 1), status, logs: [], frameReceipts };
     });
   };
-  const methods: string[] = [];
   const ranges: [bigint, bigint][] = []; // the block range of each eth_getLogs call
   // Blocks whose receipts were asked for past the finalized head; the scan must ask none.
   const unfinalized: bigint[] = [];
-  const server = createServer(async (request, response) => {
-    let body = "";
-    for await (const chunk of request) body += chunk;
-    const { id, method, params } = JSON.parse(body);
-    methods.push(method);
+  const node = await rpcServer(({ method, params }) => {
     let result: unknown = null;
     if (method === "eth_chainId") result = hexPadded(CHAIN, 1);
     else if (method === "eth_getBlockByNumber") result = { number: hexPadded(finalized.block, 1) };
@@ -380,16 +372,9 @@ async function serve(chain: Chain, finalized: { block: bigint }, hiding: Hiding 
       if (block > finalized.block) unfinalized.push(block);
       result = receipts(block);
     }
-    const text = JSON.stringify({ jsonrpc: "2.0", id, result });
-    response.writeHead(200, { "content-type": "application/json" }).end(text);
+    return { result };
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const close = () => {
-    server.closeAllConnections();
-    return new Promise<void>((resolve) => server.close(() => resolve()));
-  };
-  return { url, methods, ranges, unfinalized, close };
+  return { ...node, ranges, unfinalized };
 }
 
 /** The test pool's config, written to dir/config.json, with `fields` in place of its own. */
@@ -406,10 +391,7 @@ function writeConfig(dir: string, url: string, fields: Record<string, unknown> =
  * With `refusal`, it must instead exit 1, print nothing, and give that reason on stderr.
  */
 async function cli(argv: string[], refusal?: string): Promise<string> {
-  const env = { ...process.env, NODE_TEST_CONTEXT: undefined };
-  const run = promisify(execFile)(process.execPath, [CLI, ...argv], { cwd: TMP, env });
-  // A failed run rejects with its exit code and output.
-  const { code = 0, stdout, stderr } = await run.catch((error) => error);
+  const { code, stdout, stderr } = await runCli(process.execPath, [CLI, ...argv], { cwd: TMP });
   assert.equal(code, refusal === undefined ? 0 : 1, `notes ${argv[0]}: ${stderr}`);
   if (refusal === undefined) return stdout;
   assert.equal(stdout, "");
@@ -580,7 +562,8 @@ test("hidden calls: calls left out of eth_getLogs are rebuilt from receipts or c
           const config = writeConfig(dir, node.url);
           const args = ["scan", "--config", config, "--state", state, "--seed-file", SEED];
           await cli(args, typeof c.outcome === "string" ? c.outcome : undefined);
-          assert.ok(!node.methods.includes("eth_getStorageAt"), "asked about a nullifier");
+          const asked = node.requests.some((call) => call.method === "eth_getStorageAt");
+          assert.ok(!asked, "asked about a nullifier");
           assert.deepEqual(node.unfinalized, [], "read receipts past the finalized head");
         } finally {
           await node.close();

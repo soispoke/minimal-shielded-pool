@@ -156,7 +156,7 @@ const costs = (tx: FrameTx) => [BigInt(rawTx(tx).length), ...GAS.map((f) => f(tx
 
 // Computed by the Python client (sdk/frametx.py at commit 2386147), so these bytes and gas are
 // pinned to the implementation this encoder replaced, not only to themselves.
-describe("parity with the Python encoder", () => {
+describe("pinned encoder vectors", () => {
   // limits.state adds exactly its amount to max_gas, and nothing to the execution cap.
   test("the evidence transaction, and with limits.state 97920 on frame 0", () => {
     const tx = build();

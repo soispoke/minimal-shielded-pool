@@ -2,18 +2,16 @@
  * The pool CLI never submits this profile's proofs to the recorded old deployment. It refuses
  * other profile labels before any RPC; a pool whose deployed code, linked verifier or domain do
  * not match; a shield whose fixture cannot spend the funded note; and unknown or misplaced
- * flags. It also checks that the flags it accepts reach the sender, and that the funded key is
- * read from standard input or a prompt that does not echo it. Runs in about 0.6 s, most of it
- * in 22 CLI subprocesses that pin the exit statuses.
+ * flags. It also checks that the flags it accepts reach the sender, that the funded key is read
+ * from standard input or a prompt that does not echo it, and that a key given as an argument is
+ * refused without being printed. Runs in about 2 s, most of it in 49 CLI subprocesses that pin
+ * the exit statuses.
  *
  *   node --test test/pool-cli.test.ts
  */
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -37,6 +35,7 @@ import {
 import { poolNode, RpcError, RpcTransportError, type PoolNode } from "../src/rpc.ts";
 import type { Send } from "../src/send.ts";
 import type { Action } from "../src/spend.ts";
+import { rpcServer, runCli, type CliResult } from "./helpers.ts";
 
 type Json = Record<string, unknown>;
 const path = (relative: string) => fileURLToPath(new URL(`../${relative}`, import.meta.url));
@@ -65,22 +64,15 @@ function writeTemp(name: string, value: unknown): string {
 }
 
 /**
- * Runs the CLI as a user would, and returns its exit status and standard error. Its standard
- * input is closed and it is killed after 30 s, so a CLI that waits for the funded key fails the
- * test instead of hanging it; a killed CLI reports status -1 and the signal.
+ * Runs the CLI as a user would, from `cwd`, by default the test's temporary directory. runCli
+ * closes its standard input and kills it after a timeout, so a CLI that waits for the funded key
+ * fails the test instead of hanging it; a killed CLI reports status -1, and its signal is added
+ * to stderr, which the assertions print.
  */
-function runCli(args: string[]): Promise<{ code: number; stderr: string }> {
-  const env = { ...process.env };
-  delete env.NODE_TEST_CONTEXT;
-  return new Promise((resolve) => {
-    const options = { cwd: tmp, env, timeout: 30_000 };
-    const child = execFile(process.execPath, [CLI, ...args], options, (error, _stdout, stderr) => {
-      if (error === null) return resolve({ code: 0, stderr });
-      const code = typeof error.code === "number" ? error.code : -1;
-      resolve({ code, stderr: `${stderr}${error.signal ? `\n[killed by ${error.signal}]` : ""}` });
-    });
-    child.stdin?.end();
-  });
+async function runPoolCli(args: string[], cwd = tmp): Promise<CliResult> {
+  const result = await runCli(process.execPath, [CLI, ...args], { cwd });
+  const { signal, stderr } = result;
+  return { ...result, stderr: signal ? `${stderr}\n[killed by ${signal}]` : stderr };
 }
 
 /**
@@ -155,7 +147,7 @@ describe("command-line flags", () => {
       const runs = await Promise.all(
         ["shield", "publish", "transfer", "withdraw"].map(async (op) => ({
           op,
-          ...(await runCli(["http://127.0.0.1:1", "missing-config.json", FIXTURE, op, typo])),
+          ...(await runPoolCli(["http://127.0.0.1:1", "missing-config.json", FIXTURE, op, typo])),
         })),
       );
       for (const { op, code, stderr } of runs) {
@@ -317,7 +309,7 @@ describe("profile labels", () => {
 
   test("the CLI exits 1 with the refusal on stderr", async () => {
     const argv = ["http://127.0.0.1:1", configFor(null), FIXTURE, "shield", "--dry-run"];
-    const { code, stderr } = await runCli(argv);
+    const { code, stderr } = await runPoolCli(argv);
     assert.equal(code, 1, stderr);
     assert.ok(stderr.includes(requiresProfile("shield")), stderr);
   });
@@ -327,9 +319,66 @@ describe("profile labels", () => {
 test("the CLI redacts a key-like path from its refusal", async () => {
   const key = "ab".repeat(32);
   writeFileSync(join(tmp, `${key}.json`), "x");
-  const { code, stderr } = await runCli(["http://127.0.0.1:1", `${key}.json`, FIXTURE, "shield"]);
+  const { code, stderr } = await runPoolCli([
+    "http://127.0.0.1:1",
+    `${key}.json`,
+    FIXTURE,
+    "shield",
+  ]);
   assert.equal(code, 1, stderr);
   assert.ok(stderr.includes("<redacted>.json is not JSON") && !stderr.includes(key), stderr);
+});
+
+// The pool CLI reads the funded key from standard input. In the position where it once took the
+// key it names the change (exit status 1); anywhere else the parser refuses the key (exit status
+// 2, before any file is read); a key typed where a path belongs passes the parser and the failed
+// read follows. None of them prints the key.
+describe("the pool CLI never echoes a key", { concurrency: 8 }, () => {
+  const key = "01".repeat(32);
+  // A directory of its own, made once the file's temporary directory exists.
+  let cwd = "";
+  before(() => {
+    cwd = mkdtempSync(join(tmp, "cli-"));
+  });
+  const cli = (...args: string[]) => runPoolCli(args, cwd);
+  const head = ["http://127.0.0.1:1", "cfg.json", "fix.json"];
+  /** The run exited with status `expected`, its stderr holds `text`, and it printed no key. */
+  const refusedRun = ({ code, stdout, stderr }: CliResult, expected: number, text = "") => {
+    assert.equal(code, expected, stderr);
+    assert.ok(stderr.includes(text), stderr);
+    assert.ok(!(stdout + stderr).includes(key), stderr);
+  };
+  const strays = [
+    ["--dry-run", key],
+    ["--", "0x" + key],
+    ["--dry-run=" + key],
+    ["--epoch", key],
+    ["--sender", "0x" + key + "01"],
+  ];
+  for (const op of ["shield", "publish", "transfer", "withdraw"]) {
+    test(`${op}: a key where the CLI once took it is refused`, async () => {
+      refusedRun(await cli(...head, op, key), 1, "no longer takes a key argument");
+    });
+    for (const stray of strays) {
+      test(`${op} ${stray.join(" ").replaceAll(key, "<key>")} is refused`, async () => {
+        refusedRun(await cli(...head, op, ...stray), 2, "pool.ts: error:");
+      });
+    }
+  }
+
+  test("a key in place of the config path is not printed", async () => {
+    refusedRun(await cli("http://127.0.0.1:1", key, "f.json", "transfer"), 1);
+  });
+
+  test("a key in place of the op is refused as an invalid choice", async () => {
+    refusedRun(await cli(...head, key), 2, "argument op: invalid choice");
+  });
+
+  // A flag is never an option's value: here --dry-run would stop being a dry run.
+  test("a flag where an option's value belongs is refused", async () => {
+    const args = [...head, "transfer", "--spend-key", "--dry-run"];
+    refusedRun(await cli(...args), 2, "argument --spend-key: expected one argument");
+  });
 });
 
 // ---- the deployed-pool gate ----
@@ -411,7 +460,7 @@ describe("the deployed-pool gate", () => {
     checkDeployedProfile(deployedNode(deployment), POOL, configuredChain, LOGIC, VERIFIER);
 
   test("the reference verifier call carries the committed fixture's transfer proof", () => {
-    // test/reference.test.ts checks how the call is composed against the Python client; here
+    // test/reference.test.ts checks how the call is composed against the pinned vectors; here
     // it only has to be built from the committed fixture, whose proof Forge also verifies.
     const proof = (readJson(FIXTURE).transfer as Json).proof;
     const words = JSON.stringify(proof).match(/0x[0-9a-f]{64}/g)!;
@@ -458,28 +507,20 @@ describe("the deployed-pool gate", () => {
   // body, but the verifier gave no answer, so the gate fails without refusing it.
   test("reports a verifier probe that failed over HTTP instead of refusing", async () => {
     const node = deployedNode();
-    const server = createServer(async (request, response) => {
-      let body = "";
-      for await (const chunk of request) body += chunk;
-      const { id, method, params } = JSON.parse(body);
+    const server = await rpcServer(async ({ method, params }) => {
       const limited = method === "eth_call" && params[0].data.startsWith("0x11479fea");
-      const reply = limited
-        ? { error: { code: -32005, message: "rate limited" } }
-        : { result: await node.call(method, params) };
-      response.writeHead(limited ? 429 : 200).end(JSON.stringify({ jsonrpc: "2.0", id, ...reply }));
+      if (limited) return { status: 429, error: { code: -32005, message: "rate limited" } };
+      return { result: await node.call(method, params) };
     });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     try {
-      const gate = checkDeployedProfile(poolNode(url), POOL, CHAIN, LOGIC, VERIFIER);
+      const gate = checkDeployedProfile(poolNode(server.url), POOL, CHAIN, LOGIC, VERIFIER);
       await assert.rejects(gate, (error: unknown) => {
         assert.ok(error instanceof RpcTransportError, String(error));
         assert.equal(error.message, "eth_call request failed: HTTP 429");
         return true;
       });
     } finally {
-      server.closeAllConnections();
-      server.close();
+      await server.close();
     }
   });
 
