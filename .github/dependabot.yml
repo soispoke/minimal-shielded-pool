@@ -1,0 +1,9 @@
+# Proposes updates to the GitHub Actions that CI pins by commit. npm packages stay pinned in
+# package.json and change only by hand, since the circuit toolchain's versions are part of the
+# committed artifacts' provenance.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
