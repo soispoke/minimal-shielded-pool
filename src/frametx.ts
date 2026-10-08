@@ -9,9 +9,9 @@
  *   signature = [scheme, signer, msg, signature bytes]
  *   sig_hash  = keccak256(0x06 || rlp(envelope with empty-msg signatures' bytes elided))
  *
- * The pre-relaunch chain-8141 dialect is archived under evidence/vectors/
- * 2026-09-01-hegota-final-profile/; the two envelopes cannot read each other. Transactions are
- * plain mutable objects, so tests can change a field after building one.
+ * The pre-relaunch chain-8141 dialect is archived under the repository's evidence-archive tag
+ * (evidence/vectors/2026-09-01-hegota-final-profile/); the two envelopes cannot read each
+ * other. Transactions are plain mutable objects, so tests can change a field after building one.
  */
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 

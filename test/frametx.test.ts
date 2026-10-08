@@ -40,8 +40,9 @@ function frame(mode: bigint, flags: bigint, to: bigint | null, gas: bigint, more
 }
 
 /**
- * The transaction the archived evidence pins (evidence/vectors/2026-09-01-hegota-final-profile/
- * frametx.py): a targetless VERIFY frame approving execution and payment, then a SENDER call.
+ * The transaction the archived evidence pins (the evidence-archive tag's
+ * evidence/vectors/2026-09-01-hegota-final-profile/frametx.py): a targetless VERIFY frame
+ * approving execution and payment, then a SENDER call.
  */
 function build(): FrameTx {
   return {

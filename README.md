@@ -75,7 +75,6 @@ tools/         setup and deployment scripts, the activation, gas, compiler-setti
                vector generators
 test/          node:test suites, fixtures, reference vectors and the native
                ethrex suite
-evidence/      dated records of earlier devnet runs and reviews
 docs/          design notes
 ```
 
@@ -101,9 +100,8 @@ just test-ts            # the TypeScript tests: node --test test/*.test.ts
 just test-contracts     # format, lint and test the contracts with Forge
 ```
 
-`just check-artifacts` compares the archived profile with an old commit, so it
-needs the full git history. `just --list` shows the other recipes: the native
-suite, the formal-pin report, Poseidon regeneration and deployment.
+`just --list` shows the other recipes: the native suite, the formal-pin
+report, Poseidon regeneration and deployment.
 
 The command-line tools are under [Use](#use), after the sections that explain
 what they send.
@@ -411,8 +409,9 @@ This is pool profile `position-notes-v3`. It follows EIP-8141 at
 `7d1c8bfb94`, EIP-8250 at `f3079a09e8` and EIP-8272 at `824cbc0b0e`: an eight-field envelope
 with separate execution and state gas limits for each frame. Because the EIPs
 are drafts, each supported combination is a separate profile, and profiles are
-not wire compatible. The format chain 8141 used before its relaunch is archived byte for byte
-under `evidence/vectors/2026-09-01-hegota-final-profile/`.
+not wire compatible. The format chain 8141 used before its relaunch is archived
+byte for byte, with the earlier devnet runs and reviews, under the
+[`evidence-archive`](https://github.com/soispoke/minimal-shielded-pool/tree/evidence-archive/evidence) tag (commit `bfea6ff`).
 
 Each profile needs its own deployment, because a deployed pool cannot be
 upgraded. A `position-notes-v2` pool rejects this profile's settlement and

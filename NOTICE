@@ -35,5 +35,5 @@ frame-transaction encoder for the Hegotá devnet (scripts/hegota-devnet/frametx.
 hegota-devnet branch), through the earlier Python client's sdk/frametx.py, and
 has since been adapted to the current EIP-8141 envelope and ported to
 TypeScript. ethrex is Apache-2.0 / MIT dual-licensed. The pool client
-(src/spend.ts, src/deployment.ts, src/send.ts and src/cli/pool.ts) and
-evidence/REVIEW.md are original Apache-2.0 work.
+(src/spend.ts, src/deployment.ts, src/send.ts and src/cli/pool.ts) is original
+Apache-2.0 work.
