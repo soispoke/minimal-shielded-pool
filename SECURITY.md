@@ -52,6 +52,21 @@ clients and a proof that settlement fits each fork's gas schedule.
 
 ## Trust boundaries
 
+The pool stays solvent, holding the ETH that its unspent notes and unclaimed
+credits are worth, and lets only a note's owner spend it, once. Both rest on
+the circuit, contracts and dispatcher in `core/` and on a deployment that links
+the pool to the logic, verifier and Poseidon libraries built from them. They
+also rest on the setup behind the proving key and on a chain that keeps its
+chain ID (item 3) and implements EIP-8141, EIP-8250, EIP-8272 and EIP-7843
+correctly, under the [assumptions](#assumptions) below. Neither property rests
+on a client: the pool checks every spend itself, so a spend from a faulty or
+hostile client faces the same checks as any other. A client can lose only what
+its user trusts it with: the user's keys and seed, the privacy of the payments
+the user takes part in, and the user's funds, for example through a lost
+fixture, a wrong recipient or amount, a fee above the transaction's cost (the
+unused part stays in the pool) or a stranded credit. It can still delay other
+users' spends ([Liveness](#liveness)).
+
 `tools/run_live_dispatcher.sh` compares the deployed code of the verifier, both
 Poseidon libraries and the logic with a local build, and the pool with the
 committed dispatcher initcode, before it writes `core/deploy_config.json`. A
@@ -97,11 +112,12 @@ note holder replacing a spend while another is pending, can delay everyone
 else's.
 
 Both revisions recheck every pending spend, its pairing check included, on each
-forkchoiceUpdated, at 1.1 to 1.3 ms each on fast hardware, so on `bdfc5d8f`,
-which has no width budget, about 6,000 to 7,000 pending spends, fewer on slower
-nodes, would exceed the Engine API's 8-second limit. Raising a pending spend's
-fee past its proof's fee needs a new proof with the same dummy input: a new
-dummy changes the key set, which the mempool refuses while the first spend is
+forkchoiceUpdated. A recheck takes an estimated 1.1 to 1.3 ms on fast hardware,
+from a measurement not recorded in this repository, so on `bdfc5d8f`, which has
+no width budget, about 6,000 to 7,000 pending spends, fewer on slower nodes,
+would exceed the Engine API's 8-second limit. Raising a pending spend's fee
+past its proof's fee needs a new proof with the same dummy input: a new dummy
+changes the key set, which the mempool refuses while the first spend is
 pending.
 
 ## Privacy limits
@@ -136,6 +152,12 @@ public, and these patterns can still link a spend to a deposit or another spend:
   key covers every note of its spend key in the epoch, which includes every
   note paid to one address, so export refuses such a key unless
   `--address-wide` accepts it.
+- Export matches the pool's logs locally, with one exception. When the node's
+  logs do not show the spend or creation of a disclosed note that the fixture
+  spends, export reads that note's nullifier slot in the EIP-8250 nonce
+  manager. The slot is a hash of the pool and the nullifier, so once a spend
+  publishes the nullifier, the node can tell which spend the export looked up.
+  Export with a node you control.
 
 ## Note delivery
 
@@ -172,12 +194,13 @@ note shows as unspent, and spending it fails. Notes older than client history
   round-3 Kyber (PKC 2023) and not checked separately for FIPS 203.
 - A public multi-party phase 1 and a multi-party phase 2 with destroyed
   contributions and verified transcripts. The activation gate checks the whole
-  key only when given the phase 1 file (`--ptau`), whose hash the manifest
-  pins as `ceremony.phase1_ptau_sha256`. The gate checks that file only
-  against the pinned hash and counts only phase 2 contributions, so the origin
-  of phase 1 must be checked by hand. The committed key's phase 1 is not
-  recorded, so it cannot be checked in full
-  ([README](README.md#what-the-tests-cover)).
+  key only when given the phase 1 file (`--ptau`), whose SHA-256 the manifest
+  pins as `ceremony.phase1_ptau_sha256`, so it refuses a manifest marked
+  `production: true` unless `--ptau` names that file and the proving key
+  verifies against it. The gate checks that file only against the pinned hash
+  and counts only phase 2 contributions, so the origin of phase 1 must be
+  checked by hand. The committed key's phase 1 is not recorded, so it cannot
+  be checked in full ([README](README.md#what-the-tests-cover)).
 - Correct ethrex implementations of EIP-8141, EIP-8250, EIP-8272 and EIP-7843.
   The activation manifest records the EIP-8250 and EIP-8272 revisions, and the
   native suite pins ethrex `247e2dd2`.
@@ -197,6 +220,8 @@ configuration, not production readiness.
 
 ## Reporting
 
-Report vulnerabilities privately to the repository owner before opening a
-public issue. Include the affected commit, a minimal reproduction, impact, and
-proposed mitigation. Do not test public deployments without permission.
+Report vulnerabilities privately through GitHub's
+[private vulnerability reporting](https://github.com/soispoke/minimal-shielded-pool/security/advisories/new)
+before opening a public issue. Include the affected commit, a minimal
+reproduction, impact, and proposed mitigation. Do not test public deployments
+without permission.

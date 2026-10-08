@@ -160,5 +160,7 @@ A change to the tree or the statement touches all of these:
 - gas: re-measure the worst settlement in the native suite, then update the
   pins, `src/gas.ts` and `tools/check-gas-profile.ts`;
 - the activation manifest, the activation check's profiles, a new pool profile
-  and a fresh deployment. The formal proofs stop covering the changed files
-  until their pins are updated.
+  and a fresh deployment. The formal proofs cover commit `8835be7` and do not
+  cover a changed file until the proofs and their pins are updated;
+  `node tools/check-formal-pins.ts` lists the pinned files that already
+  differ, among them the dispatcher and the logic.

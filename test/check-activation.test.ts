@@ -2,7 +2,7 @@
  * The activation gate must reject malformed or self-certified manifests and mismatched setups.
  * The manifest rules run in process through checkActivation; five runs of the CLI pin its
  * contract (exit status, the summary on stdout, the refusal on stderr, the manifest and --ptau
- * reaching the gate). Runtime: about 2 s.
+ * reaching the gate). Runtime: about 3 s.
  */
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -155,8 +155,10 @@ function edit(rel: string, magic: string, n: number) {
 
 // The committed key records one phase-2 contribution, so production can pass only on a key
 // that records two: here a copy of the pinned tree whose key claims a second contribution. The
-// gate reads the count from section 10 and checks no other part of the key against it.
-describe("production needs two contributions and independent verification", () => {
+// gate reads the count from section 10 and checks no other part of the key against it. No
+// phase-1 file is committed, so the copy's snarkjs is a stand-in whose `zkey verify` passes
+// with one stand-in ptau and fails with any other.
+describe("production needs two contributions, independent verification and --ptau", () => {
   const root = join(tmp, "two-contributions");
   for (const rel of PINNED) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
@@ -166,18 +168,47 @@ describe("production needs two contributions and independent verification", () =
   const zkey = edit(ZKEY, "zkey", 10);
   zkey.view.setUint32(zkey.at + 64, 2, true);
   writeFileSync(join(root, ZKEY), zkey.bytes);
-  const hash = createHash("sha256").update(zkey.bytes).digest("hex");
-  const pin = (m: Manifest) => (m.artifacts[ZKEY] = hash);
-  const claim = (verified: boolean | null) =>
-    mutated(production({ phase2_contributions: 2, independent_verification: verified }), pin);
-
-  test("accepted with independent verification, refused with it null or false", () => {
-    assert.equal(
-      checkActivation(parseManifest(claim(true)), { root }),
-      '{"artifacts": "match", "production": true, "profile": "match", "setup": "partial"}',
+  const sha256 = (data: Uint8Array | string) => createHash("sha256").update(data).digest("hex");
+  const hash = sha256(zkey.bytes);
+  // Each stand-in ptau holds its own path.
+  const [ptau, other] = ["phase1.ptau", "other.ptau"].map((name) => {
+    const path = scratch(name);
+    writeFileSync(path, path);
+    return path;
+  });
+  const snarkjs = join(root, "node_modules/.bin/snarkjs");
+  mkdirSync(dirname(snarkjs), { recursive: true });
+  writeFileSync(snarkjs, `#!/bin/sh\n[ "$1 $2 $4" = 'zkey verify ${ptau}' ]\n`, { mode: 0o755 });
+  const claim = (verified: boolean | null, pinned = ptau) =>
+    mutated(
+      production({ phase2_contributions: 2, independent_verification: verified }),
+      ceremony({ phase1_ptau_sha256: sha256(pinned) }),
+      (m) => (m.artifacts[ZKEY] = hash),
     );
+
+  test("accepted with independent verification and --ptau", () => {
+    assert.equal(
+      checkActivation(parseManifest(claim(true)), { root, ptau }),
+      '{"artifacts": "match", "production": true, "profile": "match", "setup": "verified"}',
+    );
+  });
+
+  test("refused without --ptau, even with --allow-testbed", () => {
+    for (const allowTestbed of [false, true]) {
+      const message = "activation blocked: production activation requires --ptau";
+      refused(claim(true), message, { root, allowTestbed });
+    }
+  });
+
+  test("refused with a pinned ptau the key does not verify against", () => {
+    refused(claim(true, other), "snarkjs zkey verify failed", { root, ptau: other });
+  });
+
+  test("refused with independent verification null or false, with or without --ptau", () => {
     for (const verified of [null, false]) {
-      refused(claim(verified), "ceremony evidence is incomplete", { root });
+      for (const options of [{ root }, { root, ptau }]) {
+        refused(claim(verified), "ceremony evidence is incomplete", options);
+      }
     }
   });
 });
