@@ -38,6 +38,13 @@ as one line on standard input, or at a hidden prompt on a terminal. The `notes`
 commands read the seed the same way, unless `--seed-file` names a file readable
 by its owner only.
 
+The client is a fixture generator, not a production wallet. The pool commands
+send only what a fixture holds: deposits and spends that `smoke.ts` or
+`nonce-race.ts` proved in advance against the tree they expected. Another
+deposit landing first leaves those proofs unusable, so each spend entry keeps
+its inputs' openings, from which the notes can be proved again where they
+landed. `notes scan` finds a wallet's notes, but no command spends them yet.
+
 ```sh
 # Deposit one of a fixture's notes, paid by the funded account.
 printf '%s\n' "$FUNDED_KEY" | node src/cli/pool.ts RPC CONFIG FIXTURE shield [--note N]
