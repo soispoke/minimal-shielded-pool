@@ -41,10 +41,7 @@
     "core/contracts/src/ShieldedPoolLogic.sol": "d93bbd9fd7eed8d5f71981bf3e94c94df9b82ad62c1127278473cff3c6948fba",
     "core/dispatcher/ShieldedPoolDispatcher.yul": "82fbb879429ad6f0a7ee663d475af174d2162444942cf69f554164573b5f4631",
     "core/artifacts/shielded_pool_dispatcher_init.hex": "a506c59cc30fda7c700943c181dd39419f99d2a5c6908d668d9aa52daa1a5820",
-    "sdk/frametx.py": "78e33ae23344fd818c7ed4ed1bf05affb86f92bdfec02ba899333576c18a1514",
-    "sdk/gas_profile.py": "2eb50b822d9695a81f573bf637bf928424f965909801c8951bea07e49e562c9d",
-    "sdk/pool_frametx.py": "b3446f73446edb076728f2a13552b3f18c1ffc64476237c32ee37a753da59021",
-    "tools/check_gas_profile.py": "b6f0f28e2a0a47a1be078aa172bf28b8d643dca254e5bbe21b823efe2ca71e41"
+    "src/gas.ts": "47270d469aa6fdfef1cda0f85456da72f0e8612d456dc8b0343e95e295cc80a7"
   },
   "compiler": {
     "default": {

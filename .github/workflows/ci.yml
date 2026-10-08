@@ -16,11 +16,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-node@v7
         with:
-          python-version: "3.12"
+          node-version: 24
+          cache: npm
+      - run: npm ci
       - name: Report changes to formally verified files
-        run: python tools/check_formal_pins.py
+        run: node tools/check-formal-pins.ts
 
   test:
     runs-on: ubuntu-latest
@@ -34,12 +36,6 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: tools/package-lock.json
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
 
       - uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -53,18 +49,39 @@ jobs:
         run: just install
 
       - name: Reject high dependency advisories
-        run: npm audit --prefix tools --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       # The checks themselves live in the justfile, so CI and `just test` run
       # the same list.
       - name: Check generated artifacts and the archived profile
         run: just check-artifacts
 
-      - name: Python tests and checks
-        run: just test-python
+      - name: Type, format, gas, activation and compiler-settings checks
+        run: just check
+
+      - name: TypeScript tests
+        run: just test-ts
 
       - name: Test contracts
         run: just test-contracts
+
+  # package.json allows Node 24.7, the first release with ML-KEM in node:crypto,
+  # so the TypeScript tests also run on exactly that version.
+  oldest-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.7.0
+          cache: npm
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+      - run: npm ci
+      - name: TypeScript tests
+        run: node --test test/*.test.ts
 
   native:
     runs-on: ubuntu-latest
@@ -81,18 +98,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.7.1
       - name: Install native test dependencies
         run: |
           rustup toolchain install 1.93.0 --profile minimal
-          npm ci --prefix tools
-          python -m pip install --requirement requirements.txt
+          npm ci
       - name: Test duplicate notes, reorgs, settlement gas and client policy
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
-        run: python test/native/run.py --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
+        run: node test/native/run.ts --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"

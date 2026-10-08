@@ -1,0 +1,10 @@
+src/poseidon-constants.json
+test/fixtures/
+test/vectors/
+test/native/fixtures/
+core/
+evidence/
+*.js
+*.md
+*.json
+*.yml
