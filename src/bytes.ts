@@ -114,7 +114,7 @@ export function parseAddress(text: unknown, what: string): bigint {
 
 /**
  * An address as a person writes it in a deployment config: "0x" and 1 to 40 hex digits in any
- * case, so EIP-55 checksummed addresses and short ones such as 0x01 read (critic G10).
+ * case, so EIP-55 checksummed addresses and short ones such as 0x01 read.
  */
 export function parseConfigAddress(text: unknown, what: string): bigint {
   if (typeof text !== "string" || !/^0x[0-9a-fA-F]{1,40}$/.test(text)) {
@@ -126,6 +126,12 @@ export function parseConfigAddress(text: unknown, what: string): bigint {
 /** Orders bigints for sort(): negative, zero or positive as a is below, equal to or above b. */
 export function compareBigint(a: bigint, b: bigint): number {
   return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** Orders equal-length sort keys made of bigints, such as (epoch, index) or (block, tx, call). */
+export function compareKeys(a: readonly bigint[], b: readonly bigint[]): number {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return compareBigint(a[i], b[i]);
+  return 0;
 }
 
 export function maxBigint(a: bigint, b: bigint): bigint {

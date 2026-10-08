@@ -303,6 +303,14 @@ test("the dispatcher CLI refuses a zero implementation or verifier address", asy
   }
 });
 
+test("the dispatcher CLI takes addresses as 0x and hex digits only", async () => {
+  for (const address of ["1", "0X1", "0x1_0", " 0x1"]) {
+    const { code, stderr } = await initcode(address, "0x2");
+    assert.equal(code, 1, stderr);
+    assert.ok(stderr.includes(`invalid address: ${address}`), stderr);
+  }
+});
+
 test("the verifier patch refuses a verifier without exactly three GAS calls", () => {
   const call = "staticcall(sub(gas(), 2000),";
   for (const calls of [2, 4]) {

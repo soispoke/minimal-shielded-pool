@@ -1,6 +1,6 @@
 /**
- * Groth16 proofs of the spend circuit through snarkjs 0.7.5 as a library: the fullprove,
- * verify and soliditycalldata steps the generators ran as `npx snarkjs` commands, in memory.
+ * Groth16 proofs of the spend circuit through snarkjs 0.7.5 as a library: its fullprove, verify
+ * and soliditycalldata steps, run in memory rather than as `npx snarkjs` commands.
  * Proving draws its blinding from the operating system, so proofs are never reproducible;
  * their public signals are.
  *

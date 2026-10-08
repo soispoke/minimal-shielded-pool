@@ -4,12 +4,14 @@
  * (RpcTransportError), and refusals depend on the difference. Node's fetch honours HTTP_PROXY,
  * HTTPS_PROXY and NO_PROXY when NODE_USE_ENV_PROXY=1 is set.
  *
- * RpcChain is the read-only view of the chain that disclosure and note scanning use. Whatever
- * stops it answering, a node it cannot reach, an answer it cannot read or a transaction it does
- * not hold, is a ChainError; disclosure refuses the claim that needed the answer.
+ * PoolNode is the node as the pool client calls it: plain calls, and simulation of a signed
+ * frame transaction. RpcChain is the read-only view of the chain that disclosure and note
+ * scanning use. Whatever stops it answering, a node it cannot reach, an answer it cannot read or
+ * a transaction it does not hold, is a ChainError; disclosure refuses the claim that needed the
+ * answer.
  */
 import { fromHex, hexPadded, parseAddress, parseHex, toHex } from "./bytes.ts";
-import { UserError } from "./errors.ts";
+import { PoolError, UserError } from "./errors.ts";
 import { isObject, parse, stringify } from "./json.ts";
 import { NONCE_MANAGER_ADDRESS, nonceKeySlot } from "./protocol.ts";
 
@@ -92,6 +94,39 @@ function transportReason(error: unknown, timeoutMs: number): string {
   if (typeof cause?.code === "string") return cause.code;
   if (typeof cause?.message === "string" && !cause.message.includes(":")) return cause.message;
   return "the node could not be reached";
+}
+
+// ---- the node, as the pool client calls it ----
+
+/**
+ * The node calls the pool client makes; tests pass a fake. `call` throws RpcError for an error
+ * reply and RpcTransportError otherwise; `simulate` returns null when the node lacks the method.
+ */
+export interface PoolNode {
+  call(method: string, params: readonly unknown[]): Promise<unknown>;
+  simulate(raw: string): Promise<unknown>;
+}
+
+/**
+ * The node at `url`, with the pool's 20-second timeout by default. simulate dry-runs a signed
+ * frame transaction through ethrex_simulateFrameTransaction, the frame-native eth_estimateGas; a
+ * transaction over the gas cap comes back as a result with valid=false, not as an error.
+ */
+export function poolNode(url: string, { timeoutMs = 20_000 } = {}): PoolNode {
+  const call = (method: string, params: readonly unknown[]) =>
+    rpc(url, method, params, { timeoutMs });
+  return {
+    call,
+    async simulate(raw) {
+      try {
+        return await call("ethrex_simulateFrameTransaction", [raw]);
+      } catch (error) {
+        if (!(error instanceof RpcError)) throw error;
+        if (error.code === -32601) return null;
+        throw new PoolError(`  simulate RPC error: ${error.detail}`);
+      }
+    },
+  };
 }
 
 // ---- the chain, as disclosure and note scanning read it ----

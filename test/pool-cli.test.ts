@@ -23,17 +23,9 @@ import { fileURLToPath } from "node:url";
 import { concat, fromHex, hex32, keccak, toBytes, toHex } from "../src/bytes.ts";
 import { main } from "../src/cli/pool.ts";
 import { readSecretLine } from "../src/cli/secret.ts";
+import { checkDeployedProfile, referenceVerifierCalls, shieldLeaf } from "../src/deployment.ts";
 import { PoolError, UserError } from "../src/errors.ts";
 import { POOL_PROFILE, PREVIOUS_POOL_PROFILE } from "../src/gas.ts";
-import {
-  checkDeployedProfile,
-  poolNode,
-  referenceVerifierCalls,
-  shieldLeaf,
-  type Action,
-  type PoolNode,
-  type Send,
-} from "../src/pool.ts";
 import {
   domainScalar,
   EMPTY_ROOT,
@@ -42,7 +34,9 @@ import {
   sourceId,
   TREE_CAPACITY,
 } from "../src/protocol.ts";
-import { RpcError, RpcTransportError } from "../src/rpc.ts";
+import { poolNode, RpcError, RpcTransportError, type PoolNode } from "../src/rpc.ts";
+import type { Send } from "../src/send.ts";
+import type { Action } from "../src/spend.ts";
 
 type Json = Record<string, unknown>;
 const path = (relative: string) => fileURLToPath(new URL(`../${relative}`, import.meta.url));

@@ -111,9 +111,9 @@ export function initcode(impl: bigint, verifier: bigint): Uint8Array {
   return concat(compiledInitcode(), word(impl), word(verifier));
 }
 
-/** A nonzero address below 2^160 in hex, with or without 0x or 0X, as Python's int() read it. */
+/** A nonzero address below 2^160, written as "0x" and hex digits. */
 function address(value: string): bigint {
-  const parsed = hexFromText(value.replace(/^(0[xX])?/, "0x")) ?? 0n;
+  const parsed = hexFromText(value) ?? 0n;
   if (parsed === 0n || parsed >= 1n << 160n) throw new InputError(`invalid address: ${value}`);
   return parsed;
 }

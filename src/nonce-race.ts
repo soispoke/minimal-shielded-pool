@@ -221,7 +221,7 @@ export async function generateNonceRace(options: NonceRaceOptions, deps: fixture
   log(`  root R      ${fixture.root.slice(0, 18)}...`);
   log(`  transfer A  nf ${ea.nf1.slice(0, 14)}.. ${ea.nf2.slice(0, 14)}..`);
   log(`  transfer C  nf ${ec.nf1.slice(0, 14)}.. ${ec.nf2.slice(0, 14)}..`);
-  log("  disjoint: True   same root: True");
+  log("  disjoint: true   same root: true");
   log(`wrote ${output}`);
   return { output, fixture };
 }

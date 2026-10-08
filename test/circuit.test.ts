@@ -27,7 +27,7 @@ import * as untyped from "snarkjs";
 
 import { mod } from "../src/bytes.ts";
 import { InputError } from "../src/errors.ts";
-import { referenceVerifierCalls } from "../src/pool.ts";
+import { referenceVerifierCalls } from "../src/deployment.ts";
 import { WASM, assertUnprovable, prove, terminate, verify } from "../src/prover.ts";
 import type { ProofWords } from "../src/prover.ts";
 import * as pr from "../src/protocol.ts";

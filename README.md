@@ -52,14 +52,18 @@ does:
   the circuit, the contracts and the EIPs compute, or the client builds
   transactions the chain rejects or notes its user cannot spend, so
   `test/reference.test.ts` checks them against reference vectors.
-- **Features:** `pool.ts` reads a fixture's spends, checks the deployed pool,
-  and builds and sends transactions; `notes.ts` is note delivery;
-  `disclosure.ts` writes and checks receipts.
+- **Features:** `spend.ts` turns a fixture's shield and spend entries into
+  calldata and a spend's signed frames, `deployment.ts` checks the deployed
+  pool and a spend's recent root, and `send.ts` simulates, sends and checks
+  transactions. `notes.ts` seals notes and keeps a sender's channels, and
+  `scan.ts` finds a wallet's notes on chain. `disclosure.ts` writes and checks
+  receipts.
 - **Fixture generators:** `smoke.ts` and `nonce-race.ts`, what they share in
   `fixtures.ts`, and `prover.ts`, which proves with snarkjs.
 - **Plumbing:** `bytes.ts`, `json.ts`, `errors.ts`, `files.ts`, `random.ts`,
   `rpc.ts`, and `cli/`, the command-line tools with their argument parser and
-  secret reader.
+  secret reader (`cli/notes.ts` also keeps the wallet's state file under a
+  lock).
 
 ```text
 core/          the files above, the activation manifest and the deployment record

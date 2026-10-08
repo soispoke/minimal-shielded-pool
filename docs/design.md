@@ -145,8 +145,9 @@ A change to the tree or the statement touches all of these:
   nullifier, statement and compression, the `Spend` fields, selectors, events,
   ABI encoders and empty root, with the frame data sizes in `src/gas.ts`;
 - the client code built on them: `src/wallet.ts` (tree and witness),
-  `src/pool.ts` (frames and the deployed-profile checks), `src/notes.ts`, whose
-  scanner rebuilds positions from `LeafAppended` and tracks spends by
+  `src/spend.ts` (calldata and frames), `src/deployment.ts` (the
+  deployed-profile checks), `src/notes.ts` (output commitments), `src/scan.ts`,
+  whose scanner rebuilds positions from `LeafAppended` and tracks spends by
   nullifier, and `src/disclosure.ts`, which decodes `settle` calls and
   recomputes nullifiers from disclosed keys;
 - `src/poseidon.ts`, `tools/export-vectors.ts` and `test/vectors/`, if the
