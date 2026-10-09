@@ -46,7 +46,6 @@ export const TAG_PK = 1n;
 export const TAG_LEAF = 2n;
 export const TAG_OCCURRENCE_NULL = 4n;
 
-/** Poseidon of two values, the circuit's two-input hash. */
 export function p2(a: bigint, b: bigint): bigint {
   return poseidon([a, b]);
 }
@@ -56,7 +55,6 @@ export function tagged(tag: bigint, a: bigint, b: bigint): bigint {
   return poseidon([tag, a, b]);
 }
 
-/** The owner public key, Poseidon(TAG_PK, spendKey, 0). */
 export function ownerPk(spendKey: bigint): bigint {
   return tagged(TAG_PK, spendKey, 0n);
 }
@@ -117,20 +115,18 @@ export interface SpendInput {
   idx: bigint | null;
 }
 
-/** One output as (inner, value). */
 export type Output = readonly [inner: bigint, value: bigint];
 
 /** Output k with value 0 must use SINK_INNERS[k]. */
 export const SINK_INNERS: readonly bigint[] = Object.freeze([1n, 2n]);
 
-/** The two zero-value outputs, (SINK_INNERS[k], 0) for output k. */
 export function sinkOutputs(): Output[] {
   return SINK_INNERS.map((sink) => [sink, 0n] as const);
 }
 
 /** The sink outputs' commitments, which the pool recognises and does not append. */
 export function sinkCommitments(): bigint[] {
-  return SINK_INNERS.map((sink) => tagged(TAG_LEAF, sink, 0n));
+  return outputCommitments(sinkOutputs());
 }
 
 /** The inputs' nullifiers in order; a dummy is never in the tree and uses index 0. */
@@ -138,16 +134,12 @@ export function inputNullifiers(domain: bigint, inputs: readonly SpendInput[]): 
   return inputs.map((i) => nullifier(domain, i.sk, commitment(i.sk, i.rho, i.value), i.idx ?? 0n));
 }
 
-/** The commitment of each (inner, value) output, in order. */
 export function outputCommitments(outputs: readonly Output[]): bigint[] {
   return outputs.map(([out, value]) => tagged(TAG_LEAF, out, value));
 }
 
-/** The ten statement values a proof binds, by name. */
-export type Statement = Omit<Spend, "rootSlot" | "epoch">;
-
-/** The ten statement values in the order the circuit and the pool hash them. */
-export function statement(s: Statement): bigint[] {
+/** The ten values a proof binds, in the order the circuit and the pool hash them. */
+export function statement(s: Omit<Spend, "rootSlot" | "epoch">): bigint[] {
   const hashes = [s.nf1, s.nf2, s.outCm1, s.outCm2, s.root, s.domain];
   return [...hashes, s.publicAmount, s.fee, s.recipient, s.authorizer];
 }
@@ -238,7 +230,6 @@ export const SPEND_FIELDS = Object.keys(SPEND_ABI) as (keyof Spend)[];
 
 export const SPEND_TUPLE = `(${Object.values(SPEND_ABI).join(",")})`;
 
-/** The first four bytes of keccak256(signature). */
 export function selector(signature: string): Uint8Array {
   return keccak(utf8(signature)).slice(0, 4);
 }
@@ -260,7 +251,6 @@ export const NOTES = eventTopic("Notes(bytes)");
 
 type AbiType = "bytes32" | "uint64" | "uint256" | "address";
 
-/** One static ABI word; an address is left-padded. */
 function abiWord(value: bigint, type: AbiType, what: string): Uint8Array {
   const bits = type === "uint64" ? 64n : type === "address" ? 160n : 256n;
   if (!fits(value, bits)) throw new InputError(`${what} must be a ${type}`);
@@ -305,7 +295,6 @@ export function encodeShield(inner: bigint, note: Uint8Array): Uint8Array {
   return concat(SHIELD_SELECTOR, ...head, note, new Uint8Array((32 - (note.length % 32)) % 32));
 }
 
-/** publishEpochRoot(uint64 epoch). */
 export function encodePublish(epoch: bigint): Uint8Array {
   return concat(PUBLISH_SELECTOR, abiWord(epoch, "uint64", "publish epoch"));
 }

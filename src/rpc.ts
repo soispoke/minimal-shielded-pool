@@ -4,11 +4,9 @@
  * (RpcTransportError), and refusals depend on the difference. Node's fetch honours HTTP_PROXY,
  * HTTPS_PROXY and NO_PROXY when NODE_USE_ENV_PROXY=1 is set.
  *
- * PoolNode is the node as the pool client calls it: plain calls, and simulation of a signed
- * frame transaction. RpcChain is the read-only view of the chain that disclosure and note
- * scanning use. Whatever stops it answering, a node it cannot reach, an answer it cannot read or
- * a transaction it does not hold, is a ChainError; disclosure refuses the claim that needed the
- * answer.
+ * PoolNode is the node as the pool client calls it. RpcChain is the read-only view of the chain
+ * that disclosure and note scanning use; whatever stops it answering is a ChainError, and
+ * disclosure refuses the claim that needed the answer.
  */
 import { fromHex, hexPadded, parseAddress, parseHex, toHex } from "./bytes.ts";
 import { PoolError, UserError } from "./errors.ts";
@@ -19,7 +17,6 @@ import { NONCE_MANAGER_ADDRESS, nonceKeySlot } from "./protocol.ts";
 export class RpcError extends UserError {
   /** The error object as text, or "no result". */
   readonly detail: string;
-  /** The error object's numeric code, when it has one. */
   readonly code: number | undefined;
 
   constructor(method: string, error: unknown) {
@@ -34,11 +31,8 @@ export class RpcError extends UserError {
 
 /** The node could not be reached, timed out, answered a non-2xx status or not with JSON-RPC. */
 export class RpcTransportError extends UserError {
-  readonly reason: string;
-
   constructor(method: string, reason: string) {
     super(`${method} request failed: ${reason}`);
-    this.reason = reason;
   }
 }
 
@@ -46,9 +40,8 @@ export class RpcTransportError extends UserError {
 export class ChainError extends UserError {}
 
 /**
- * One JSON-RPC call, returning the reply's result, including null. The pool uses a 20 s
- * timeout, disclosure, notes and the generators 30 s. A redirect is refused rather than
- * followed, and no failure reason repeats the URL, which can carry an API key.
+ * One JSON-RPC call, returning the reply's result, including null. A redirect is refused rather
+ * than followed, and no failure reason repeats the URL, which can carry an API key.
  */
 export async function rpc(
   url: string,
@@ -108,13 +101,13 @@ export interface PoolNode {
 }
 
 /**
- * The node at `url`, with the pool's 20-second timeout by default. simulate dry-runs a signed
- * frame transaction through ethrex_simulateFrameTransaction, the frame-native eth_estimateGas; a
- * transaction over the gas cap comes back as a result with valid=false, not as an error.
+ * The node at `url`, with a 20-second timeout. simulate dry-runs a signed frame transaction
+ * through ethrex_simulateFrameTransaction, the frame-native eth_estimateGas; a transaction over
+ * the gas cap comes back as a result with valid=false, not as an error.
  */
-export function poolNode(url: string, { timeoutMs = 20_000 } = {}): PoolNode {
+export function poolNode(url: string): PoolNode {
   const call = (method: string, params: readonly unknown[]) =>
-    rpc(url, method, params, { timeoutMs });
+    rpc(url, method, params, { timeoutMs: 20_000 });
   return {
     call,
     async simulate(raw) {
@@ -179,22 +172,18 @@ export interface Chain {
 /** A node read over JSON-RPC. Any failure, a malformed answer included, is a ChainError. */
 export class RpcChain implements Chain {
   readonly url: string;
-  readonly timeoutMs: number;
 
-  constructor(url: string, options: { timeoutMs?: number } = {}) {
+  constructor(url: string) {
     this.url = url;
-    this.timeoutMs = options.timeoutMs ?? 30_000;
   }
 
-  /** One call; tests override it to replay canned answers. */
+  /** One call, with a 30-second timeout; tests override it to replay canned answers. */
   async call(method: string, params: readonly unknown[]): Promise<unknown> {
     try {
-      return await rpc(this.url, method, params, { timeoutMs: this.timeoutMs });
+      return await rpc(this.url, method, params, { timeoutMs: 30_000 });
     } catch (error) {
       const cause = { cause: error };
-      if (error instanceof RpcTransportError) {
-        throw new ChainError(`${method} request failed: ${error.reason}`, cause);
-      }
+      if (error instanceof RpcTransportError) throw new ChainError(error.message, cause);
       if (error instanceof RpcError) {
         throw new ChainError(`${method} failed: ${error.detail}`, cause);
       }

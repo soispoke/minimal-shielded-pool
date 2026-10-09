@@ -106,9 +106,9 @@ suite("refusals before proving", { concurrency: true }, () => {
     [NONCE_RACE, ["--random", ...LIVE, `--output=${KEY_FIXTURE}`], `<redacted>.json ${HOLDS}`],
     // A mistyped flag stops the run instead of falling back to a default, such as the
     // committed test chain's fixture path.
-    [SMOKE, ["--random", "--chain_id=8141", OUT], "unrecognized arguments", 2],
-    [SMOKE, ["--rand", OUT], "unrecognized arguments", 2],
-    [NONCE_RACE, [POOL, "--note_wei=1", OUT], "unrecognized arguments", 2],
+    [SMOKE, ["--random", "--chain_id=8141", OUT], "Unknown option '--chain_id'", 2],
+    [SMOKE, ["--rand", OUT], "Unknown option '--rand'", 2],
+    [NONCE_RACE, [POOL, "--note_wei=1", OUT], "Unknown option '--note_wei'", 2],
   ];
   for (const [script, args, expected, code] of cases) {
     const shown = args.map((arg) => arg.replace(TMP, "TMP").replace(KEY, "KEY")).join(" ");

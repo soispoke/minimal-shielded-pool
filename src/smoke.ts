@@ -25,7 +25,7 @@ import { secureRng, seededRng } from "./random.ts";
 import { Tree, buildWitness, dummyInput, newAuthorizer, newNote } from "./wallet.ts";
 
 /** The test placeholder recipient, refused off the test chain and pool. */
-export const PLACEHOLDER_RECIPIENT = "0x00000000000000000000000000000000cafebabe";
+const PLACEHOLDER_RECIPIENT = "0x00000000000000000000000000000000cafebabe";
 const SEED = 20260702n;
 const EPOCH = 0n;
 const SHIELD = 10n ** 18n;
@@ -33,7 +33,7 @@ const PAYMENT = (SHIELD * 60n) / 100n;
 const FEE = (SHIELD * 5n) / 100n;
 const CHANGE = SHIELD - PAYMENT - FEE;
 
-export interface SmokeOptions {
+interface SmokeOptions {
   /** Fresh seeds and secrets, required off the test chain and pool. */
   random: boolean;
   chainId: bigint;
@@ -54,8 +54,7 @@ export interface SmokeOptions {
 export async function generateSmoke(options: SmokeOptions, deps: fixtures.GeneratorDeps) {
   const { chainId, poolAddress } = options;
   const { prover, log } = deps;
-  const rng = deps.rng ?? (options.random ? secureRng : seededRng(SEED));
-  const randomNote = deps.dummyNote ?? (() => notes.dummyNote(secureRng));
+  const rng = options.random ? secureRng : seededRng(SEED);
   let recipient = PLACEHOLDER_RECIPIENT;
   if (options.recipient !== undefined) {
     const text = options.recipient.startsWith("0x") ? options.recipient : "0x" + options.recipient;
@@ -101,7 +100,7 @@ export async function generateSmoke(options: SmokeOptions, deps: fixtures.Genera
 
   // Alice's deposit, Bob's payment and Alice's change.
   const a = notes.reserve(aliceSelf, SHIELD);
-  const b = notes.reserve(notes.openChannel(bob.address(), deps.encapsulate), PAYMENT);
+  const b = notes.reserve(notes.openChannel(bob.address()), PAYMENT);
   const a2 = notes.reserve(aliceSelf, CHANGE);
   const [skA, skB] = [alice.spendKey, bob.spendKey];
   const cmA = commitment(skA, a.rho, SHIELD);
@@ -160,7 +159,8 @@ export async function generateSmoke(options: SmokeOptions, deps: fixtures.Genera
   await prover.assertUnprovable(positiveSink, "positive_output_uses_sink");
   await prover.assertUnprovable({ ...ww, recipient: "0" }, "withdrawal_without_recipient");
 
-  const unused = notes.spendNotes(randomNote(), randomNote());
+  const randomNote = () => notes.dummyNote(secureRng);
+  const randomNotes = () => toHex(notes.spendNotes(randomNote(), randomNote()));
   const wallet = (keys: notes.WalletKeys, seed: Uint8Array) => ({
     seed: toHex(seed),
     address: keys.address().hex(),
@@ -183,10 +183,10 @@ export async function generateSmoke(options: SmokeOptions, deps: fixtures.Genera
       out_value1: String(outsT[0][1]),
     }),
     withdraw_seed: fixtures.spendEntry(t2, domain, insS, sinkOutputs(), termsS, provedS, {
-      notes: toHex(unused),
+      notes: randomNotes(),
     }),
     withdraw: fixtures.spendEntry(t2, domain, insW, sinkOutputs(), termsW, provedW, {
-      notes: toHex(notes.spendNotes(randomNote(), randomNote())),
+      notes: randomNotes(),
     }),
   };
   fixtures.writeFixture(output, fixture, previous);

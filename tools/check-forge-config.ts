@@ -34,7 +34,7 @@ const settings = (config: unknown, what: string) =>
   Object.fromEntries(KEYS.map((key) => [key, get(config, key, what)]));
 
 /** Compares every profile the manifest pins with what forge resolves; returns the summary. */
-export function checkForgeConfig(manifest: unknown, root: string): string {
+function checkForgeConfig(manifest: unknown, root: string): string {
   const profiles = object(field(manifest, "compiler", "the manifest"), "compiler");
   for (const [profile, pins] of profiles) {
     // The default profile runs in the caller's environment unchanged, as the deployment's

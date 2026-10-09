@@ -38,7 +38,7 @@ const artifact = (name: string) =>
   fileURLToPath(new URL(`../core/artifacts/${name}`, import.meta.url));
 export const WASM = artifact("spend_js/spend.wasm");
 export const ZKEY = artifact("spend_final.zkey");
-export const VKEY = artifact("spend_vkey.json");
+const VKEY = artifact("spend_vkey.json");
 
 /** The BN254 base field modulus: proof coordinates live in [0, Q). */
 const Q = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47n;
@@ -64,7 +64,7 @@ export interface ProofWords {
  */
 export async function prove(
   witness: Witness,
-  tag = "the witness",
+  tag: string,
 ): Promise<{ publics: Publics; proof: ProofWords }> {
   await sharedCurve();
   const { proof, publicSignals } = await snarkjs.groth16
@@ -94,13 +94,8 @@ export async function verify(
   { pA, pB, pC }: ProofWords,
 ): Promise<boolean> {
   const words = [...pA, ...pB.flat(), ...pC].map((word) => parseHex(word, "a proof word"));
-  if (
-    publics.length !== 3 ||
-    !publics.every((x) => 0n <= x && x < P) ||
-    !words.every((w) => w < Q)
-  ) {
-    return false;
-  }
+  if (publics.length !== 3 || !publics.every((x) => 0n <= x && x < P)) return false;
+  if (!words.every((w) => w < Q)) return false;
   return verifySnark(publics, {
     pi_a: [pA[0], pA[1], "1"],
     pi_b: [

@@ -40,10 +40,6 @@ const get = (value: unknown, key: string): unknown => (isObject(value) ? value[k
 
 type Parser = (value: unknown, what: string) => bigint;
 const word32: Parser = (value, what) => toBigint(fromHex(value, what, 32));
-// A fixture's integers are decimal or 0x hex strings, or JSON numbers; a root slot may also be
-// a bigint its caller has already read.
-const uintField: Parser = (value, what) =>
-  typeof value === "string" ? parseUint(value, what) : parseDec(value, what);
 
 /** The note bytes a wallet stored in a fixture entry; the protocol encoders check the length. */
 function notesField(entry: unknown, key: string, what: string): Uint8Array {
@@ -62,8 +58,8 @@ export type RecentRoot = Pick<protocol.Spend, "root" | "rootSlot" | "epoch">;
 
 /** The recent root of a fixture spend entry whose root was published in `rootSlot`. */
 export function parseRecentRoot(entry: unknown, rootSlot: bigint): RecentRoot {
-  // Fixtures write the epoch in decimal, the only form read here; parseSpend reads each of the
-  // entry's integers as decimal or 0x hex.
+  // Fixtures write the epoch in decimal, the only form read here; parseSpend reads the entry's
+  // integers with parseUint (0x hex, or decimal without leading zeros).
   const epoch = parseDec(get(entry, "epoch"), "the spend entry's epoch");
   return { rootSlot, epoch, root: word32(get(entry, "root"), "the spend entry's root") };
 }
@@ -73,15 +69,15 @@ export function parseSpend(entry: unknown, rootSlot: unknown): protocol.Spend {
   const at = (parse: Parser, key: string) => parse(get(entry, key), `the spend entry's ${key}`);
   return {
     root: at(word32, "root"),
-    rootSlot: uintField(rootSlot, "the spend entry's root_slot"),
-    epoch: at(uintField, "epoch"),
+    rootSlot: parseUint(rootSlot, "the spend entry's root_slot"),
+    epoch: at(parseUint, "epoch"),
     domain: at(word32, "domain"),
     nf1: at(word32, "nf1"),
     nf2: at(word32, "nf2"),
     outCm1: at(word32, "out_cm1"),
     outCm2: at(word32, "out_cm2"),
-    publicAmount: at(uintField, "public_amount"),
-    fee: at(uintField, "fee"),
+    publicAmount: at(parseUint, "public_amount"),
+    fee: at(parseUint, "fee"),
     recipient: at(parseAddress, "recipient"),
     authorizer: at(parseAddress, "authorizer"),
   };
@@ -98,14 +94,8 @@ export function shieldCalldata(inner: unknown, entry: unknown): Uint8Array {
   return protocol.encodeShield(word32(inner, "the shield's inner"), note);
 }
 
-/** What the proof frame carries: the Groth16 proof and hybrid compression's beta. */
-export interface SpendProof {
-  readonly proof: protocol.Proof;
-  readonly beta: bigint;
-}
-
-/** The proof and beta of a fixture spend entry. */
-export function parseSpendProof(entry: unknown): SpendProof {
+/** A fixture spend entry's Groth16 proof and hybrid compression's beta. */
+export function parseSpendProof(entry: unknown): { proof: protocol.Proof; beta: bigint } {
   // Rows must be arrays: an object keyed "0" and "1" is not read as one.
   const row = (value: unknown, i: number) => (Array.isArray(value) ? value[i] : undefined);
   const at = (key: string, ...path: number[]) =>

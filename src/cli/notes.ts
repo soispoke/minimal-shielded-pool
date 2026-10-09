@@ -13,7 +13,7 @@
  * issued again. Without --seed-file the seed is typed at a hidden prompt or read from standard
  * input, never taken from the command line, which other local users can read.
  */
-import { fromHex, hex32, parseConfigAddress, parseDec, toHex } from "../bytes.ts";
+import { hex32, parseConfigAddress, parseDec, toHex } from "../bytes.ts";
 import { NotesError } from "../errors.ts";
 import {
   FileChangedError,
@@ -25,7 +25,7 @@ import {
 } from "../files.ts";
 import { POOL_PROFILE } from "../gas.ts";
 import { asObject, stringify, type JsonObject } from "../json.ts";
-import { MIN_SEED_BYTES, WalletKeys } from "../notes.ts";
+import { pastedHex, WalletKeys } from "../notes.ts";
 import { RpcChain } from "../rpc.ts";
 import { Scanner, scanToFinalized } from "../scan.ts";
 import { parseArgs, runCli } from "./args.ts";
@@ -46,18 +46,13 @@ const SPEC = {
   },
 } as const;
 
-/** What in-process tests replace: the prompt or pipe the seed is read from. */
-export interface Deps {
-  readonly readSecretLine?: (prompt: string) => Promise<string>;
-}
-
 /** The command line `argv` (without node and the script). */
-export async function main(argv: readonly string[], deps: Deps = {}): Promise<void> {
+export async function main(argv: readonly string[]): Promise<void> {
   const { positionals, options } = parseArgs(SPEC, argv);
-  const readLine = deps.readSecretLine ?? readSecretLine;
   // The seed is read and checked first, so a bad seed is reported before any other option.
-  const seed = await readSeed(options["--seed-file"], () => readLine("wallet seed (hex): "));
-  const keys = new WalletKeys(seed, options["--account"] ?? 0n);
+  const file = options["--seed-file"];
+  const seed = file ? readPrivate(file) : await readSecretLine("wallet seed (hex): ");
+  const keys = new WalletKeys(pastedHex(seed.trim(), "a seed"), options["--account"] ?? 0n);
   const chunk = options["--chunk"];
   const command = {
     keys,
@@ -70,7 +65,7 @@ export async function main(argv: readonly string[], deps: Deps = {}): Promise<vo
   };
   process.stdout.write(
     positionals.command === "address"
-      ? addressCommand(keys)
+      ? keys.address().hex() + "\n"
       : positionals.command === "scan"
         ? await scanCommand(command)
         : await directSecretCommand(command),
@@ -78,30 +73,6 @@ export async function main(argv: readonly string[], deps: Deps = {}): Promise<vo
 }
 
 // ---- commands (main parses the arguments and prints what these return) ----
-
-/** A wallet seed written as hex ("0x" optional), at least 32 bytes. */
-export function parseSeed(text: string): Uint8Array {
-  const digits = text.trim().replace(/^0x/, "");
-  if (!/^([0-9a-fA-F]{2})*$/.test(digits)) throw new NotesError("a seed is hex");
-  const seed = fromHex("0x" + digits, "a seed");
-  if (seed.length < MIN_SEED_BYTES) {
-    throw new NotesError(`a seed has at least ${MIN_SEED_BYTES} bytes`);
-  }
-  return seed;
-}
-
-/**
- * The wallet seed from an owner-only file or, when none is named, from the line readLine gives;
- * never from the command line, which any local user can read.
- */
-export async function readSeed(seedFile: string | undefined, readLine: () => Promise<string>) {
-  return parseSeed(seedFile ? readPrivate(seedFile) : await readLine());
-}
-
-/** What `notes address` prints. */
-export function addressCommand(keys: WalletKeys): string {
-  return keys.address().hex() + "\n";
-}
 
 export interface CommandOptions {
   keys: WalletKeys;
@@ -165,11 +136,11 @@ export async function directSecretCommand(options: CommandOptions): Promise<stri
  * Runs body under the state file's lock, which serializes runs on one wallet, with the config,
  * the wallet's scanner (from the state file if there is one) and a save that writes it back.
  */
-async function withState<T>(
+async function withState(
   command: string,
   { keys, config: configPath, state: statePath }: CommandOptions,
-  body: (config: JsonObject, scanner: Scanner, save: () => void) => Promise<T>,
-): Promise<T> {
+  body: (config: JsonObject, scanner: Scanner, save: () => void) => Promise<string>,
+): Promise<string> {
   if (!configPath || !statePath) throw new NotesError(`${command} needs --config and --state`);
   return withLock(statePath, () => {
     const config = asObject(readJson(configPath), configPath);

@@ -58,7 +58,6 @@ async function exportVectors() {
   const p2 = (a: bigint, b: bigint) => hash([a, b]);
   const p3 = (a: bigint, b: bigint, c: bigint) => hash([a, b, c]);
 
-  /** Permutation-input vectors: zero, unit, counter and 13 LCG-seeded states. */
   function cases(n: number) {
     const next = lcg(42n, p);
     const states = [

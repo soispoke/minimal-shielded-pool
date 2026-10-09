@@ -41,9 +41,8 @@ const VERSION = 1;
 
 /** A receipt as exportReceipt builds it; the file keeps its key order. */
 export type Receipt = Awaited<ReturnType<typeof exportReceipt>>;
-export type ReceiptNote = Receipt["notes"][number];
 /** A note as verify reports it; spent is "not disclosed" without a nullifier key. */
-export interface VerifiedNote {
+interface VerifiedNote {
   cm: string;
   epoch: bigint;
   index: bigint;
@@ -279,7 +278,6 @@ async function verify(chain: Chain, receipt: unknown, poolCheck: PoolCheck) {
         origin = `deposit made from ${h}'s fourth frame`;
       }
     }
-    // Without a nullifier key, whether the note was spent is not disclosed.
     let spent = "not disclosed";
     let nf: bigint | undefined;
     if ("spent" in n) {
@@ -426,8 +424,7 @@ function lower(value: unknown, what: string): string {
  * sign passes, so that a negative index or value meets its range check.
  */
 function signedDec(value: unknown, what: string): bigint {
-  if (typeof value === "bigint") return value;
-  if (typeof value === "number" && Number.isSafeInteger(value)) return BigInt(value);
+  if (typeof value === "bigint" || Number.isSafeInteger(value)) return BigInt(value as bigint);
   if (typeof value === "string" && /^-?[0-9]+$/.test(value)) return BigInt(value);
   throw new InputError(`${what} must be an integer`);
 }

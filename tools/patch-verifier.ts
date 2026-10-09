@@ -15,7 +15,7 @@ import { runCli } from "../src/cli/args.ts";
 import { CheckError } from "../src/errors.ts";
 import { readText } from "./check.ts";
 
-export const VERIFIER = new URL("../core/contracts/src/Groth16Verifier.sol", import.meta.url);
+const VERIFIER = new URL("../core/contracts/src/Groth16Verifier.sol", import.meta.url);
 const NEEDLE = "staticcall(sub(gas(), 2000),";
 const REPLACEMENT = "staticcall(500000,";
 const MARKER = "// CANONICAL_PROOF_COORDINATES";

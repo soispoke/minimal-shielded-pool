@@ -59,7 +59,11 @@ export function hexPadded(value: bigint, digits: number): string {
   return "0x" + value.toString(16).padStart(digits, "0");
 }
 
-/** "0x"-prefixed hex of any length, as nodes write integers; null for any other form. */
+// Readers, one per written form of an integer or an address. A ...FromText reader returns null
+// for any other form, so that its caller can name its own refusal; a parse... reader throws an
+// InputError naming `what`.
+
+/** "0x" and hex digits, as nodes write quantities and words and fixtures write field elements. */
 export function hexFromText(text: unknown): bigint | null {
   return typeof text === "string" && /^0x[0-9a-fA-F]+$/.test(text) ? BigInt(text) : null;
 }
@@ -71,7 +75,12 @@ export function parseHex(text: unknown, what: string): bigint {
   return value;
 }
 
-/** A non-negative decimal integer, as a JSON number or a string of digits. */
+/**
+ * A non-negative decimal integer: a JSON number, a bigint (json.ts's parse returns one past
+ * 2^53), or decimal digits, leading zeros included. Configs, fixtures and state files hold
+ * integers this way, and the CLIs' decimal options take this form. Unlike parseUint it
+ * refuses 0x hex.
+ */
 export function parseDec(value: unknown, what: string): bigint {
   if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
     return BigInt(value);
@@ -81,20 +90,26 @@ export function parseDec(value: unknown, what: string): bigint {
   throw new InputError(`${what} must be a non-negative decimal integer`);
 }
 
-/** A non-negative integer written as decimal digits or "0x" hex, nothing else. */
-export function parseUint(text: unknown, what: string): bigint {
-  if (typeof text === "string" && /^0x[0-9a-fA-F]+$/.test(text)) return BigInt(text);
-  if (typeof text === "string" && /^[0-9]+$/.test(text)) return BigInt(text);
-  throw new InputError(`${what} must be a non-negative integer, in decimal or 0x hex`);
-}
-
 /**
- * A non-negative integer as a person or a node types it: "0x" hex, or decimal without leading
- * zeros, since 010 could mean ten or eight. Null for any other form, so that each caller names
- * its own refusal.
+ * A non-negative integer as a person or a node writes it: "0x" hex, or decimal without leading
+ * zeros, since 010 could mean ten or eight.
  */
 export function uintFromText(text: string): bigint | null {
   return /^(0x[0-9a-fA-F]+|0+|[1-9][0-9]*)$/.test(text) ? BigInt(text) : null;
+}
+
+/**
+ * uintFromText for text, or a JSON number or bigint as parseDec reads it. The command line, a
+ * block's slotNumber and a fixture's spend entries are read this way: nodes write hex, and so
+ * do the reference vectors' spend entries.
+ */
+export function parseUint(value: unknown, what: string): bigint {
+  if (typeof value !== "string") return parseDec(value, what);
+  const parsed = uintFromText(value);
+  if (parsed === null) {
+    throw new InputError(`${what} must be 0x hex or decimal without leading zeros`);
+  }
+  return parsed;
 }
 
 /**

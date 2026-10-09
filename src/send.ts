@@ -8,8 +8,8 @@
  */
 import { setTimeout as delay } from "node:timers/promises";
 
-import { hexPadded, maxBigint, parseDec, parseHex, toHex, uintFromText } from "./bytes.ts";
-import { InputError, PoolError } from "./errors.ts";
+import { hexPadded, maxBigint, parseHex, parseUint, toHex } from "./bytes.ts";
+import { PoolError } from "./errors.ts";
 import {
   addressOf,
   APPROVE,
@@ -113,34 +113,26 @@ const ACTION_REBUILD =
   "Fix the account calldata or limits and rebuild. The RPC has seen this signed spend, so " +
   "check that its nonce keys are unused before sending another.";
 
-/** Whether a simulated spend may be sent. */
-export interface SpendVerdict {
-  /** Progress lines to print before acting on the verdict. */
-  readonly notes: readonly string[];
-  /** Why the spend must not be sent, or null to send it. */
-  readonly refusal: string | null;
-}
-
 /**
- * Whether a simulated spend of `frameCount` frames may be sent. Every frame must succeed, except
- * a withdrawal's claim when `allowFailedClaim` is set: its credit then stays in the pool for a
- * later claim. A failed DEFAULT tail makes the node mark the simulation invalid though nothing
- * before it failed, so an invalid simulation gets through only for such a claim, and only once
- * settlement (frame 2) succeeded.
+ * Whether a simulated spend of `frameCount` frames may be sent: the progress lines to print
+ * before acting on the verdict, and why the spend must not be sent, or null to send it. Every
+ * frame must succeed, except a withdrawal's claim when `allowFailedClaim` is set: its credit
+ * then stays in the pool for a later claim. A failed DEFAULT tail makes the node mark the
+ * simulation invalid though nothing before it failed, so an invalid simulation gets through only
+ * for such a claim, and only once settlement (frame 2) succeeded.
  */
 export function spendVerdict(
   sim: Simulation,
   tailKind: TailKind,
   allowFailedClaim: boolean,
   frameCount: number,
-): SpendVerdict {
+): { notes: string[]; refusal: string | null } {
   const notes: string[] = [];
-  const refuse = (refusal: string): SpendVerdict => ({ notes, refusal });
+  const refuse = (refusal: string) => ({ notes, refusal });
   const { frames, result } = sim;
   const settled = frames[2]?.succeeded === true;
   const tailFailed = tailKind !== null && frames[3]?.succeeded !== true;
   if (!sim.valid) {
-    // An action that simulation shows failing is never broadcast.
     if (settled && tailKind === "action") {
       return refuse(
         "  simulate: settlement would succeed but the gas-only action frame would fail; not " +
@@ -192,10 +184,8 @@ export function spendVerdict(
 
 /**
  * Builds, simulates and sends a call or a spend and returns its receipt, or null after a dry
- * run. A spend is sent only if spendVerdict allows it, and keeps its SENDER limit: EIP-8037
- * state accounting varies too much for measured gas plus 25% to be a safe margin. A call may go
- * on the default limits when the node cannot simulate, and otherwise its SENDER frame is sized
- * from the simulated gas.
+ * run. A spend keeps its SENDER limit: EIP-8037 state accounting varies too much for measured
+ * gas plus 25% to be a safe margin.
  */
 export async function buildAndSend(
   node: PoolNode,
@@ -238,8 +228,6 @@ export async function buildAndSend(
       );
     }
   }
-  // The pool sends a spend at sequence 0 under its nullifier keys; a call goes from the key's
-  // account under key 0.
   const build = (senderGas = gas.SETTLE_FRAME_GAS): FrameTx => {
     const tx: FrameTx = {
       chainId,
@@ -280,8 +268,7 @@ export async function buildAndSend(
     return tx;
   };
   let tx = build();
-  let raw = toHex(rawTx(tx));
-  const sim = simulation(await node.simulate(raw));
+  const sim = simulation(await node.simulate(toHex(rawTx(tx))));
   const r = sim?.result ?? {};
   const { prefixShape: shape, payer, executionStatus: status } = r;
   const report = `shape=${show(shape)}  payer=${show(payer)}  status=${show(status)}`;
@@ -297,10 +284,10 @@ export async function buildAndSend(
     if (sim.gasUsed !== null) io.log(`           gas=${grouped(sim.gasUsed)}  (${per})`);
     return null;
   }
-  const logValid = ({ frames, gasUsed }: Simulation) => {
-    const per = frames.map((f, i) => `f${i}=${show(f.gasUsed)}`).join(", ");
-    io.log(`  simulate: valid  ${report}  gas=${show(gasUsed)}  (${per})`);
-  };
+  if (sim?.valid) {
+    const per = sim.frames.map((f, i) => `f${i}=${show(f.gasUsed)}`).join(", ");
+    io.log(`  simulate: valid  ${report}  gas=${show(sim.gasUsed)}  (${per})`);
+  }
 
   if (spend) {
     if (sim === null) {
@@ -310,7 +297,6 @@ export async function buildAndSend(
           "frame reverts burns the spent notes)",
       );
     }
-    if (sim.valid) logValid(sim);
     const allowFailedClaim = spend.allowFailedClaim === true;
     const verdict = spendVerdict(sim, tailKind, allowFailedClaim, tx.frames.length);
     for (const line of verdict.notes) io.log(line);
@@ -319,35 +305,30 @@ export async function buildAndSend(
     io.log("  simulate: ethrex_simulateFrameTransaction unavailable here; default gas limits");
   } else {
     if (!sim.valid) throw new PoolError(`  simulate: INVALID (${show(r.violation)}); not sending`);
-    logValid(sim);
-    let outcome = sim.result;
-    // A reverting SENDER still reports per-frame gas; only a successful one is a size.
+    if ((status ?? "success") !== "success") {
+      const hint =
+        value > 0n
+          ? `; this frame moves ${value} wei — if the sender is short after contract creates, ` +
+            "top up and redeploy from scratch"
+          : " (if root-not-recent, retry one block later)";
+      const error = r.executionError;
+      const cause = show(typeof error === "string" && error !== "" ? error : status);
+      throw new PoolError(`  simulate: execution did not succeed (${cause}); not sending${hint}`);
+    }
+    // Only a reported success is a size; a call whose status is missing keeps the default limit.
     const used = sim.frames.at(-1)?.gasUsed ?? null;
     if (used !== null && status === "success") {
       const sized = maxBigint(used + used / 4n, CALL_VERIFY_FRAME_GAS);
       const resized = build(sized);
-      const resizedRaw = toHex(rawTx(resized));
-      const check = simulation(await node.simulate(resizedRaw));
+      const check = simulation(await node.simulate(toHex(rawTx(resized))));
       if (check?.valid && check.result.executionStatus === "success") {
-        [tx, raw, outcome] = [resized, resizedRaw, check.result];
+        tx = resized;
         const measured = `measured ${grouped(used)} + 25%, floor 80k`;
         io.log(`  sized SENDER frame to ${grouped(sized)} gas (${measured})`);
       } else if (check?.valid) {
         const fallback = grouped(gas.SETTLE_FRAME_GAS);
         io.log(`  sized SENDER ${grouped(sized)} did not execute; keeping default ${fallback}`);
       }
-    }
-    if ((outcome.executionStatus ?? "success") !== "success") {
-      const hint =
-        value > 0n
-          ? `; this frame moves ${value} wei — if the sender is short after contract creates, ` +
-            "top up and redeploy from scratch"
-          : " (if root-not-recent, retry one block later)";
-      const error = outcome.executionError;
-      const cause = show(
-        typeof error === "string" && error !== "" ? error : outcome.executionStatus,
-      );
-      throw new PoolError(`  simulate: execution did not succeed (${cause}); not sending${hint}`);
     }
   }
 
@@ -356,7 +337,7 @@ export async function buildAndSend(
       `nonce_keys=[${tx.nonceKeys.join(", ")}] raw_len=${rawTx(tx).length} ` +
       `max_cost=${maxCost(tx)} sig_hash=${toHex(sigHash(tx)).slice(2, 20)}...`,
   );
-  const hash = await node.call("eth_sendRawTransaction", [raw]);
+  const hash = await node.call("eth_sendRawTransaction", [toHex(rawTx(tx))]);
   io.log(`  submitted: ${show(hash)}`);
   for (let poll = 0; poll < 30; poll++) {
     const receipt = await node.call("eth_getTransactionReceipt", [hash]);
@@ -462,9 +443,5 @@ export async function waitPublishedSlot(
   if (!isObject(block)) throw new PoolError("  publication block is no longer on the chain");
   const slot = block.slotNumber;
   if ((slot ?? "") === "") throw new PoolError("  publication block has no slotNumber");
-  const what = "the publication block's slotNumber";
-  const value = typeof slot === "string" ? uintFromText(slot) : parseDec(slot, what);
-  if (value === null)
-    throw new InputError(`${what} must be 0x hex or decimal without leading zeros`);
-  return value;
+  return parseUint(slot, "the publication block's slotNumber");
 }

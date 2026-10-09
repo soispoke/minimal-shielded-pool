@@ -74,19 +74,13 @@ const SPEC = {
   },
 } as const;
 
-const ACTION_OPTION_FLAGS: readonly string[] = [
-  "--action-target",
-  "--action-call",
-  "--action-gas",
-  "--action-state-gas",
-];
+const ACTION_OPTION_FLAGS = Object.keys(SPEC.options).filter((flag) =>
+  flag.startsWith("--action-"),
+);
 // Whole hex bytes, after an optional 0x or 0X.
 const CALL_FORM = /^(?:0[xX])?((?:[0-9a-fA-F]{2})*)$/;
 
-/**
- * One all-or-none custom tail from [flag, value, ...] pairs, or null when no action flag is
- * present. main passes --flag=value forms back as pairs, so they obey the same rules.
- */
+/** One all-or-none custom tail from [flag, value, ...] pairs, or null without action flags. */
 export function actionOptions(argv: readonly string[]): Action | null {
   const flags = ACTION_OPTION_FLAGS;
   const unknown = new Set(argv.filter((a) => a.startsWith("--action-") && !flags.includes(a)));
@@ -118,65 +112,12 @@ export function actionOptions(argv: readonly string[]): Action | null {
   };
 }
 
-/** One run of the pool CLI, as its command line names it. */
-export interface PoolCommand {
-  readonly rpc: string;
-  readonly config: string;
-  readonly fixture: string;
-  readonly op: "shield" | "publish" | "transfer" | "withdraw";
-  readonly dryRun: boolean;
-  /** publish: the epoch to publish, 0 by default. */
-  readonly epoch?: bigint;
-  /** shield: the index into a nonce-race fixture's shields. */
-  readonly note?: bigint;
-  /** A spend: the fixture key of its entry, the operation's name by default. */
-  readonly spendKey?: string;
-  /** A spend: the slot that published its root, the config's _slot_<op> by default. */
-  readonly rootSlot?: bigint;
-  /** A spend: the fee cap and tip in wei, in place of the defaults buildAndSend computes. */
-  readonly maxFee?: bigint;
-  readonly maxPriorityFee?: bigint;
-  readonly omitTail: boolean;
-  readonly allowFailedClaim: boolean;
-  readonly action: Action | null;
-}
-
 /** What in-process tests replace: the node, the deployed-code check, the sender, the key. */
 export interface Deps {
   readonly node?: PoolNode;
   readonly checkDeployedProfile?: typeof checkDeployedProfile;
   readonly buildAndSend?: typeof buildAndSend;
   readonly readFundedKey?: () => Promise<Uint8Array>;
-}
-
-/** Where poolCommand reports progress, and what Deps replaces. */
-export interface PoolCommandDeps extends Deps {
-  readonly log: (line: string) => void;
-}
-
-/** The command line `argv` (without node and the script), run against the real node by default. */
-export async function main(argv: readonly string[], deps: Deps = {}): Promise<void> {
-  const { positionals, options } = parseArgs(SPEC, argv);
-  // Flag-value pairs as the parser read them, so --flag=value forms obey the same tail rules.
-  const given: Record<string, unknown> = options;
-  const pairs = ACTION_OPTION_FLAGS.flatMap((flag) =>
-    (given[flag] as string[]).flatMap((value) => [flag, value]),
-  );
-  const command = {
-    ...positionals,
-    dryRun: options["--dry-run"],
-    epoch: options["--epoch"],
-    note: options["--note"],
-    spendKey: options["--spend-key"],
-    rootSlot: options["--root-slot"],
-    maxFee: options["--max-fee-per-gas"],
-    maxPriorityFee: options["--max-priority-fee-per-gas"],
-    omitTail: options["--no-tail"],
-    allowFailedClaim: options["--allow-failed-claim"],
-    action: actionOptions(pairs),
-  };
-  const log = (line: string) => process.stdout.write(line + "\n");
-  await poolCommand(command, { ...deps, log });
 }
 
 /** The shield or publish payer's key: a hidden prompt on a terminal, one line from a pipe. */
@@ -217,16 +158,28 @@ function fixtureShield(fix: JsonObject, note: bigint | undefined) {
 }
 
 /**
- * Runs one pool CLI operation. A config for another profile, and options that do not fit the
- * operation, are refused before any RPC; then the deployed pool is checked, except before a
- * publication, and the shield, publication or spend is built and sent.
+ * Runs the command line `argv` (without node and the script), against the real node by default.
+ * A config for another profile, and options that do not fit the operation, are refused before
+ * any RPC; then the deployed pool is checked, except before a publication, and the shield,
+ * publication or spend is built and sent.
  */
-export async function poolCommand(command: PoolCommand, deps: PoolCommandDeps): Promise<void> {
-  const { op, dryRun, action, omitTail, allowFailedClaim } = command;
-  const sendTx = deps.buildAndSend ?? buildAndSend;
-  const config = readJson(command.config);
-  const fix = readJson(command.fixture) as JsonObject;
-  const cfg = asObject(config, command.config);
+export async function main(argv: readonly string[], deps: Deps = {}): Promise<void> {
+  const { positionals, options } = parseArgs(SPEC, argv);
+  const { op } = positionals;
+  const dryRun = options["--dry-run"];
+  const omitTail = options["--no-tail"];
+  const allowFailedClaim = options["--allow-failed-claim"];
+  const maxFee = options["--max-fee-per-gas"];
+  const maxPriorityFee = options["--max-priority-fee-per-gas"];
+  // Flag-value pairs as the parser read them, so --flag=value forms obey the same tail rules.
+  const given: Record<string, unknown> = options;
+  const pairs = ACTION_OPTION_FLAGS.flatMap((flag) =>
+    (given[flag] as string[]).flatMap((value) => [flag, value]),
+  );
+  const action = actionOptions(pairs);
+  const config = readJson(positionals.config);
+  const fix = readJson(positionals.fixture) as JsonObject;
+  const cfg = asObject(config, positionals.config);
   const poolAddress = parseConfigAddress(cfg.pool, "the config's pool");
   const spend = op === "transfer" || op === "withdraw";
   // A config for another profile names a pool this tooling cannot spend from. The label is a
@@ -260,20 +213,20 @@ export async function poolCommand(command: PoolCommand, deps: PoolCommandDeps): 
   if (allowFailedClaim && omitTail) {
     throw new PoolError("--allow-failed-claim cannot be combined with --no-tail");
   }
-  const { maxFee, maxPriorityFee } = command;
   if ((maxFee !== undefined || maxPriorityFee !== undefined) && !spend) {
     throw new PoolError("fee overrides are valid only for transfer or withdraw");
   }
 
-  const node = deps.node ?? poolNode(command.rpc);
-  const io: SendIo = { log: deps.log };
+  const node = deps.node ?? poolNode(positionals.rpc);
+  const sendTx = deps.buildAndSend ?? buildAndSend;
+  const io: SendIo = { log: (line) => process.stdout.write(line + "\n") };
   const sendCall = async (value: bigint, calldata: Uint8Array) => {
     const call = { kind: "call", value, calldata } as const;
     const key = await (deps.readFundedKey ?? fundedKey)();
     return sendTx(node, io, key, poolAddress, call, { dryRun });
   };
   if (op === "publish") {
-    const epoch = command.epoch ?? 0n;
+    const epoch = options["--epoch"] ?? 0n;
     const calldata = protocol.encodePublish(epoch);
     io.log(`publishEpochRoot(${epoch}) via frame tx -> pool ${cfg.pool}`);
     const receipt = await sendCall(0n, calldata);
@@ -288,7 +241,7 @@ export async function poolCommand(command: PoolCommand, deps: PoolCommandDeps): 
   await checkDeployed(node, poolAddress, chainId, logic, verifier);
 
   if (op === "shield") {
-    const { value, inner, leaf, priorRoot, entry } = fixtureShield(fix, command.note);
+    const { value, inner, leaf, priorRoot, entry } = fixtureShield(fix, options["--note"]);
     // A missing inner is refused before the pool's tree is read; shieldCalldata checks its form.
     if (inner === undefined) throw new PoolError("the fixture does not record the shield's inner");
     await checkShieldFixture(node, poolAddress, chainId, fix, leaf, priorRoot);
@@ -312,11 +265,11 @@ export async function poolCommand(command: PoolCommand, deps: PoolCommandDeps): 
 
   // A nonce-race fixture holds two transfers against one root (--spend-key picks one), both
   // using the slot in which its second shield completed the tree (--root-slot).
-  const name = command.spendKey ?? op;
+  const name = options["--spend-key"] ?? op;
   const source = Object.hasOwn(fix, name) ? fix[name] : undefined;
   if (!isObject(source)) throw new PoolError(`the fixture has no spend entry ${name}`);
   const configured = `_slot_${op}`;
-  const slot = command.rootSlot ?? cfg[configured];
+  const slot = options["--root-slot"] ?? cfg[configured];
   if (slot === undefined) throw new PoolError(`the config has no ${configured}; pass --root-slot`);
   // --root-slot is already a bigint. A configured slot is a JSON integer or decimal digits; a
   // malformed string is reported as the spend entry's root_slot, anything else by its config key.

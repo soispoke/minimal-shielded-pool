@@ -11,7 +11,7 @@
 import { existsSync } from "node:fs";
 
 import { GeneratorError } from "../errors.ts";
-import { TEST_CHAIN_ID, TEST_POOL, type Prover } from "../fixtures.ts";
+import { TEST_CHAIN_ID, TEST_POOL } from "../fixtures.ts";
 import * as prover from "../prover.ts";
 import { generateSmoke } from "../smoke.ts";
 import { parseArgs, runCli } from "./args.ts";
@@ -33,15 +33,10 @@ const SPEC = {
   },
 } as const;
 
-/** What in-process tests replace: the prover, which by default is snarkjs with the real key. */
-export interface Deps {
-  readonly prover?: Prover;
-}
-
 /** The command line `argv` (without node and the script). */
-export async function main(argv: readonly string[], deps: Deps = {}): Promise<void> {
+async function main(argv: readonly string[]): Promise<void> {
   const { options } = parseArgs(SPEC, argv);
-  if (deps.prover === undefined && !existsSync(prover.ZKEY)) {
+  if (!existsSync(prover.ZKEY)) {
     throw new GeneratorError("run the setup first: (cd tools && ./setup.sh)");
   }
   try {
@@ -53,10 +48,10 @@ export async function main(argv: readonly string[], deps: Deps = {}): Promise<vo
         recipient: options["--recipient"],
         output: options["--output"],
       },
-      { prover: deps.prover ?? prover, log: (line) => process.stdout.write(line + "\n") },
+      { prover, log: (line) => process.stdout.write(line + "\n") },
     );
   } finally {
-    if (deps.prover === undefined) await prover.terminate();
+    await prover.terminate();
   }
 }
 

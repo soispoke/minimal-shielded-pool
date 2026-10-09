@@ -152,8 +152,21 @@ describe("command-line flags", () => {
       );
       for (const { op, code, stderr } of runs) {
         assert.equal(code, 2, `${op}: ${stderr}`);
-        assert.ok(stderr.includes("unrecognized arguments"), `${op}: ${stderr}`);
+        assert.ok(
+          stderr.endsWith(`: Unknown option '${typo.split("=")[0]}'\n`),
+          `${op}: ${stderr}`,
+        );
       }
+    });
+  }
+
+  // Only the last value of an integer flag is used, but every value is checked.
+  for (const first of ["-1", "007", "x"]) {
+    test(`--epoch=${first} --epoch=5 exits 2 before reading the missing config`, async () => {
+      const args = ["http://127.0.0.1:1", "missing-config.json", FIXTURE, "transfer"];
+      const { code, stderr } = await runPoolCli([...args, `--epoch=${first}`, "--epoch=5"]);
+      assert.equal(code, 2, stderr);
+      assert.ok(stderr.includes("--epoch must be 0x hex or decimal without leading zeros"), stderr);
     });
   }
 
@@ -371,13 +384,13 @@ describe("the pool CLI never echoes a key", { concurrency: 8 }, () => {
   });
 
   test("a key in place of the op is refused as an invalid choice", async () => {
-    refusedRun(await cli(...head, key), 2, "argument op: invalid choice");
+    refusedRun(await cli(...head, key), 2, "op must be one of shield, publish, transfer, withdraw");
   });
 
   // A flag is never an option's value: here --dry-run would stop being a dry run.
   test("a flag where an option's value belongs is refused", async () => {
     const args = [...head, "transfer", "--spend-key", "--dry-run"];
-    refusedRun(await cli(...args), 2, "argument --spend-key: expected one argument");
+    refusedRun(await cli(...args), 2, "Option '--spend-key' argument is ambiguous");
   });
 });
 

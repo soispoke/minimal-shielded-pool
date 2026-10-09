@@ -19,12 +19,11 @@ import { resolve } from "node:path";
 
 import { readText, ROOT, utf8 } from "./check.ts";
 
-export const SPEC_URL =
-  "https://raw.githubusercontent.com/soispoke/verified-shielded-pool/main/SPEC.md";
+const SPEC_URL = "https://raw.githubusercontent.com/soispoke/verified-shielded-pool/main/SPEC.md";
 // SPEC.md names the pinned files by their paths at the verified commit, before the repository
 // was reorganized. Look each one up where it lives now; a path not listed here (for example
 // one SPEC.md already gives in the new layout) is used as is.
-export const MOVED: ReadonlyMap<string, string> = new Map([
+const MOVED = new Map([
   ["build/spend.r1cs", "core/artifacts/spend.r1cs"],
   ["build/spend_final.zkey", "core/artifacts/spend_final.zkey"],
   ["circuits/spend.circom", "core/circuits/spend.circom"],
@@ -42,9 +41,9 @@ export const MOVED: ReadonlyMap<string, string> = new Map([
   ["contracts/src/PoseidonT4.sol", "core/contracts/src/PoseidonT4.sol"],
 ]);
 
-/** SPEC.md's text and where it came from: formal/SPEC.md under root, or a fetch. */
-export async function readSpec(root = ROOT): Promise<[text: string, source: string]> {
-  const local = resolve(root, "formal", "SPEC.md");
+/** SPEC.md's text and where it came from: formal/SPEC.md, or a fetch. */
+async function readSpec(): Promise<[text: string, source: string]> {
+  const local = resolve(ROOT, "formal", "SPEC.md");
   if (existsSync(local)) return [readText(local), "formal/SPEC.md"];
   const response = await fetch(SPEC_URL, { signal: AbortSignal.timeout(30_000) });
   if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
@@ -58,7 +57,7 @@ const backticked = (text: string) => [...text.matchAll(/`([^`]+)`/g)].map((m) =>
  * formal/tools/check_formal.py parses it. A row's first cell may list several files of one
  * directory, the first with its path and the rest by name.
  */
-export function pinned(spec: string): [name: string, sha256: string][] {
+function pinned(spec: string): [name: string, sha256: string][] {
   const lines = spec.split("## 2.")[0].split(/\r\n|\n|\r/);
   const pins: [string, string][] = [];
   for (const line of lines.filter((l) => l.startsWith("|")).slice(2)) {
@@ -79,17 +78,11 @@ export function pinned(spec: string): [name: string, sha256: string][] {
  * The lines to print for a SPEC.md text read from source, checking files under root, and the
  * summary for GitHub's step summary (null when nothing was checked).
  */
-export function report(
-  spec: string,
-  source: string,
-  root = ROOT,
-): { lines: string[]; summary: string | null } {
+export function report(spec: string, source: string, root = ROOT) {
   const pins = pinned(spec);
   if (pins.length === 0) {
-    return {
-      lines: [`::warning::no full SHA-256 pins found in ${source}; nothing checked`],
-      summary: null,
-    };
+    const warning = `::warning::no full SHA-256 pins found in ${source}; nothing checked`;
+    return { lines: [warning], summary: null };
   }
   const changed: string[] = [];
   for (const [name, want] of pins) {

@@ -1,14 +1,11 @@
 /**
- * Files that hold secrets: wallet seeds and states, fixtures with note openings and
- * authorizer keys, and disclosure receipts. Wallet states and fixtures are written by
- * writePrivate, receipts by writeNewPrivate, both creating the file owner-only (mode 0600);
- * seeds are only read. writePrivate moves a complete temporary file into place, so a reader
- * never sees one half written, and refuses to write when the path no longer holds what its
- * caller's check saw there; writeNewPrivate refuses any file already there. Only readPrivate,
- * which reads seeds and wallet states, refuses a file its group or others have any permission
- * on: fixtures and receipts are read without that check. A file this module refuses is an
- * InputError; one that changed after it was checked is a FileChangedError, which each caller
- * words for its own users.
+ * Files that hold secrets: wallet seeds and states, fixtures with note openings and authorizer
+ * keys, and disclosure receipts. Wallet states and fixtures are written by writePrivate,
+ * receipts by writeNewPrivate, both creating the file owner-only (mode 0600); seeds are only
+ * read. Only readPrivate, which reads seeds and wallet states, refuses a file its group or
+ * others have any permission on: fixtures and receipts are read without that check. A file
+ * this module refuses is an InputError; one that changed after it was checked is a
+ * FileChangedError, which each caller words for its own users.
  */
 import { randomBytes } from "node:crypto";
 import {
@@ -43,18 +40,12 @@ export interface FileIdentity {
 
 /** The identity of the file at path (following links), or null if nothing is there. */
 export function fileIdentity(path: string): FileIdentity | null {
-  try {
-    const st = statSync(path, { bigint: true });
-    return { ino: st.ino, mtimeNs: st.mtimeNs, size: st.size };
-  } catch (error) {
-    if (errorCode(error) === "ENOENT") return null;
-    throw error;
-  }
+  const st = unlessMissing(() => statSync(path, { bigint: true }));
+  return st === null ? null : { ino: st.ino, mtimeNs: st.mtimeNs, size: st.size };
 }
 
-export function sameFile(a: FileIdentity | null, b: FileIdentity | null): boolean {
-  if (a === null || b === null) return a === b;
-  return a.ino === b.ino && a.mtimeNs === b.mtimeNs && a.size === b.size;
+function sameFile(a: FileIdentity | null, b: FileIdentity): boolean {
+  return a !== null && a.ino === b.ino && a.mtimeNs === b.mtimeNs && a.size === b.size;
 }
 
 /**
@@ -87,14 +78,13 @@ export function writePrivate(path: string, text: string, previous?: FileIdentity
         throw new FileChangedError(`${path} appeared since it was checked`);
       }
       unlinkSync(temporary);
+    } else if (previous !== undefined && !sameFile(fileIdentity(path), previous)) {
+      throw new FileChangedError(`${path} changed since it was checked`);
     } else {
-      if (previous !== undefined && !sameFile(fileIdentity(path), previous)) {
-        throw new FileChangedError(`${path} changed since it was checked`);
-      }
       renameSync(temporary, path);
     }
   } catch (error) {
-    removeIfPresent(temporary);
+    unlessMissing(() => unlinkSync(temporary));
     throw error;
   }
 }
@@ -136,19 +126,17 @@ export function readJson(path: string, read: (path: string) => string = readText
 // Strict UTF-8: a lossy decode would read a damaged file as some other text. \r\n and \r read
 // as \n, and a byte order mark is kept, so a JSON file that starts with one is refused.
 function readText(path: string, bytes: Uint8Array = readFileSync(path)): string {
-  let text: string;
   try {
-    text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
+      .decode(bytes)
+      .replace(/\r\n?/g, "\n");
   } catch {
     throw new InputError(`${path} is not UTF-8 text`);
   }
-  return text.replace(/\r\n?/g, "\n");
 }
 
 function refuseShared(path: string, mode: number): void {
-  if (mode & 0o077) {
-    throw new InputError(`${path} is readable by other users; chmod 600 it first`);
-  }
+  if (mode & 0o077) throw new InputError(`${path} is readable by other users; chmod 600 it first`);
 }
 
 /**
@@ -156,17 +144,11 @@ function refuseShared(path: string, mode: number): void {
  * any link, even a dangling one, so a link planted at the path cannot redirect the write.
  */
 export function writeNewPrivate(path: string, text: string): void {
-  let fd: number;
   try {
-    fd = openSync(path, "wx", 0o600);
+    writeFileSync(path, text, { flag: "wx", mode: 0o600 });
   } catch (error) {
     if (errorCode(error) === "EEXIST") throw new InputError(`${path} exists`);
     throw error;
-  }
-  try {
-    writeFileSync(fd, text);
-  } finally {
-    closeSync(fd);
   }
 }
 
@@ -180,10 +162,10 @@ export function writeNewPrivate(path: string, text: string): void {
 export async function withLock<T>(
   statePath: string,
   body: () => T | Promise<T>,
-  options: { waitMs?: number; pollMs?: number } = {},
+  { waitMs = 60_000 } = {},
 ): Promise<T> {
   const lock = `${statePath}.lock.d`;
-  const deadline = Date.now() + (options.waitMs ?? 60_000);
+  const deadline = Date.now() + waitMs;
   for (;;) {
     try {
       mkdirSync(lock, 0o700);
@@ -196,15 +178,9 @@ export async function withLock<T>(
         `${lock} is held by another run; if no other run is active, remove it and try again`,
       );
     }
-    await sleep(options.pollMs ?? 100);
+    await sleep(100);
   }
-  const release = () => {
-    try {
-      rmdirSync(lock);
-    } catch (error) {
-      if (errorCode(error) !== "ENOENT") throw error;
-    }
-  };
+  const release = () => unlessMissing(() => rmdirSync(lock));
   process.on("exit", release);
   try {
     return await body();
@@ -214,11 +190,13 @@ export async function withLock<T>(
   }
 }
 
-function removeIfPresent(path: string): void {
+/** What f returns, or null when it fails because its path does not exist. */
+function unlessMissing<T>(f: () => T): T | null {
   try {
-    unlinkSync(path);
+    return f();
   } catch (error) {
-    if (errorCode(error) !== "ENOENT") throw error;
+    if (errorCode(error) === "ENOENT") return null;
+    throw error;
   }
 }
 

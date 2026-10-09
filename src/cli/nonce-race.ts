@@ -8,7 +8,7 @@
  * is refused off the test chain and with --rpc: pass --random there. The fixture holds the
  * only openings of its notes, so it goes under the ignored artifacts/ by default.
  */
-import { TEST_CHAIN_ID, type Prover } from "../fixtures.ts";
+import { TEST_CHAIN_ID } from "../fixtures.ts";
 import { generateNonceRace } from "../nonce-race.ts";
 import * as prover from "../prover.ts";
 import { parseArgs, runCli } from "./args.ts";
@@ -32,13 +32,8 @@ const SPEC = {
   },
 } as const;
 
-/** What in-process tests replace: the prover, which by default is snarkjs with the real key. */
-export interface Deps {
-  readonly prover?: Prover;
-}
-
 /** The command line `argv` (without node and the script). */
-export async function main(argv: readonly string[], deps: Deps = {}): Promise<void> {
+async function main(argv: readonly string[]): Promise<void> {
   const { options } = parseArgs(SPEC, argv);
   try {
     await generateNonceRace(
@@ -51,10 +46,10 @@ export async function main(argv: readonly string[], deps: Deps = {}): Promise<vo
         rpc: options["--rpc"],
         output: options["--output"],
       },
-      { prover: deps.prover ?? prover, log: (line) => process.stdout.write(line + "\n") },
+      { prover, log: (line) => process.stdout.write(line + "\n") },
     );
   } finally {
-    if (deps.prover === undefined) await prover.terminate();
+    await prover.terminate();
   }
 }
 

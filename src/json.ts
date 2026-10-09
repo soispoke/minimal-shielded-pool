@@ -8,7 +8,6 @@ import { InputError } from "./errors.ts";
 /** A parsed JSON object: not null and not an array. */
 export type JsonObject = Record<string, unknown>;
 
-/** Whether a parsed JSON value is an object. */
 export function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -25,19 +24,17 @@ export function asList(value: unknown, what: string): unknown[] {
   return value;
 }
 
-type Reviver = (key: string, value: unknown, context?: { source?: string }) => unknown;
-
 /** JSON.parse, except an integer outside the safe range comes back as a bigint. */
 export function parse(text: string): unknown {
   // The reviver's context.source is the literal's text, before it was rounded.
-  const reviver: Reviver = (_key, value, context) =>
+  return JSON.parse(text, (_key, value, context?: { source?: string }) =>
     typeof value === "number" &&
     !Number.isSafeInteger(value) &&
     context?.source !== undefined &&
     /^-?[0-9]+$/.test(context.source)
       ? BigInt(context.source)
-      : value;
-  return JSON.parse(text, reviver);
+      : value,
+  );
 }
 
 /**
@@ -48,9 +45,7 @@ export function parse(text: string): unknown {
  * key order mixes them (the native storage maps) are built as Maps.
  */
 export function stringify(value: unknown, indent = 0): string {
-  const text = write(value, { indent: " ".repeat(indent), sortKeys: false, canonical: false }, "");
-  if (text === undefined) throw new TypeError("cannot write undefined as JSON");
-  return text;
+  return write(value, { indent: " ".repeat(indent), canonical: false }, "") ?? refuseUndefined();
 }
 
 /**
@@ -59,14 +54,15 @@ export function stringify(value: unknown, indent = 0): string {
  * the native proof cache keys its files on it, so changing it would orphan existing caches.
  */
 export function canonical(value: unknown): string {
-  const text = write(value, { indent: "", sortKeys: true, canonical: true }, "");
-  if (text === undefined) throw new TypeError("cannot write undefined as JSON");
-  return text;
+  return write(value, { indent: "", canonical: true }, "") ?? refuseUndefined();
+}
+
+function refuseUndefined(): never {
+  throw new TypeError("cannot write undefined as JSON");
 }
 
 interface Style {
   indent: string;
-  sortKeys: boolean;
   canonical: boolean;
 }
 
@@ -76,11 +72,10 @@ function write(value: unknown, style: Style, prefix: string): string | undefined
     case "string":
       return style.canonical ? asciiString(value) : JSON.stringify(value);
     case "number":
+    case "boolean":
       return JSON.stringify(value);
     case "bigint":
       return value.toString();
-    case "boolean":
-      return value ? "true" : "false";
     case "undefined":
     case "function":
     case "symbol":
@@ -97,18 +92,12 @@ function write(value: unknown, style: Style, prefix: string): string | undefined
     const items = Array.from(value, (item) => write(item, style, nested) ?? "null");
     return "[" + open + items.join(comma) + close + "]";
   }
+  const proto = Object.getPrototypeOf(value);
   let entries: [string, unknown][];
-  if (value instanceof Map) {
-    entries = [...value].map(([key, item]) => [String(key), item]);
-  } else if (
-    Object.getPrototypeOf(value) === Object.prototype ||
-    Object.getPrototypeOf(value) === null
-  ) {
-    entries = Object.entries(value as object);
-  } else {
-    throw new TypeError(`cannot write ${Object.prototype.toString.call(value)} as JSON`);
-  }
-  if (style.sortKeys) entries.sort(([a], [b]) => byCodePoint(a, b));
+  if (value instanceof Map) entries = [...value].map(([key, item]) => [String(key), item]);
+  else if (proto === Object.prototype || proto === null) entries = Object.entries(value as object);
+  else throw new TypeError(`cannot write ${Object.prototype.toString.call(value)} as JSON`);
+  if (style.canonical) entries.sort(([a], [b]) => byCodePoint(a, b));
   const members: string[] = [];
   for (const [key, item] of entries) {
     const text = write(item, style, nested);
@@ -143,12 +132,9 @@ const SHORT_ESCAPES: Record<string, string> = {
 };
 
 function asciiString(text: string): string {
-  return (
-    '"' +
-    text.replace(
-      /["\\]|[^ -~]/g,
-      (c) => SHORT_ESCAPES[c] ?? "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"),
-    ) +
-    '"'
+  const escaped = text.replace(
+    /["\\]|[^ -~]/g,
+    (c) => SHORT_ESCAPES[c] ?? "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"),
   );
+  return `"${escaped}"`;
 }

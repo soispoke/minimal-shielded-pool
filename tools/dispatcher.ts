@@ -59,12 +59,11 @@ function which(name: string): string | undefined {
 }
 
 /**
- * The pinned compiler. The list is a fallback chain, so a candidate of the wrong version is
- * skipped: otherwise any `solc` on PATH (the one a package manager or a shim happens to expose)
- * would hide the pinned install below it, and only the pinned compiler reproduces the committed
- * initcode. An explicit SOLC of the wrong version is refused, because naming a binary by hand
- * and getting a different compiler is a mistake worth reporting. CI has solc 0.8.30 only because
- * `forge build` installs it under ~/.svm first.
+ * The pinned compiler, the only one that reproduces the committed initcode. A candidate of the
+ * wrong version is skipped, so a `solc` that a package manager or shim puts on PATH cannot hide
+ * the pinned install below it; an explicit SOLC of the wrong version is refused, since naming a
+ * binary by hand and getting another compiler is a mistake worth reporting. CI has solc 0.8.30
+ * only because `forge build` installs it under ~/.svm first.
  */
 function solcBinary(): string {
   const svm = (root: string) => join(root, SOLC_VERSION, `solc-${SOLC_VERSION}`);
@@ -89,21 +88,15 @@ function solcBinary(): string {
   throw new CheckError(`solc ${SOLC_VERSION} not found${detail}; set SOLC to the pinned binary`);
 }
 
-let compiled: Uint8Array | undefined;
-
-/** The dispatcher's bare initcode, compiled once per process. */
+/** The dispatcher's bare initcode. */
 function compiledInitcode(): Uint8Array {
-  if (compiled) return compiled;
   const args = ["--strict-assembly", "--optimize", "--optimize-runs", "200", "--bin"];
   const { stdout, stderr } = capture(solcBinary(), [...args, basename(SOURCE)], dirname(SOURCE));
   const marker = "Binary representation:\n";
   const at = stdout.indexOf(marker);
   if (at < 0) throw new CheckError(`could not parse solc output: ${stdout}\n${stderr}`);
-  const hex = stdout
-    .slice(at + marker.length)
-    .split("\n")[0]
-    .trim();
-  return (compiled = fromHex(`0x${hex}`, "solc's binary output"));
+  const [hex] = stdout.slice(at + marker.length).split("\n");
+  return fromHex(`0x${hex.trim()}`, "solc's binary output");
 }
 
 /** The deploy initcode: the compiled dispatcher, then word(impl) and word(verifier). */
@@ -143,7 +136,7 @@ function main(argv: readonly string[]): void {
     ] as const;
     const { options, positionals: args } = parseArgs({ ...SPEC, positionals }, argv);
     if (options["--artifact"]) {
-      throw new UsageError(SPEC, "argument --artifact: not allowed with argument --initcode");
+      throw new UsageError(SPEC, "--artifact cannot be combined with --initcode");
     }
     process.stdout.write(toHex(initcode(address(args.impl), address(args.verifier))) + "\n");
   } else if (parseArgs(SPEC, argv).options["--artifact"]) {
@@ -152,7 +145,7 @@ function main(argv: readonly string[]): void {
     writeFileSync(ARTIFACT, toHex(compiledInitcode()));
     process.stdout.write(ARTIFACT + "\n");
   } else {
-    throw new UsageError(SPEC, "one of the arguments --initcode --artifact is required");
+    throw new UsageError(SPEC, "missing --initcode or --artifact");
   }
 }
 

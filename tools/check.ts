@@ -13,12 +13,10 @@ export const ROOT = resolve(import.meta.dirname, "..");
 /** Strict UTF-8 that keeps a leading byte order mark: the text is exactly the file's bytes. */
 export const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
-/** The text of a file, decoded as strict UTF-8. */
 export function readText(path: string | URL): string {
   return utf8.decode(readFileSync(path));
 }
 
-/** Refuses with message unless condition holds. */
 export function check(condition: boolean, message: string): asserts condition {
   if (!condition) throw new CheckError(message);
 }

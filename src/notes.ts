@@ -160,6 +160,13 @@ export function outputCommitment(owner: bigint, rho: bigint, value: bigint): big
 
 // ---- keys and addresses ----
 
+/** The bytes of hex with or without "0x", as a person pastes a seed or an address. */
+export function pastedHex(text: string, what: string): Uint8Array {
+  const digits = text.replace(/^0x/, "");
+  if (!/^([0-9a-fA-F]{2})*$/.test(digits)) throw new NotesError(`${what} is hex`);
+  return fromHex("0x" + digits, what);
+}
+
 // Node imports ML-KEM-768 keys (OID 2.16.840.1.101.3.4.4.2) only as DER: PKCS#8 holding the
 // FIPS 203 seed d || z, and SPKI holding the 1,184-byte encapsulation key.
 const PKCS8_SEED = Buffer.from("3054020100300b060960864801650304040204428040", "hex");
@@ -204,12 +211,9 @@ export class Address {
     return toHex(this.encode());
   }
 
-  /** An address from its bytes or hex ("0x" optional), with its owner key and ek checked. */
+  /** An address from its bytes or hex, with its owner key and ek checked. */
   static decode(data: string | Uint8Array): Address {
-    if (typeof data === "string") {
-      if (!/^(0x)?([0-9a-fA-F]{2})*$/.test(data)) throw new NotesError("an address is hex");
-      data = fromHex("0x" + data.replace(/^0x/, ""), "an address");
-    }
+    if (typeof data === "string") data = pastedHex(data, "an address");
     if (data.length !== ADDRESS_BYTES || data[0] !== ADDRESS_VERSION) {
       throw new NotesError(
         `an address is ${ADDRESS_BYTES} bytes starting with version ${ADDRESS_VERSION}`,
@@ -300,18 +304,14 @@ export function outgoingToJson(channel: Outgoing) {
 
 export function outgoingFromJson(data: unknown): Outgoing {
   const d = asObject(data, "a channel");
-  const ciphertextSent = bool(d.ciphertext_sent, "ciphertext_sent");
+  const sent = d.ciphertext_sent;
+  if (typeof sent !== "boolean") throw new NotesError("ciphertext_sent is not true or false");
   return outgoing(parseHex(d.owner_pk, "owner_pk"), fromHex(d.secret, "secret"), {
     nextIndex: parseDec(d.next_index, "next_index"),
     ciphertext: fromHex(d.ciphertext, "ciphertext"),
-    ciphertextSent,
+    ciphertextSent: sent,
     confirmed: parseDec(d.confirmed, "confirmed"),
   });
-}
-
-function bool(value: unknown, what: string): boolean {
-  if (typeof value === "boolean") return value;
-  throw new NotesError(`${what} is not true or false`);
 }
 
 /** ML-KEM-768 encapsulation to an encapsulation key; tests replay recorded pairs instead. */
@@ -340,10 +340,7 @@ export function directChannel(owner: bigint, secret: Uint8Array): Outgoing {
   return outgoing(owner, secret.slice());
 }
 
-/**
- * What selfChannel reads from a scan: a Scanner (src/scan.ts) has these fields. Naming them here
- * keeps this module free of the scanner, which is built on it.
- */
+/** What selfChannel reads from a Scanner, named here since src/scan.ts imports this module. */
 type ScanResult = {
   readonly keys: WalletKeys;
   readonly incoming: readonly { readonly kind: string; readonly nextIndex: bigint }[];

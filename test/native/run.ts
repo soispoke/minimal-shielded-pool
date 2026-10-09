@@ -15,14 +15,6 @@ const HERE = import.meta.dirname;
 const REPO = join(HERE, "..", "..");
 
 type Env = NodeJS.ProcessEnv;
-/** Runs a command and returns its exit status; tests pass a stub. */
-export type Exec = (argv: string[], options: { cwd: string; env?: Env }) => number | null;
-
-const spawnInherited: Exec = (argv, options) => {
-  const result = spawnSync(argv[0], argv.slice(1), { ...options, stdio: "inherit" });
-  if (result.error) throw new CheckError(`cannot run ${argv[0]}: ${result.error.message}`);
-  return result.status;
-};
 
 /**
  * The absolute path as the kernel resolves it: each symlink is followed before the ".." after
@@ -61,17 +53,19 @@ const SPEC = {
   },
 } as const;
 
-export function main(argv: readonly string[], exec: Exec = spawnInherited): void {
+function main(argv: readonly string[]): void {
   const { options } = parseArgs(SPEC, argv);
   const given = options["--ethrex-source"] ?? process.env.ETHREX_SOURCE;
   if (!given) throw new CheckError("--ethrex-source or ETHREX_SOURCE is required");
   const source = resolveSource(given);
   verifyEthrex(source);
 
-  const run = (command: string[], env?: Env) => {
-    process.stdout.write(`+ ${command.join(" ")}\n`);
-    const status = exec(command, { cwd: REPO, env });
-    if (status !== 0) throw new CheckError(`${command.join(" ")} exited with status ${status}`);
+  const run = ([program, ...args]: string[], env?: Env) => {
+    const command = [program, ...args].join(" ");
+    process.stdout.write(`+ ${command}\n`);
+    const result = spawnSync(program, args, { cwd: REPO, env, stdio: "inherit" });
+    if (result.error) throw new CheckError(`cannot run ${program}: ${result.error.message}`);
+    if (result.status !== 0) throw new CheckError(`${command} exited with status ${result.status}`);
   };
   if (!options["--skip-generate"]) {
     const forge = ["forge", "build", "--root", "core/contracts", "--force"];
