@@ -4,8 +4,9 @@
  * and a note's position find the spend that published its nullifier, and the proof ties that
  * nullifier to exactly this note, yet only spend_key can spend. A receipt proves these links and
  * amounts, not who presents it or where the funds came from before the deposit. Notes paid to
- * one address share its spend key, so their nk covers every note of that address in the epoch:
- * export refuses such a key unless --address-wide accepts that, and marks those notes.
+ * one address share its spend key, so their nk covers every note of that address in the epoch.
+ * Export cannot tell such a key from one a single note uses, so it refuses the key of every real
+ * note unless --address-wide accepts that, and marks those notes.
  */
 import { existsSync } from "node:fs";
 
@@ -85,15 +86,17 @@ export async function exportReceipt(
 
   const fx = asObject(fixture, "the fixture");
   const notes = openings(fx);
-  // Spend keys that more than one note shares: an address's, under note delivery. A fixture made
-  // with src/notes.ts names its wallets' seeds, and any key two real notes share is one too.
+  // Spend keys that other notes may share. Every real note src/notes.ts makes is an address's
+  // and carries its spend key, and a seed has an address for every account number, so export
+  // cannot rule out that a real note's key is an address's: it counts every one. A dummy input's
+  // key is drawn for that spend alone, unless a real note or the account-0 address of a wallet
+  // the fixture names has it too.
   const shared = new Set<bigint>();
   for (const wallet of Object.values(asObject(fx.wallets ?? {}, "the fixture's wallets"))) {
     const seed = fromHex(asObject(wallet, "a wallet").seed, "a wallet's seed");
     shared.add(new WalletKeys(seed).spendKey);
   }
-  const keys = [...notes.values()].filter((note) => note.value !== 0n).map((note) => note.sk);
-  for (const [i, sk] of keys.entries()) if (keys.indexOf(sk) !== i) shared.add(sk);
+  for (const note of notes.values()) if (note.value !== 0n) shared.add(note.sk);
 
   const out = [];
   // Real notes first, then dummies, each by commitment.
