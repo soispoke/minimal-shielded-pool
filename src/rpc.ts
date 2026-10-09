@@ -1,0 +1,286 @@
+/**
+ * The one JSON-RPC client. A node that answered with a JSON-RPC error gave a verdict
+ * (RpcError); one that could not be reached or did not speak JSON-RPC gave none
+ * (RpcTransportError), and refusals depend on the difference. Node's fetch honours HTTP_PROXY,
+ * HTTPS_PROXY and NO_PROXY when NODE_USE_ENV_PROXY=1 is set.
+ *
+ * RpcChain is the read-only view of the chain that disclosure and note scanning use. Whatever
+ * stops it answering, a node it cannot reach, an answer it cannot read or a transaction it does
+ * not hold, is a ChainError; disclosure refuses the claim that needed the answer.
+ */
+import { fromHex, hexPadded, parseAddress, parseHex, toHex } from "./bytes.ts";
+import { UserError } from "./errors.ts";
+import { isObject, parse, stringify } from "./json.ts";
+import { NONCE_MANAGER_ADDRESS, nonceKeySlot } from "./protocol.ts";
+
+/** The node answered with a JSON-RPC error object, or with neither error nor result. */
+export class RpcError extends UserError {
+  /** The error object as text, or "no result". */
+  readonly detail: string;
+  /** The error object's numeric code, when it has one. */
+  readonly code: number | undefined;
+
+  constructor(method: string, error: unknown) {
+    const detail =
+      error === undefined ? "no result" : typeof error === "string" ? error : stringify(error);
+    super(`${method} -> ${detail}`);
+    this.detail = detail;
+    const code = isObject(error) ? error.code : undefined;
+    this.code = typeof code === "number" ? code : undefined;
+  }
+}
+
+/** The node could not be reached, timed out, answered a non-2xx status or not with JSON-RPC. */
+export class RpcTransportError extends UserError {
+  readonly reason: string;
+
+  constructor(method: string, reason: string) {
+    super(`${method} request failed: ${reason}`);
+    this.reason = reason;
+  }
+}
+
+/** A Chain could not answer: its node failed or answered badly, or it lacks the transaction. */
+export class ChainError extends UserError {}
+
+/**
+ * One JSON-RPC call, returning the reply's result, including null. The pool uses a 20 s
+ * timeout, disclosure, notes and the generators 30 s. A redirect is refused rather than
+ * followed, and no failure reason repeats the URL, which can carry an API key.
+ */
+export async function rpc(
+  url: string,
+  method: string,
+  params: readonly unknown[],
+  { timeoutMs }: { timeoutMs: number },
+): Promise<unknown> {
+  const body = stringify({ jsonrpc: "2.0", id: 1, method, params });
+  const fail = (reason: string) => new RpcTransportError(method, reason);
+  if (!URL.canParse(url) || !/^https?:$/.test(new URL(url).protocol)) {
+    throw fail("not a valid HTTP URL");
+  }
+  let response: Response;
+  let text: string;
+  try {
+    const headers = { "content-type": "application/json" };
+    const signal = AbortSignal.timeout(timeoutMs);
+    response = await fetch(url, { method: "POST", headers, body, redirect: "error", signal });
+    text = await response.text();
+  } catch (error) {
+    throw fail(transportReason(error, timeoutMs));
+  }
+  if (!response.ok) throw fail(`HTTP ${response.status}`);
+  let reply: unknown;
+  try {
+    reply = parse(text);
+  } catch {
+    throw fail("the reply is not JSON");
+  }
+  if (!isObject(reply)) throw fail("the reply is not a JSON-RPC object");
+  if (Object.hasOwn(reply, "error")) throw new RpcError(method, reply.error);
+  if (!Object.hasOwn(reply, "result")) throw new RpcError(method, undefined);
+  return reply.result;
+}
+
+// Node's error codes (ECONNREFUSED, ENOTFOUND) and fetch's own reasons ("unexpected
+// redirect", "bad port") name no host, unlike the full error messages.
+function transportReason(error: unknown, timeoutMs: number): string {
+  if (error instanceof DOMException && error.name === "TimeoutError") {
+    return `timed out after ${timeoutMs} ms`;
+  }
+  const cause = (error as { cause?: { code?: unknown; message?: unknown } } | undefined)?.cause;
+  if (typeof cause?.code === "string") return cause.code;
+  if (typeof cause?.message === "string" && !cause.message.includes(":")) return cause.message;
+  return "the node could not be reached";
+}
+
+// ---- the chain, as disclosure and note scanning read it ----
+
+/** A log as the node returns it; only these fields are read. */
+export interface RawLog {
+  readonly address: string;
+  readonly topics: readonly string[];
+  readonly data: string;
+}
+
+/** A log from eth_getLogs, with its transaction hash in lower case. */
+export type ChainLog = RawLog & { readonly tx: string };
+
+export interface ChainFrame {
+  readonly mode: bigint;
+  /** The frame's target; a frame without one calls the transaction's sender. */
+  readonly to: bigint;
+  readonly data: Uint8Array;
+  readonly status: bigint;
+  readonly logs: readonly RawLog[];
+}
+
+export interface ChainTransaction {
+  readonly hash: string;
+  readonly sender: bigint;
+  readonly block: bigint;
+  readonly frames: readonly ChainFrame[];
+  readonly logs: readonly RawLog[];
+}
+
+type Awaitable<T> = T | Promise<T>;
+
+/**
+ * What disclosure reads from a chain. A method that cannot answer throws a ChainError. Test
+ * chains may answer synchronously.
+ */
+export interface Chain {
+  chainId(): Awaitable<bigint>;
+  finalizedBlock(): Awaitable<bigint>;
+  transaction(hash: string): Awaitable<ChainTransaction>;
+  logs(
+    address: bigint,
+    topics: readonly unknown[],
+    fromBlock?: bigint,
+  ): Awaitable<readonly ChainLog[]>;
+  nonceUsed(sender: bigint, key: bigint): Awaitable<boolean>;
+}
+
+/** A node read over JSON-RPC. Any failure, a malformed answer included, is a ChainError. */
+export class RpcChain implements Chain {
+  readonly url: string;
+  readonly timeoutMs: number;
+
+  constructor(url: string, options: { timeoutMs?: number } = {}) {
+    this.url = url;
+    this.timeoutMs = options.timeoutMs ?? 30_000;
+  }
+
+  /** One call; tests override it to replay canned answers. */
+  async call(method: string, params: readonly unknown[]): Promise<unknown> {
+    try {
+      return await rpc(this.url, method, params, { timeoutMs: this.timeoutMs });
+    } catch (error) {
+      const cause = { cause: error };
+      if (error instanceof RpcTransportError) {
+        throw new ChainError(`${method} request failed: ${error.reason}`, cause);
+      }
+      if (error instanceof RpcError) {
+        throw new ChainError(`${method} failed: ${error.detail}`, cause);
+      }
+      throw error;
+    }
+  }
+
+  async chainId(): Promise<bigint> {
+    const result = await this.call("eth_chainId", []);
+    return answer("eth_chainId", () => parseHex(result, "the chain id"));
+  }
+
+  async finalizedBlock(): Promise<bigint> {
+    const block = await this.call("eth_getBlockByNumber", ["finalized", false]);
+    return answer("eth_getBlockByNumber", () => {
+      if (!isObject(block)) throw new Error("the node has no finalized block");
+      return parseHex(block.number, "the block number");
+    });
+  }
+
+  /** Whether EIP-8250's nonce manager has consumed this sender's nonce key. */
+  async nonceUsed(sender: bigint, key: bigint): Promise<boolean> {
+    const manager = hexPadded(NONCE_MANAGER_ADDRESS, 40);
+    const slot = toHex(nonceKeySlot(sender, key));
+    const result = await this.call("eth_getStorageAt", [manager, slot, "latest"]);
+    return answer("eth_getStorageAt", () => parseHex(result, "the storage word") !== 0n);
+  }
+
+  /** A transaction with its frames and their outcomes, both looked up before either is read. */
+  async transaction(hash: string): Promise<ChainTransaction> {
+    const tx = await this.call("eth_getTransactionByHash", [hash]);
+    const receipt = await this.call("eth_getTransactionReceipt", [hash]);
+    // A node answers null for a hash it does not know.
+    if (tx === null || receipt === null) {
+      throw new ChainError(`transaction ${hash} is not on this chain`);
+    }
+    return answer(hash, () => {
+      if (!isObject(tx) || !isObject(receipt)) throw new Error("not an object");
+      // EIP-8141 frame transactions name their sender; legacy ones use from.
+      const named = tx.sender ?? tx.from;
+      if (named === undefined) throw new Error("the transaction names no sender");
+      const sender = parseAddress(named, "sender");
+      const frames = optionalList(tx.frames, "frames");
+      const outcomes = optionalList(receipt.frameReceipts, "frameReceipts");
+      if (frames.length !== outcomes.length) {
+        throw new Error("frames and frame receipts differ in number");
+      }
+      return {
+        hash,
+        sender,
+        block: parseHex(receipt.blockNumber, "blockNumber"),
+        frames: frames.map((frame, i): ChainFrame => {
+          const outcome = outcomes[i];
+          if (!isObject(frame) || !isObject(outcome)) throw new Error("a frame is not an object");
+          return {
+            mode: parseHex(frame.mode, "mode"),
+            to: frame.to == null ? sender : parseAddress(frame.to, "to"),
+            data: fromHex(frame.data, "frame data"),
+            status: parseHex(outcome.status, "status"),
+            logs: rawLogs(outcome.logs),
+          };
+        }),
+        logs: rawLogs(receipt.logs),
+      };
+    });
+  }
+
+  /** The pool's logs from fromBlock to the head, in one eth_getLogs call. */
+  async logs(address: bigint, topics: readonly unknown[], fromBlock = 0n): Promise<ChainLog[]> {
+    const filter = {
+      address: hexPadded(address, 40),
+      topics,
+      fromBlock: hexPadded(fromBlock, 1),
+      toBlock: "latest",
+    };
+    const found = await this.call("eth_getLogs", [filter]);
+    return answer("eth_getLogs", () => {
+      if (!Array.isArray(found)) throw new Error("not a list of logs");
+      return found.map((log: unknown) => {
+        const tx = isObject(log) ? log.transactionHash : undefined;
+        if (typeof tx !== "string") throw new Error("a log has no transactionHash");
+        return { tx: tx.toLowerCase(), ...rawLog(log) };
+      });
+    });
+  }
+}
+
+// Any parse failure inside an answer is the node's fault, reported as such.
+function answer<T>(what: string, read: () => T): T {
+  try {
+    return read();
+  } catch (error) {
+    if (!(error instanceof Error) || error instanceof ChainError) throw error;
+    const message = `unexpected RPC response for ${what}: ${error.message}`;
+    throw new ChainError(message, { cause: error });
+  }
+}
+
+// A legacy transaction has no frames or frame receipts: the node leaves them out or writes null.
+function optionalList(value: unknown, what: string): unknown[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error(`${what} is not a list`);
+  return value;
+}
+
+// A frame that failed may report null logs; it emitted none.
+function rawLogs(value: unknown): RawLog[] {
+  if (value === null) return [];
+  if (!Array.isArray(value)) throw new Error("logs is not a list");
+  return value.map(rawLog);
+}
+
+function rawLog(log: unknown): RawLog {
+  if (
+    !isObject(log) ||
+    typeof log.address !== "string" ||
+    typeof log.data !== "string" ||
+    !Array.isArray(log.topics) ||
+    !log.topics.every((topic) => typeof topic === "string")
+  ) {
+    throw new Error("a log lacks its address, topics or data");
+  }
+  return { address: log.address, topics: log.topics as string[], data: log.data };
+}

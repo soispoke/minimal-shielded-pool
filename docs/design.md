@@ -90,52 +90,75 @@ epoch first, so settlement never fails for lack of room.
 
 ## Settlement gas is pinned
 
-The dispatcher pins the settlement frame at 2,000,000 execution gas and 550,000
-state gas, because running out after approval burns the notes. The highest
-settlement the native suite measures, carrying a first payment's notes, is
-1,435,539 gas, so the limit is a measurement with margin, not a proof. The
-validation limits are wallet defaults in `sdk/gas_profile.py`, because a
-validation limit that is too low only makes the transaction invalid before any
-key is consumed. A repricing that makes settlement more expensive needs a new
-pool. A repricing of validation needs only new defaults and a regenerated
-manifest, as long as the proof check still fits the 500,000 gas the dispatcher
-forwards to the verifier.
+The dispatcher pins the settlement frame's execution and state gas (the
+README's [frame table](../README.md#transactions)), because running out after
+approval burns the notes. The limits sit above the highest settlement the
+[native suite](../test/native/README.md) measures, which carries a first
+payment's notes, so they are a measurement with margin, not a proof. The
+validation limits are wallet defaults in `src/gas.ts`, because a validation
+limit that is too low only makes the transaction invalid before any key is
+consumed. A repricing that makes settlement more expensive needs a new pool. A
+repricing of validation needs only new defaults and a regenerated manifest, as
+long as the proof check still fits the fixed gas the dispatcher forwards to the
+verifier.
 
 ## The client and its cross-checks
 
-The client in `sdk/` is Python. It calls snarkjs to prove, Foundry's `cast` to
-encode calls and `cryptography` (OpenSSL) to encrypt notes, and JavaScript
-appears only in the pinned circuit toolchain in `tools/`. Because the client
-reimplements Poseidon, the tree, the statement and the transaction encoding,
-the tests check it against independent sources: Poseidon against circomlibjs
-vectors, witnesses and statements against the committed R1CS and a real proof
-(`test/test_occurrence.py`), the smoke fixture's proof against the Solidity
-verifier in Forge, and the whole pool with real proofs and signed transactions
-in the pinned ethrex VM (`test/native/`).
+The client in `src/` is TypeScript, run by Node without a build step. It proves
+with snarkjs as a library, encodes calls itself in `src/protocol.ts`, signs with
+@noble/curves and encrypts notes with ML-KEM-768 and ChaCha20-Poly1305 from
+`node:crypto`, so it starts no other program. The tools and the node:test suites
+are TypeScript too, apart from the setup and deployment shell scripts; the Forge
+tests are Solidity and the native harness is Rust. Because the client
+reimplements Poseidon, the tree, the statement and the transaction encoding, the
+tests check it against independent sources: Poseidon against circomlibjs vectors
+(`test/poseidon.test.ts`), witnesses and statements against the committed R1CS
+and a real proof (`test/occurrence.test.ts`), the smoke fixture's proof against
+the Solidity verifier in Forge, and the whole pool with real proofs and signed
+transactions in the pinned ethrex VM (`test/native/`).
+
+The client replaced a Python one, and the reference vectors in
+`test/vectors/reference/` pin the Python client's behaviour. The Python client
+at commit `2386147` computed them, and `test/reference.test.ts` checks the
+TypeScript against every case: hashes, trees and witnesses, encodings and gas
+figures, signatures, and note delivery. The vectors are never regenerated from
+the TypeScript: a deliberate change to an encoding or hash updates the affected
+vectors in the same commit and says why. The fixture generators draw by default
+from a seeded stream (`src/random.ts`) rather than Python's generator, so the
+committed smoke fixture's random values differ from the Python's;
+`test/random.test.ts` pins that stream, and the Python's own fixture stays in
+the reference vectors.
 
 ## Changing the tree or the statement
 
 A change to the tree or the statement touches all of these:
 
 - the circuit, then the artifacts and the verifier (`tools/setup.sh` runs a
-  test setup, not a ceremony);
-- the dispatcher's statement handling, its frame data length pins (288 bytes
-  for the proof, 484 or 1,572 for settlement with its notes), the `settle`
-  selector and the constructor's empty root;
+  test setup, not a ceremony, and `tools/patch-verifier.ts` patches the
+  verifier it exports);
+- the dispatcher's statement handling, its frame data length pins (in the
+  README's [frame table](../README.md#transactions)), the `settle` selector
+  and the constructor's empty root;
 - `ShieldedPoolLogic`'s tree constants, `Spend` struct, storage layout,
-  insertion and epoch roll, the Forge tests and the Python tests in `test/`;
-- the client: `sdk/wallet.py`, `sdk/pool_frametx.py`, `sdk/notes.py`, whose
+  insertion and epoch roll, and the Forge tests;
+- the client's shared definitions in `src/protocol.ts`: the note hashes,
+  nullifier, statement and compression, the `Spend` fields, selectors, events,
+  ABI encoders and empty root, with the frame data sizes in `src/gas.ts`;
+- the client code built on them: `src/wallet.ts` (tree and witness),
+  `src/pool.ts` (frames and the deployed-profile checks), `src/notes.ts`, whose
   scanner rebuilds positions from `LeafAppended` and tracks spends by
-  nullifier, and `sdk/disclosure.py`, which repeats the nullifier formula and
-  the `Spend` fields;
-- `sdk/poseidon_bn254.py`, `tools/export_vectors.js` and `test/vectors/`, if
-  the change needs a new hash arity, and a new Poseidon library from
-  `tools/gen_poseidon_sol.py` and `tools/split_poseidon.py` if the contracts
-  need it too;
-- the fixture generators: `sdk/gen_smoke.py`, `sdk/gen_nonce_race.py` and
-  `test/native/scripts/generate_fixtures.py`;
+  nullifier, and `src/disclosure.ts`, which decodes `settle` calls and
+  recomputes nullifiers from disclosed keys;
+- `src/poseidon.ts`, `tools/export-vectors.ts` and `test/vectors/`, if the
+  change needs a new hash arity, and new Poseidon libraries from
+  `tools/poseidon-sol.ts` if the contracts need it too;
+- the fixture generators (`src/smoke.ts`, `src/nonce-race.ts` and
+  `test/native/scripts/generate-fixtures.ts`), the committed smoke fixture and
+  the TypeScript tests;
+- the reference vectors whose values the change alters, updated as described
+  above;
 - gas: re-measure the worst settlement in the native suite, then update the
-  pins, `sdk/gas_profile.py` and the gas checks;
+  pins, `src/gas.ts` and `tools/check-gas-profile.ts`;
 - the activation manifest, the activation check's profiles, a new pool profile
   and a fresh deployment. The formal proofs stop covering the changed files
   until their pins are updated.

@@ -5,23 +5,47 @@ native LEVM from ethrex `247e2dd2c4d4c526dcc64ac1c025bd2319e7a10e`. They deploy
 the contracts from this checkout and check frame results, nonce keys, tree
 storage, withdrawal credits, recipient balances and gas payments.
 
-Run after installing the repository's Python, Node, Foundry and Rust dependencies:
+They need Node 24.7 or later with `npm ci` run at the repository root,
+[Foundry](https://getfoundry.sh) (CI uses 1.7.1), Rust (CI uses 1.93.0) and a
+checkout of lambdaclass/ethrex at that commit. The dispatcher is compiled with
+solc 0.8.30, which `forge build` installs; `SOLC` can name another copy of that
+version. Then run:
 
 ```sh
-ETHREX_SOURCE=/path/to/pinned/ethrex python3 test/native/run.py
+node test/native/run.ts --ethrex-source /path/to/pinned/ethrex
 ```
 
-Add `--offline` when Cargo dependencies are cached. `--skip-generate` reuses
-locally generated vectors; a normal run recompiles contracts and regenerates
-vectors. Cached proofs are keyed by their witness, proving key and circuit
-WASM. No setup ceremony runs here. The repository's proving key is test-only.
-Generated vectors and proof files are ignored by Git; the reports are kept.
+`ETHREX_SOURCE` can name the checkout instead, and `just native PATH` runs the
+same command. `run.ts` first checks the checkout against the pinned hashes in
+`ethrex-source-sha256.json`. A normal run then rebuilds the contracts with
+Forge, in the default and `libsmall` profiles, and writes the vectors under
+`test/native/fixtures/` with `node test/native/scripts/generate-fixtures.ts`.
+`--skip-generate` reuses the vectors already there, and `--offline` passes
+`--offline` to Cargo when its dependencies are cached.
+
+Proofs are cached with the vectors, keyed by their witness, proving key and
+circuit WASM, so a run proves only what changed. With `--cache-only`,
+`generate-fixtures.ts` fails on a proof missing from the cache instead of
+proving it. `run.ts` does not pass it; it is for running the generator by hand
+after the Forge builds, followed by `run.ts --skip-generate`. No setup ceremony
+runs here, and the repository's proving key is test-only.
+Generated vectors and proof files are ignored by Git. The two reports,
+`native-report.json` and `policy-report.json`, are tracked, so a run changes
+them by design.
 
 The recorded run passes 77 native scenarios and two client-policy tests, using
 32 real Groth16 proofs. The highest measured settlement execution cost is
 1,435,539 gas (long carry plus withdrawal credit, with a first payment's
 notes). The conservative five-slot state test uses 489,600 state gas, below the
-550,000 cap. The reports contain each transaction hash and per-frame results.
+pinned state limit. The reports contain each transaction hash and per-frame
+results. This suite, not Forge, bounds settlement gas, because it deploys the
+`libsmall` Poseidon builds a real pool uses, while the Forge suite runs the
+via-IR builds, about 10% cheaper per hash.
+
+The recorded reports come from a run on the TypeScript generator's fixtures.
+Regenerating them reproduces the hash of every transaction without a proof;
+a proof-carrying transaction matches only when the local proof cache still
+holds its proof, since Groth16 proving is randomized.
 
 The scenarios cover both copies of identical funded deposits being withdrawn
 in one history, an identical private output and its original both being spent,
@@ -109,13 +133,16 @@ transactions. Two additional tests inject conservative storage-bound states
 (an empty active epoch and a zero frontier); those states are not claimed to
 have been reached by deposits.
 
-The settlement profile allows 2,000,000 execution gas and 550,000 state gas.
-`run.py` checks the ethrex source against the pinned `247e2dd2` hashes. To
-run the same fixtures on another revision, such as the live client
-`bdfc5d8f`, generate them with `run.py`, then run `cargo test` with a
+The settlement limits are in the README's
+[frame table](../../README.md#transactions). `run.ts` refuses an ethrex source
+that does not match the pinned `247e2dd2` hashes. To run the same fixtures on
+another revision, such as the live client `bdfc5d8f`, generate them with
+`run.ts`, then run `cargo test` with a
 `Cargo.toml` made from `Cargo.toml.in` whose `@ETHREX@` names that source and
 with `ETHREX_SOURCE` set to it. The report names the revision it ran on, with
-`-dirty` if that source has local changes.
+`-dirty` if that source has local changes. On `bdfc5d8f`, 88 commits older,
+the same scenarios gave identical results, gas included, before notes were
+added.
 
 The old-limit regression deploys a separate dispatcher with only the pinned
 settlement limit changed back to 1.4 million. It requires settlement to fail
@@ -134,5 +161,6 @@ charge disabled, so it tests keyed concurrency and the Profile 2 checks, not
 the width budget, which on a default node refuses the second spend until the
 pool has earned width. This is not a test of full
 blockchain admission, inclusion-list omission processing, block import or
-networking. The 235,800 declared validation budget still exceeds the standard
-100,000 public-mempool default and requires the existing testnet profile.
+networking. The declared validation budget still exceeds EIP-8141's
+public-mempool default ([README](../../README.md#deployment)) and needs the
+testnet's policy.

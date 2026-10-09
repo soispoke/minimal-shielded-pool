@@ -19,11 +19,11 @@ export ETH_KEYSTORE=$DEPLOYER_KEYSTORE ETH_PASSWORD=$DEPLOYER_PASSWORD_FILE
   exit 1
 }
 MANIFEST=../core/activation_manifest.testbed.json
-python3 check_activation.py "$MANIFEST" --allow-testbed
+node check-activation.ts "$MANIFEST" --allow-testbed
 
 BN=../core/contracts
 PRICE=(--gas-price 3000000000 --priority-gas-price 1000000000)
-SMOKE_OUTPUT=${SMOKE_OUTPUT:-../sdk/artifacts/smoke_fixture.live.json}
+SMOKE_OUTPUT=${SMOKE_OUTPUT:-../artifacts/smoke_fixture.live.json}
 # An earlier run's fixture holds the only secrets of the notes it left behind.
 [[ ! -e $SMOKE_OUTPUT ]] || {
   echo "$SMOKE_OUTPUT exists and may hold the only secrets of unspent notes; move it or set SMOKE_OUTPUT" >&2
@@ -32,11 +32,22 @@ SMOKE_OUTPUT=${SMOKE_OUTPUT:-../sdk/artifacts/smoke_fixture.live.json}
 # forge resolves its settings from foundry.toml, FOUNDRY_* variables in any case,
 # .env files and the global config, and every check below compares the chain with
 # that same local build. Compare what forge would use with the manifest's pins.
-python3 check_forge_config.py "$MANIFEST" "$BN"
+node check-forge-config.ts "$MANIFEST" "$BN"
 deployed() { grep -oE 'Deployed to: 0x[0-9a-fA-F]{40}' | awk '{print $3}'; }
-addr_of() { python3 -c 'import json,sys; print(json.load(sys.stdin)["contractAddress"])'; }
-# Cast annotates large ints as "550000000000000000 [5.5e17]". int() needs the first token.
-cast_uint() { python3 -c 'import sys; print(int(sys.argv[1].strip().split()[0], 0))' "$1"; }
+# -e fails on a missing or null address instead of printing "null".
+addr_of() { jq -er '.contractAddress'; }
+# Cast annotates large ints as "550000000000000000 [5.5e17]". Keep the first token, which must
+# be 0x hex or a decimal without leading zeros: BigInt("") would read an empty answer as 0.
+cast_uint() {
+  node -e 'const t = process.argv[1].trim().split(/\s+/)[0];
+    if (!/^(0x[0-9a-fA-F]+|0+|[1-9][0-9]*)$/.test(t)) process.exit(1);
+    console.log(BigInt(t).toString())' "$1"
+}
+# Balances outgrow Bash's 64-bit arithmetic: "uint_math add A B" or "uint_math sub A B".
+uint_math() {
+  node -e 'const [a, b] = process.argv.slice(2).map((x) => (/^[0-9]+$/.test(x) ? BigInt(x) : process.exit(1)));
+    console.log(String(process.argv[1] === "add" ? a + b : a - b))' "$@"
+}
 # These checks run on the left of `||`, where Bash ignores `set -e`, so every
 # read and comparison returns its own failure. Otherwise only the last line
 # would decide the result.
@@ -51,20 +62,33 @@ verify_library_runtime() {
 verify_logic_runtime() {
   local addr=$1 expected=$2 actual t3 t4
   actual=$(cast code "$addr" --rpc-url "$RPC") || return 1
-  python3 - "$actual" "$expected" "$BN/out/ShieldedPoolLogic.sol/ShieldedPoolLogic.json" <<'PY' || return 1
-import json, sys
-actual = bytearray.fromhex(sys.argv[1][2:])
-expected = bytearray.fromhex(sys.argv[2][2:])
-refs = json.load(open(sys.argv[3]))["deployedBytecode"]["immutableReferences"]
-if len(actual) != len(expected):
-    raise SystemExit(1)
-for locations in refs.values():
-    for item in locations:
-        start, length = item["start"], item["length"]
-        actual[start:start + length] = b"\0" * length
-        expected[start:start + length] = b"\0" * length
-raise SystemExit(0 if actual == expected else 1)
-PY
+  # Zero the immutables, which the simulated deployment cannot know, then compare. The script
+  # is indented: a line holding only "}" would end this function for test/deploy.test.ts.
+  node - "$actual" "$expected" "$BN/out/ShieldedPoolLogic.sol/ShieldedPoolLogic.json" <<'JS' || return 1
+    const [actualHex, expectedHex, artifact] = process.argv.slice(2);
+    const hex = /^0x([0-9a-fA-F]{2})*$/;
+    if (!hex.test(actualHex) || !hex.test(expectedHex)) process.exit(1);
+    const actual = Buffer.from(actualHex.slice(2), "hex");
+    const expected = Buffer.from(expectedHex.slice(2), "hex");
+    // Strict UTF-8, and an offset written as 1.0 or 1e0 is not an integer.
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true })
+      .decode(require("node:fs").readFileSync(artifact));
+    const integer = (_, v, c) => (typeof v === "number" && !/^-?[0-9]+$/.test(c.source) ? NaN : v);
+    const refs = JSON.parse(text, integer).deployedBytecode.immutableReferences;
+    const isMap = typeof refs === "object" && refs !== null && !Array.isArray(refs);
+    if (actual.length !== expected.length || !isMap) process.exit(1);
+    for (const locations of Object.values(refs)) {
+      for (const { start, length } of locations) {
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(length)) process.exit(1);
+        if (start < 0 || length < 0) process.exit(1);
+        // A region past the end has nothing to zero, and both copies are clamped alike.
+        const [from, to] = [start, start + length].map((i) => Math.min(i, actual.length));
+        actual.fill(0, from, to);
+        expected.fill(0, from, to);
+      }
+    }
+    process.exit(actual.equals(expected) ? 0 : 1);
+JS
   t3=$(cast call "$addr" 'POSEIDON_T3()(address)' --rpc-url "$RPC") || return 1
   t4=$(cast call "$addr" 'POSEIDON_T4()(address)' --rpc-url "$RPC") || return 1
   [[ $t3 == "$T3" && $t4 == "$T4" ]]
@@ -147,29 +171,29 @@ echo "    rejecter=$REJECTER"
 echo "==> deployment-bound proofs"
 # Fresh secrets: with the fixed fixture seed, anyone could rebuild these notes'
 # keys and one-time authorizers and sweep what a live run leaves behind.
-python3 ../sdk/gen_smoke.py --random --chain-id="$CHAIN_ID" --pool-address="$POOL" \
+node ../src/cli/smoke.ts --random --chain-id="$CHAIN_ID" --pool-address="$POOL" \
   --recipient="$REJECTER" --output="$SMOKE_OUTPUT"
 
 # The shield below checks the label, chain, and deployed code against this stub, so it
 # carries the profile and the logic and verifier verified above.
-MANIFEST_PATH=$MANIFEST python3 - "$RPC" "$POOL" "$LOGIC" "$VERIFIER" <<'PY'
-import json, os, sys
-manifest = json.load(open(os.environ["MANIFEST_PATH"]))["profile"]
-with open("../core/deploy_config.json", "w") as f:
-    json.dump({"rpc": sys.argv[1], "pool": sys.argv[2], "logic": sys.argv[3],
-               "verifier": sys.argv[4], "chainId": manifest["chain_id"],
-               "profile": manifest["wire_profile"]}, f, indent=1)
-PY
+MANIFEST_PATH=$MANIFEST node - "$RPC" "$POOL" "$LOGIC" "$VERIFIER" <<'JS'
+const fs = require("node:fs");
+const [rpc, pool, logic, verifier] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST_PATH, "utf8")).profile;
+const need = (key) => (Object.hasOwn(manifest, key) ? manifest[key] : process.exit(1));
+const stub = { rpc, pool, logic, verifier, chainId: need("chain_id"), profile: need("wire_profile") };
+fs.writeFileSync("../core/deploy_config.json", JSON.stringify(stub, null, 1));
+JS
 
 echo "==> shield fixture note"
-funded_key | python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" shield
+funded_key | node ../src/cli/pool.ts "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" shield
 
 # Publish the current tree root and echo the EIP-7843 slot its block landed in. Each
 # spend proof is bound to the root that existed when it was generated, so a spend that
 # changes the tree invalidates the root the next one needs: the transfer and the withdraw
 # are bound to different roots and each needs its own publication.
 publish_root() {
-  funded_key | python3 -u ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json ../core/deploy_config.json publish --epoch 0 \
+  funded_key | node ../src/cli/pool.ts "$RPC" ../core/deploy_config.json ../core/deploy_config.json publish --epoch 0 \
     | tee /dev/stderr \
     | sed -n 's/^ROOT_SLOT //p' | tail -1
 }
@@ -178,31 +202,31 @@ echo "==> publish authenticated post-shield root"
 ROOT_SLOT_DEC=$(publish_root) || exit 1
 [[ -n $ROOT_SLOT_DEC ]] || { echo "publishEpochRoot did not emit ROOT_SLOT" >&2; exit 1; }
 
-MANIFEST_PATH=$MANIFEST python3 - "$RPC" "$POOL" "$VERIFIER" "$T3" "$T4" "$LOGIC" "$SOURCE0" "$DOMAIN" "$ROOT_SLOT_DEC" <<'PY'
-import json, os, sys
-keys = ["rpc", "pool", "verifier", "poseidonT3", "poseidonT4", "logic",
-        "sourceIdEpoch0", "domain", "_slot_transfer"]
-cfg = dict(zip(keys, sys.argv[1:]))
-# The gas figures come from the manifest this deployment was actually gated on, not
-# from literals. A deployment of the updated dispatcher that wrote the frozen profile's
-# 2,000,000 single budget would hand the spend wallet budgets belonging to a contract it
-# is not talking to, and the resulting settlement failures look like proof errors.
-manifest = json.load(open(os.environ["MANIFEST_PATH"]))["profile"]
-# This file is the deployment record, and tools/check_gas_profile.py reads the
-# budgets back.
-cfg.update({"chainId": manifest["chain_id"], "profile": manifest["wire_profile"],
-            "verifyGas": manifest["verify_frame_gas"],
-            "settleGas": manifest["settle_frame_gas"],
-            "testbedProvingKey": True,
-            "settleStateGas": manifest["settle_frame_state_gas"],
-            "verifyStateGas": manifest["verify_frame_state_gas"],
-            "recentRootGas": manifest["recent_root_frame_gas"],
-            "claimGas": manifest["claim_frame_gas"],
-            "claimStateGas": manifest["claim_frame_state_gas"]})
-with open("../core/deploy_config.json", "w") as f:
-    json.dump(cfg, f, indent=1)
-print("wrote ../core/deploy_config.json")
-PY
+MANIFEST_PATH=$MANIFEST node - "$RPC" "$POOL" "$VERIFIER" "$T3" "$T4" "$LOGIC" "$SOURCE0" "$DOMAIN" "$ROOT_SLOT_DEC" <<'JS'
+const fs = require("node:fs");
+const keys = ["rpc", "pool", "verifier", "poseidonT3", "poseidonT4", "logic",
+  "sourceIdEpoch0", "domain", "_slot_transfer"];
+const cfg = Object.fromEntries(keys.map((key, i) => [key, process.argv[i + 2]]));
+// The gas figures come from the manifest this deployment was actually gated on, not
+// from literals. A deployment of the updated dispatcher that wrote the frozen profile's
+// 2,000,000 single budget would hand the spend wallet budgets belonging to a contract it
+// is not talking to, and the resulting settlement failures look like proof errors.
+const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST_PATH, "utf8")).profile;
+const need = (key) => (Object.hasOwn(manifest, key) ? manifest[key] : process.exit(1));
+// This file is the deployment record, and tools/check-gas-profile.ts reads the
+// budgets back.
+Object.assign(cfg, { chainId: need("chain_id"), profile: need("wire_profile"),
+  verifyGas: need("verify_frame_gas"),
+  settleGas: need("settle_frame_gas"),
+  testbedProvingKey: true,
+  settleStateGas: need("settle_frame_state_gas"),
+  verifyStateGas: need("verify_frame_state_gas"),
+  recentRootGas: need("recent_root_frame_gas"),
+  claimGas: need("claim_frame_gas"),
+  claimStateGas: need("claim_frame_state_gas") });
+fs.writeFileSync("../core/deploy_config.json", JSON.stringify(cfg, null, 1));
+console.log("wrote ../core/deploy_config.json");
+JS
 
 echo "==> deployed testbed pool"
 echo "    fixture=$SMOKE_OUTPUT"
@@ -213,46 +237,46 @@ echo "    root slot=$ROOT_SLOT_DEC (EIP-7843 slotNumber, not block timestamp)"
 # settlement frame's gas. SPEND=0 skips them for a deployment that only publishes a pool.
 if [[ ${SPEND:-1} == 1 ]]; then
   echo "==> transfer (shielded spend, note -> note)"
-  python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" transfer
+  node ../src/cli/pool.ts "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" transfer
 
   # The transfer inserted two commitments, so the root the withdraw proof was generated
   # against is the post-transfer one, not the post-shield one already published. Publish
   # again and record its slot under the key the withdraw reads.
   echo "==> publish authenticated post-transfer root"
   WITHDRAW_SLOT=$(publish_root) || exit 1
-  python3 - "$WITHDRAW_SLOT" <<'PY'
-import json, sys
-cfg = json.load(open("../core/deploy_config.json"))
-cfg["_slot_withdraw"] = sys.argv[1]
-json.dump(cfg, open("../core/deploy_config.json", "w"), indent=1)
-print(f"    withdraw root slot={sys.argv[1]}")
-PY
+  node - "$WITHDRAW_SLOT" <<'JS'
+const fs = require("node:fs");
+const cfg = JSON.parse(fs.readFileSync("../core/deploy_config.json", "utf8"));
+cfg._slot_withdraw = process.argv[2];
+fs.writeFileSync("../core/deploy_config.json", JSON.stringify(cfg, null, 1));
+console.log(`    withdraw root slot=${process.argv[2]}`);
+JS
 
   # Leave real withdrawalCredit on the recipient so the existing
   # credit_before + publicAmount check is not vacuously 0 + publicAmount.
   # Alice's change exits to the same recipient; sinks do not change the root.
   echo "==> seed prior credit (withdraw_seed claim expected to revert)"
-  python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" withdraw \
+  node ../src/cli/pool.ts "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" withdraw \
     --spend-key withdraw_seed --allow-failed-claim
 
-  RECIPIENT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["recipient"])' "$SMOKE_OUTPUT")
-  SEED_AMOUNT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["withdraw_seed"]["public_amount"])' "$SMOKE_OUTPUT")
-  PUBLIC_AMOUNT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["withdraw"]["public_amount"])' "$SMOKE_OUTPUT")
+  # The fixture holds these as JSON strings; -e fails on a missing or null one.
+  RECIPIENT=$(jq -er '.recipient' "$SMOKE_OUTPUT")
+  SEED_AMOUNT=$(jq -er '.withdraw_seed.public_amount' "$SMOKE_OUTPUT")
+  PUBLIC_AMOUNT=$(jq -er '.withdraw.public_amount' "$SMOKE_OUTPUT")
   CREDIT_BEFORE=$(cast_uint "$(cast call "$POOL" 'withdrawalCredit(address)(uint256)' "$RECIPIENT" --rpc-url "$RPC")")
   [[ "$CREDIT_BEFORE" == "$SEED_AMOUNT" && "$CREDIT_BEFORE" != 0 ]] || {
     echo "seed did not leave expected credit: got $CREDIT_BEFORE want $SEED_AMOUNT" >&2; exit 1; }
   cast send "$REJECTER" 'setReject(bool)' false --rpc-url "$RPC" \
     "${PRICE[@]}" --gas-limit 100000 >/dev/null
   BEFORE=$(cast_uint "$(cast balance "$RECIPIENT" --rpc-url "$RPC")")
-  EXPECTED=$(python3 -c 'import sys; print(int(sys.argv[1]) + int(sys.argv[2]))' "$CREDIT_BEFORE" "$PUBLIC_AMOUNT")
+  EXPECTED=$(uint_math add "$CREDIT_BEFORE" "$PUBLIC_AMOUNT")
   echo "==> withdraw (shielded spend + claim, note -> recipient $RECIPIENT, expecting +$EXPECTED wei including prior credit $CREDIT_BEFORE)"
-  python3 ../sdk/pool_frametx.py "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" withdraw
+  node ../src/cli/pool.ts "$RPC" ../core/deploy_config.json "$SMOKE_OUTPUT" withdraw
   AFTER=$(cast_uint "$(cast balance "$RECIPIENT" --rpc-url "$RPC")")
   CREDIT_AFTER=$(cast_uint "$(cast call "$POOL" 'withdrawalCredit(address)(uint256)' "$RECIPIENT" --rpc-url "$RPC")")
-  # Balances outgrow bash's 64-bit arithmetic after a few ETH, so subtract in python.
   # claimWithdrawal pays all credit already held for the recipient, not just this
   # spend's publicAmount.
-  PAID=$(python3 -c 'import sys; print(int(sys.argv[1]) - int(sys.argv[2]))' "$AFTER" "$BEFORE")
+  PAID=$(uint_math sub "$AFTER" "$BEFORE")
   [[ $PAID == "$EXPECTED" ]] || {
     echo "withdraw paid $PAID wei to the recipient, expected $EXPECTED" >&2; exit 1; }
   [[ $CREDIT_AFTER == 0 ]] || {

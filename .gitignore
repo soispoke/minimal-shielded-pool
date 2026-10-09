@@ -1,13 +1,16 @@
+.DS_Store
+node_modules/
+build/
+# Live fixtures hold note openings and authorizer keys.
+/artifacts/
+
+# Left in older checkouts by layout changes. sdk/artifacts/ and wallet/artifacts/
+# may hold note secrets; the rest would otherwise show as untracked.
+sdk/artifacts/
+wallet/artifacts/
 __pycache__/
 *.pyc
-.DS_Store
-.venv/
-venv/
-build/
-sdk/artifacts/
-# Left in older checkouts by the layout change. wallet/artifacts/ may hold note
-# secrets; the rest are build outputs that would otherwise show as untracked.
-wallet/artifacts/
+/tools/node_modules/
 /tooling/node_modules/
 /contracts/out/
 /contracts/out-libsmall/

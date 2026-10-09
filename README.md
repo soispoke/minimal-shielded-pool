@@ -9,6 +9,91 @@ It has no ERC-20 support, admin, governance or external paymaster.
 > not deploy it on mainnet or use it with real funds. See
 > [SECURITY.md](SECURITY.md).
 
+## Use
+
+The client, tests and tools are TypeScript, which Node runs directly, with no
+build step. They need Node 24.7 or later, the first release with ML-KEM-768 in
+`node:crypto`, and that Node must be built against OpenSSL 3.5 or later, or
+note delivery stops with an error. The checks and tests also need
+[Foundry](https://getfoundry.sh) (CI uses 1.7.1), and the recipes need
+[just](https://just.systems).
+
+```sh
+npm ci                  # install the pinned npm packages (or: just install)
+just test               # what CI's test job runs: the four recipes below
+just check-artifacts    # rebuild the circuit and dispatcher, compare with core/artifacts/
+just check              # type, format, gas, activation and compiler-settings checks
+just test-ts            # the TypeScript tests: node --test test/*.test.ts
+just test-contracts     # format, lint and test the contracts with Forge
+```
+
+`just check-artifacts` compares the archived profile with an old commit, so it
+needs the full git history. `just --list` shows the other recipes: the native
+suite, the formal-pin report, Poseidon regeneration and deployment.
+
+The command-line tools are in `src/cli/`, and each lists its options with
+`--help`. None takes a key or seed as an argument, because other local users
+can read a command line. `shield` and `publish` read the funded account's key
+as one line on standard input, or at a hidden prompt on a terminal. The `notes`
+commands read the seed the same way, unless `--seed-file` names a file readable
+by its owner only.
+
+The client is a fixture generator, not a production wallet. The pool commands
+send only what a fixture holds: deposits and spends that `smoke.ts` or
+`nonce-race.ts` proved in advance against the tree they expected. Another
+deposit landing first leaves those proofs unusable, so each spend entry keeps
+its inputs' openings, from which the notes can be proved again where they
+landed. `notes scan` finds a wallet's notes, but no command spends them yet.
+
+```sh
+# Deposit one of a fixture's notes, paid by the funded account.
+printf '%s\n' "$FUNDED_KEY" | node src/cli/pool.ts RPC CONFIG FIXTURE shield [--note N]
+# Publish an epoch's root to EIP-8272, so that spends can prove against it.
+printf '%s\n' "$FUNDED_KEY" | node src/cli/pool.ts RPC CONFIG FIXTURE publish [--epoch N]
+# Send a fixture's transfer against the root that slot N published.
+node src/cli/pool.ts RPC CONFIG FIXTURE transfer [--spend-key NAME] [--root-slot N]
+# Send a fixture's withdrawal; its fourth frame claims the credit unless --no-tail.
+node src/cli/pool.ts RPC CONFIG FIXTURE withdraw [--spend-key NAME] [--root-slot N] [--no-tail]
+
+# Print the wallet's public address, which senders use to pay it.
+node src/cli/notes.ts address [--account N] [--seed-file PATH]
+# Find the wallet's notes in finalized blocks and print the unspent ones.
+node src/cli/notes.ts scan --config CONFIG --state PATH [--rpc URL] [--seed-file PATH]
+# Issue the next numbered secret, for one sender to receive out of band.
+node src/cli/notes.ts direct-secret --config CONFIG --state PATH [--seed-file PATH]
+
+# Write a receipt that discloses the named notes of a fixture.
+node src/cli/disclosure.ts export --rpc URL --config CONFIG --fixture FIXTURE \
+  (--only CM[,CM...] | --all) [--address-wide] --output PATH
+# Check a receipt against finalized blocks and the pool's deployed code.
+node src/cli/disclosure.ts verify --rpc URL --config CONFIG --receipt PATH
+
+# Generate a fixture of a shield, a transfer and two withdrawals, with real proofs.
+node src/cli/smoke.ts [--random --chain-id=N --pool-address=0x... --recipient=0x...] \
+  [--output=PATH]
+# Generate a fixture of two transfers against one root, which share the pool as sender.
+node src/cli/nonce-race.ts --pool-address=0x... [--random] [--rpc=URL] [--output=PATH]
+```
+
+`--spend-key` names the fixture's spend entry, such as `withdraw_seed` or a
+nonce-race fixture's `transfer_c`. Every pool command accepts `--dry-run`,
+which simulates the transaction without sending it. A transfer or withdrawal
+without `--root-slot` uses the slot the config records for it. The four
+`--action-*` options replace a spend's fourth frame with a custom call (see
+[Transactions](#transactions)). A spend's proof fixes its `fee`, which must
+cover the transaction's maximum cost. By default the fee cap per gas is twice
+the base fee plus a 1 gwei tip; on a transfer or withdrawal,
+`--max-fee-per-gas` and `--max-priority-fee-per-gas` set the cap and tip in
+wei, so a proof whose fee no longer covers the default cap can still be sent.
+
+With no options, `smoke.ts` rewrites the committed
+`test/fixtures/smoke_fixture.json` from a public fixed seed. Any other chain or
+pool needs `--random` and a `--recipient`, and the fixture then goes by default
+under the ignored `artifacts/`, as the nonce-race fixture does, unless
+`--output` names another path. `just deploy` deploys a fresh testbed pool,
+records it in `core/deploy_config.json`, and shields, transfers and withdraws
+through it with these commands.
+
 ## How it works
 
 A note commits to its owner, a random `rho` and its value:
@@ -76,7 +161,11 @@ second spend of either note. A spend has three frames and an optional fourth:
    notes it creates can be spent from the next slot, though a spend against
    that root is then easy to link to the transfer. It must name the epoch its
    outputs land in, which is a new epoch if settlement starts a new tree.
-   Naming the old epoch succeeds but leaves them unpublished.
+   Naming the old epoch succeeds but leaves them unpublished. A call to the
+   pool can do only what any caller can: `settle` accepts only the pool itself
+   as caller, `shield` needs ETH and the pool's `VERIFY` entry works only as
+   the second frame, so a fourth frame that repeats settlement or the proof
+   check reverts and settlement stands.
 
 The dispatcher pins the data length of the first three frames and the
 settlement frame's gas limits. The validation frames' gas limits are wallet
@@ -124,25 +213,33 @@ recipient that rejects plain ETH transfers strands the credit.
 
 An account called by the fourth frame sees EIP-8141's entry point as its caller, so it must
 authenticate its own owner. This is a direct account call, not an ERC-4337
-adapter. See [SECURITY.md](SECURITY.md#generic-default-tail).
+adapter. See [SECURITY.md](SECURITY.md#the-fourth-frame).
 
 When the current tree lacks room for the notes being inserted, the pool starts
 a new epoch first, for shields and settlements alike. Sinks take no space, so a
-full tree never blocks a full withdrawal. Anyone may publish the pool's current or final
-epoch root to EIP-8272.
+full tree never blocks a full withdrawal. `publishEpochRoot(epoch)` takes no
+root from its caller and reads the epoch's root from pool state, so anyone may
+publish the pool's current or final epoch root to EIP-8272. A failed
+publication consumes no notes. If a transfer's own publication fails or names
+the old epoch, retry only the publication, because the transfer has already
+settled. A later publication of the same epoch in the same slot replaces the
+stored root, so proofs must use the root stored last.
 
 ## Note delivery
 
 A recipient needs each note's amount and `rho` to spend it. Notes carry them on
 chain, encrypted under a 32-byte secret `K` that the sender and recipient share,
 so a payment can go to a reusable address and the recipient can recover
-everything from its seed. `sdk/notes.py` implements the format with
-ML-KEM-768 and ChaCha20-Poly1305 from `cryptography` (OpenSSL):
+everything from its seed. `src/notes.ts` implements the format with
+ML-KEM-768 and ChaCha20-Poly1305 from `node:crypto`:
 
 ```text
 note = tag (16) || ChaCha20-Poly1305(value) (16 + 16)
-tag  = PRF(K, "tag", i)[:16]    rho = PRF(K, "rho", i) mod r
+tag  = PRF(K, "tag", i)[:16]    rho = PRF64(K, "rho", i) mod r
 ```
+
+PRF is HMAC-SHA256; PRF64 joins two PRF outputs into 512 bits so the reduction
+has no useful bias.
 
 `i` counts the notes a sender has sent with `K`. A sender sets up `K` in one of
 two ways, and later payments look the same whichever it used:
@@ -171,38 +268,32 @@ ciphertext and matches tags, and it tracks their spends by nullifier. A sender
 cannot recompute an outgoing secret, so after a restore it opens a new channel
 with each recipient. The change channel cannot be reopened, so a restored
 wallet, or a device taking over sending from the account, rebuilds it with
-`notes.self_channel`, past the indices it may have used. A sender reserves an
-index in its saved state before broadcasting a new payment, because a repeated
-index repeats the tag, key and `rho`, and retries a payment that did not land
-with the same note. It also keeps fewer than 20 payments per channel past the
-last one it has seen final, since the recipient watches 20 indices ahead.
+`selfChannel` in `src/notes.ts`, past the indices it may have used. A sender
+reserves an index in its saved state before broadcasting a new payment, because
+a repeated index repeats the tag, key and `rho`, and retries a payment that did
+not land with the same note. It also keeps fewer than 20 payments per channel
+past the last one it has seen final, since the recipient watches 20 indices
+ahead.
 
-```sh
-python3 sdk/notes.py address --seed-file SEED
-python3 sdk/notes.py scan --config CONFIG --state STATE --seed-file SEED
-python3 sdk/notes.py direct-secret --config CONFIG --state STATE --seed-file SEED
-```
+The `notes` commands under [Use](#use) give a wallet its address, its notes and
+its direct secrets. `scan` and `direct-secret` need the config of a
+`position-notes-v3` pool. No such deployment exists yet, and
+`core/deploy_config.json` records the v2 pool, which publishes no notes.
 
-`scan` and `direct-secret` need the config of a `position-notes-v3` pool. No
-such deployment exists yet, and `core/deploy_config.json` records the v2 pool,
-which publishes no notes.
-
-The seed file must be readable by its owner only; without `--seed-file` the
-seed is read from the terminal. `scan` reads finalized blocks only and keeps
-its state in an owner-only file. It reads every shield and settlement apart,
-even several in one transaction. A node may leave a call's logs out of
-`eth_getLogs`, as ethrex does for every log of a frame transaction whose
-fourth frame failed. Once a later leaf shows the gap, `scan` rebuilds the call
-from block receipts, and it stops if leaves are still missing rather than hide
-notes. `direct-secret` needs a state
-that has been scanned, and hands out numbers only within 20 of the highest one
-paid, which is how far a scan from the seed looks. History older than
-Ethereum's retention window (EIP-4444) comes from archives, as it already does
-for the tree leaves.
+`scan` reads finalized blocks only and keeps its state in an owner-only file.
+It reads every shield and settlement apart, even several in one transaction. A
+node may leave a call's logs out of `eth_getLogs`, as ethrex does for every log
+of a frame transaction whose fourth frame failed. Once a later leaf shows the
+gap, `scan` rebuilds the call from block receipts, and it stops if leaves are
+still missing rather than hide notes. `direct-secret` needs a state that has
+been scanned, and hands out numbers only within 20 of the highest one paid,
+which is how far a scan from the seed looks. History older than Ethereum's
+retention window (EIP-4444) comes from archives, as it already does for the
+tree leaves.
 
 A normal spend grows by 96 bytes and about 4,000 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
-1,184 bytes and is visibly larger. See [SECURITY.md](SECURITY.md#note-delivery).
+1,184 bytes and is visibly larger. See [SECURITY.md](SECURITY.md#privacy-limits).
 
 ## Layout
 
@@ -213,35 +304,35 @@ core/          what is deployed and what the formal proofs cover, with the
   contracts/   the Foundry project: settlement logic, verifier, Poseidon, tests
   dispatcher/  the Yul dispatcher, the pool's own account code
   artifacts/   R1CS, WASM, proving key, verification key, dispatcher initcode
-sdk/           Python client: wallet, note delivery, transaction builder and
-               CLI, disclosure receipts, fixture generators
-test/          Python tests, fixtures, vectors and the native ethrex suite
-tools/         setup, deployment, generators, activation and formal-pin
-               checks, and the pinned npm toolchain
+src/           TypeScript client: wallet, note delivery, transaction builder,
+               disclosure receipts, fixture generators
+  cli/         the command-line tools: pool, notes, disclosure, smoke, nonce-race
+tools/         setup and deployment scripts, the activation, gas, compiler-settings
+               and formal-pin checks, and the dispatcher, verifier, Poseidon and
+               vector generators
+test/          node:test suites, fixtures, reference vectors and the native
+               ethrex suite
 evidence/      dated records of earlier devnet runs and reviews
 docs/          design notes
 ```
+
+`package.json` at the root pins the npm packages, including the circuit
+toolchain (circom2 and snarkjs).
 
 [docs/design.md](docs/design.md) explains why the pool is built this way and
 what a change to the tree or the statement has to touch.
 
 ## Disclosure receipts
 
-`sdk/disclosure.py` lets a user show, after the fact, where funds in the
+`src/disclosure.ts` lets a user show, after the fact, where funds in the
 pool came from and where they went, like Tornado Cash's compliance tool but
 without giving anyone the power to spend. For each note you spent, a receipt
 gives its nullifier key `K = Poseidon2(D, spend_key)`. With `K` and the
 note's position, anyone can confirm on chain which spend used up the note,
 but `K` cannot spend anything. A receipt can follow notes from a public
 deposit through private transfers to a withdrawal, and fully explains a
-spend when both of its inputs are disclosed.
-
-```sh
-python3 sdk/disclosure.py export --rpc URL --config core/deploy_config.json \
-  --fixture FIXTURE --only CM[,CM...] --output receipt.json
-python3 sdk/disclosure.py verify --rpc URL --config core/deploy_config.json \
-  --receipt receipt.json
-```
+spend when both of its inputs are disclosed. The `disclosure` commands are
+under [Use](#use).
 
 Export discloses only the notes you name, and gives a nullifier key only for
 notes you spent. Notes paid to one address share its spend key, so their
@@ -266,10 +357,15 @@ Each profile needs its own deployment, because a deployed pool cannot be
 upgraded. A `position-notes-v2` pool rejects this profile's settlement and
 shield calldata, which carry notes. This profile has no deployment yet:
 `core/deploy_config.json` still records the `position-notes-v2` testnet
-deployment on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`), which
-completed shield, transfer, withdrawal and claim calls on September 25, 2026,
-and the CLI refuses to shield into or spend from it. The earlier
-`position-notes-v1` pool (`0xac01…b100`, commit `c26b8e4`) stays on chain too.
+deployment on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`, deployed at
+block 143402). On September 25, 2026 it completed a shield, two root
+publications, a transfer, a withdrawal whose fourth-frame claim failed and left
+its credit, and a withdrawal whose claim paid the recipient both credits. The
+earlier `position-notes-v1` pool (`0xac01…b100`, commit `c26b8e4`) stays on
+chain too. On September 22, 2026 it completed a shield, a transfer, a root
+refresh, a withdrawal and claim, a fourth-frame claim and call, a deliberate
+tail revert whose credit was claimed later, and a rejected replay. The CLI
+refuses to shield into or spend from either pool.
 
 Before shielding or spending, the CLI requires the config to name this profile
 and checks the pool itself: the RPC must be on the configured chain, the pool's
@@ -296,28 +392,34 @@ The public mempool counts the two validation frames' declared limits plus
 [EIP-8369](https://eips.ethereum.org/EIPS/eip-8369) has not settled a
 per-transaction budget.
 
-## Test
+## What the tests cover
 
-With [just](https://just.systems) installed:
-
-```sh
-just install   # the pinned npm toolchain and the Python dependencies
-just test      # what CI's test job runs
-```
-
-`just --list` shows the other recipes: the native suite, the formal-pin report,
-Poseidon regeneration and deployment. The [justfile](justfile) lists every
-command they run.
+The [justfile](justfile) lists every command the recipes under [Use](#use)
+run, and the header of each TypeScript test file says what it checks.
+[docs/design.md](docs/design.md#the-client-and-its-cross-checks) names the
+independent sources the client is checked against. `test/occurrence.test.ts`
+checks every deliberately broken witness against the committed R1CS, not only
+the witness generator, and fails if the circuit gains an unconstrained
+assignment.
 
 The tests rebuild the circuit and require byte-identical R1CS and WASM. The
 committed artifacts come from circom2 0.2.8; 0.2.23 does not reproduce them
-byte for byte, so a compiler upgrade means a new reviewed artifact set. 
+byte for byte, so a compiler upgrade means a new reviewed artifact set.
 `tools/setup.sh` runs a new single-party test setup, not a ceremony. Run it
 only to replace the test setup on purpose, then rebuild the activation manifest
 and proof fixtures. The activation gate checks that the proving key's A and B
 terms come from the committed R1CS and that the verifier holds the key's
 verification key; the rest of the key needs the phase-1 file (`--ptau`, see
-[SECURITY.md](SECURITY.md)).
+[SECURITY.md](SECURITY.md#assumptions)).
+
+The Forge tests in `core/contracts/test/` run the contracts with the committed
+verifier and Poseidon libraries. They check that settlement fits the 2,000,000
+gas pin through an epoch rollover and the longest carries (262,143 and 524,287
+leaves), full-tree exits, sink positions, root publication apart from
+settlement, a failed claim keeping its credit, a reentrant recipient paid once,
+the refusal of direct calls to the implementation, and that the verifier
+refuses non-canonical and infinity points and binds each statement value,
+`beta` and `gamma`.
 
 The native tests in [`test/native/`](test/native/README.md)
 run real proofs through the pinned ethrex VM. They cover duplicate notes,
@@ -328,6 +430,7 @@ A Lean formal verification of this pool at `8835be7` lives in
 [verified-shielded-pool](https://github.com/soispoke/verified-shielded-pool),
 with its own CI. It is checked out as `formal/` inside a pool checkout, which
 git ignores here. CI's `formal-pins` job warns, without failing, when a change
-touches a file those proofs pin (`python3 tools/check_formal_pins.py`).
+touches a file those proofs pin (`node tools/check-formal-pins.ts`, or
+`just formal-pins`).
 
 See [SECURITY.md](SECURITY.md) for trust and failure boundaries.

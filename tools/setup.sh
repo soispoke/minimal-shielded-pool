@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Compile the spend circuit and run a TESTBED-ONLY Groth16 setup.
 #
-#   ./setup.sh                  # compile + ceremony + verifier export
+#   tools/setup.sh              # compile + ceremony + verifier export
 #
 # Groth16 needs a circuit-specific trusted setup. This script runs the whole
 # ceremony locally with entropy from /dev/urandom, which is fine for a testbed
@@ -20,17 +20,21 @@
 #
 # The committed verifier and proof fixtures are mutually consistent.
 # Re-running this script re-randomises phase 2 and replaces the proving key,
-# verification key, and verifier. Run sdk/gen_smoke.py afterwards, then
+# verification key, and verifier. Run src/cli/smoke.ts afterwards, then
 # update core/activation_manifest.testbed.json before treating the result as usable.
 set -euo pipefail
-cd "$(dirname "$0")"
+# A relative PTAU names a file in the directory the script was started from.
+[[ -z ${PTAU:-} || $PTAU == /* ]] || PTAU=$PWD/$PTAU
+# From the repository root: circom2 runs under WASI and finds circomlib only through an
+# include path inside its working directory.
+cd "$(dirname "$0")/.."
 
-BUILD=../build
-ARTIFACTS=../core/artifacts
+BUILD=build
+ARTIFACTS=core/artifacts
 mkdir -p "$BUILD"
 
 echo "==> compiling spend.circom (circom $(npx circom2 --version | tail -1 | awk '{print $3}'))"
-npx circom2 ../core/circuits/spend.circom --r1cs --wasm --sym -l node_modules -o "$BUILD"
+npx circom2 core/circuits/spend.circom --r1cs --wasm --sym -l node_modules -o "$BUILD"
 npx snarkjs r1cs info "$BUILD/spend.r1cs"
 
 if [ -n "${PTAU:-}" ]; then
@@ -54,10 +58,10 @@ cp "$BUILD/spend_js/spend.wasm" "$ARTIFACTS/spend_js/"
 
 echo "==> exporting the verification key and the Solidity verifier"
 npx snarkjs zkey export verificationkey "$BUILD/spend_final.zkey" "$ARTIFACTS/spend_vkey.json"
-npx snarkjs zkey export solidityverifier "$BUILD/spend_final.zkey" ../core/contracts/src/Groth16Verifier.sol
-python3 patch_verifier.py
-( cd ../core/contracts && forge fmt src/Groth16Verifier.sol )
+npx snarkjs zkey export solidityverifier "$BUILD/spend_final.zkey" core/contracts/src/Groth16Verifier.sol
+node tools/patch-verifier.ts
+( cd core/contracts && forge fmt src/Groth16Verifier.sol )
 
 echo "==> done: core/artifacts/spend_final.zkey (proving), core/contracts/src/Groth16Verifier.sol (on-chain)"
-echo "    keep build/pot_final.ptau; pin this as ceremony.phase1_ptau_sha256 for check_activation.py --ptau:"
+echo "    keep build/pot_final.ptau; pin this as ceremony.phase1_ptau_sha256 for check-activation.ts --ptau:"
 shasum -a 256 "$BUILD/pot_final.ptau"

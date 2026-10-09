@@ -1,0 +1,171 @@
+/**
+ * Regenerates test/vectors/poseidon_bn254_vectors.json and src/poseidon-constants.json from
+ * circomlibjs itself.
+ *
+ *   node tools/export-vectors.ts
+ *
+ * circomlibjs is the same package the circuit's poseidon.circom pairs with, so these vectors
+ * close the loop circuit <-> reference <-> Solidity from a single constants source. Every
+ * vector is computed with BOTH the reference and the wasm implementation and asserted equal,
+ * so a constants mismatch inside circomlibjs itself would fail here, not later.
+ *
+ * Vector set: zero, unit, counter, and LCG-seeded states for Poseidon(2), Poseidon(3) and
+ * Poseidon(10) (hybrid compression's beta), plus the pool chain from seed 2026 (owner_pk, cm,
+ * the domain-separated nf, out_cm) and the depth-20 incremental-tree fixtures.
+ */
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
+
+// @ts-expect-error circomlibjs 0.1.7 ships no type declarations; Poseidon types what is used.
+import { buildPoseidon, buildPoseidonReference } from "circomlibjs";
+
+interface Poseidon {
+  (inputs: unknown[]): unknown;
+  F: { p: bigint; e(x: bigint): unknown; toString(x: unknown): string };
+}
+
+const ROOT = resolve(import.meta.dirname, "..");
+const DEPTH = 20;
+
+/**
+ * Field elements from a deterministic LCG, each built from four 48-bit draws, so the vectors
+ * are reproducible without a random number dependency.
+ */
+function lcg(seed: bigint, p: bigint): () => bigint {
+  let s = seed;
+  const next48 = () => {
+    s = (s * 6364136223846793005n + 1442695040888963407n) & 0xffffffffffffffffn;
+    return (s >> 16n) & 0xffffffffffffn;
+  };
+  return () => ((next48() << 144n) | (next48() << 96n) | (next48() << 48n) | next48()) % p;
+}
+
+/** The vectors and constants files' contents. */
+async function exportVectors() {
+  const ref: Poseidon = await buildPoseidonReference();
+  const wasm: Poseidon = await buildPoseidon();
+  const F = ref.F;
+  const p = F.p;
+
+  function hash(inputs: bigint[]): bigint {
+    const a = F.toString(ref(inputs.map((x) => F.e(x))));
+    if (a !== F.toString(wasm(inputs.map((x) => F.e(x))))) {
+      throw new Error("reference and default poseidon disagree");
+    }
+    return BigInt(a);
+  }
+  const p2 = (a: bigint, b: bigint) => hash([a, b]);
+  const p3 = (a: bigint, b: bigint, c: bigint) => hash([a, b, c]);
+
+  /** Permutation-input vectors: zero, unit, counter and 13 LCG-seeded states. */
+  function cases(n: number) {
+    const next = lcg(42n, p);
+    const states = [
+      Array(n).fill(0n),
+      [1n, ...Array(n - 1).fill(0n)],
+      Array.from({ length: n }, (_, i) => BigInt(i + 1)),
+      ...Array.from({ length: 13 }, () => Array.from({ length: n }, next)),
+    ];
+    return states.map((state) => ({ in: state.map(String), out: hash(state).toString() }));
+  }
+
+  // The pool's tagged chain (mirrors core/circuits/spend.circom), seed 2026: the value-carrying
+  // note and the join-split outputs.
+  const next = lcg(2026n, p);
+  const [spend_key, rho, out_inner1, out_inner2] = Array.from({ length: 4 }, next);
+  const mask128 = (1n << 128n) - 1n;
+  const [value, out_value1, out_value2] = Array.from({ length: 3 }, () => next() & mask128);
+  // Drawn last so the earlier draws (and their committed vectors) are stable.
+  const domain = next(); // stands in for keccak(TAG||chain||pool||epoch) mod p
+  const index = 37n;
+  const owner_pk = p3(1n, spend_key, 0n);
+  const inner = p2(owner_pk, rho);
+  const cm = p3(2n, inner, value);
+  // Position-bound nullifiers, mirroring core/circuits/spend.circom. Even with the same secret
+  // and position, a zero-value dummy has a different identity.
+  const nf = p3(4n, p2(domain, spend_key), p2(cm, index));
+  const nf2 = p3(4n, p2(domain, spend_key), p2(p3(2n, inner, 0n), index));
+  const out_cm1 = p3(2n, out_inner1, out_value1);
+  const out_cm2 = p3(2n, out_inner2, out_value2);
+  const chain = {
+    ...{ spend_key, rho, value, out_inner1, out_inner2, out_value1, out_value2, domain, index },
+    ...{ owner_pk, inner, cm, nf, nf2, out_cm1, out_cm2 },
+  };
+
+  // Depth-20 incremental-tree fixtures: the root after each append, as ShieldedPoolLogic's
+  // _insert and _computeRoot (core/contracts/src/ShieldedPoolLogic.sol) compute it.
+  const zeros = [0n];
+  for (let l = 0; l < DEPTH; l++) zeros.push(p2(zeros[l], zeros[l]));
+  function incrementalRoot(leaves: bigint[]): bigint {
+    const filled: bigint[] = Array(DEPTH).fill(0n);
+    let root = zeros[DEPTH];
+    leaves.forEach((leaf, index) => {
+      let node = leaf;
+      for (let l = 0, idx = index; l < DEPTH; l++, idx >>= 1) {
+        if ((idx & 1) === 0) {
+          filled[l] = node;
+          node = p2(node, zeros[l]);
+        } else {
+          node = p2(filled[l], node);
+        }
+      }
+      root = node;
+    });
+    return root;
+  }
+
+  const [cm0, cm1] = [1n, 2n];
+  const vectors = {
+    poseidon2: cases(2),
+    poseidon3: cases(3),
+    poseidon10: cases(10),
+    pool_chain: Object.fromEntries(Object.entries(chain).map(([k, v]) => [k, v.toString()])),
+    tree: {
+      depth: DEPTH,
+      cm0: cm0.toString(),
+      cm1: cm1.toString(),
+      root_empty: zeros[DEPTH].toString(),
+      root_after_cm0: incrementalRoot([cm0]).toString(),
+      root_after_cm0_cm1: incrementalRoot([cm0, cm1]).toString(),
+    },
+  };
+
+  // Constants for src/poseidon.ts and tools/poseidon-sol.ts. C[t-2] is (8 + N_ROUNDS_P[t-2]) * t
+  // round constants and M[t-2] is t x t, with new_state[i] = sum_j M[i][j] * state[j]
+  // (poseidon_reference.js). circomlibjs stores them as hex; the file holds decimal. The
+  // package's exports map hides the file, so it is found from its CommonJS entry, build/main.cjs.
+  const circomlibjs = createRequire(import.meta.url).resolve("circomlibjs");
+  const { C, M } = JSON.parse(
+    readFileSync(join(circomlibjs, "../../src/poseidon_constants.json"), "utf8"),
+  );
+  const toDec = (x: string) => BigInt(x).toString();
+  const params = (i: number, roundsP: number) => ({
+    rounds_f: 8,
+    rounds_p: roundsP,
+    C: C[i].map(toDec),
+    M: M[i].map((row: string[]) => row.map(toDec)),
+  });
+  const constants = {
+    prime: p.toString(),
+    t3: params(1, 57),
+    t4: params(2, 56),
+    t11: params(9, 66),
+  };
+  return { vectors, constants };
+}
+
+if (import.meta.main) {
+  const { vectors, constants } = await exportVectors();
+  const vpath = join(ROOT, "test", "vectors", "poseidon_bn254_vectors.json");
+  const cpath = join(ROOT, "src", "poseidon-constants.json");
+  for (const [path, value] of [
+    [vpath, vectors],
+    [cpath, constants],
+  ] as const) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, JSON.stringify(value, null, 1));
+  }
+  console.log(`wrote ${vpath} (16+16+16 vectors + pool chain + tree)`);
+  console.log(`wrote ${cpath}`);
+}
