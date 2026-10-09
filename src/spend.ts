@@ -193,8 +193,8 @@ export function spendTailFrame(
   if (target <= 0n || target >= 1n << 160n) {
     throw new InputError("action target must be a nonzero address");
   }
-  // Both pinned ethrex revisions panic executing a top-level frame to a precompile after an
-  // earlier frame emitted logs, as settlement does.
+  // ethrex 247e2dd2 panics executing a top-level frame to a precompile after an earlier frame
+  // emitted logs, as settlement does. The testnet's 64b8fc09 has the fix; other nodes may not.
   if (protocol.PRECOMPILES.has(target)) {
     throw new InputError("action target must not be a precompile");
   }
