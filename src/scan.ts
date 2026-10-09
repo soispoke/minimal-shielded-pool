@@ -39,7 +39,7 @@ import * as protocol from "./protocol.ts";
 import { LEAF_APPENDED, NOTES, NOTE_SPENT, TREE_CAPACITY } from "./protocol.ts";
 import type { RpcChain } from "./rpc.ts";
 
-const STATE_VERSION = 2;
+const STATE_VERSION = 3;
 const POOL_TOPICS: readonly string[] = [LEAF_APPENDED, NOTE_SPENT, NOTES];
 const EMPTY: Uint8Array = new Uint8Array();
 
@@ -91,6 +91,15 @@ function closedLeaves(tree: ReadonlyMap<bigint, bigint>, epoch: bigint): bigint 
   return epoch === latest + 1n ? tree.get(latest)! : 0n;
 }
 
+/** The first epoch before the latest in `tree` shown with fewer than TREE_CAPACITY leaves. */
+function shortClosedEpoch(tree: ReadonlyMap<bigint, bigint>): bigint | null {
+  const latest = [...tree.keys()].reduce(maxBigint, -1n);
+  for (let epoch = 0n; epoch < latest; epoch++) {
+    if ((tree.get(epoch) ?? 0n) < TREE_CAPACITY) return epoch;
+  }
+  return null;
+}
+
 /**
  * Finds a wallet's notes and their spends in the pool's finalized events, from its seed. Each
  * epoch's leaves must arrive without gaps, and the next epoch may begin only with a call whose
@@ -109,6 +118,7 @@ export class Scanner {
   directIssued = -1n; // the highest direct number handed out
   scannedBlock = -1n;
   leafBlock = -1n; // the block of the last leaf seen
+  rescanReason: string | null = null; // why fromJson sent the scan back to the deployment block
   readonly #gap: bigint;
   readonly #tags = new Map<string, [Incoming, bigint]>(); // tag hex -> secret, note index
   readonly #tree = new Map<bigint, bigint>(); // epoch -> next leaf index
@@ -266,7 +276,7 @@ export class Scanner {
     return [...this.notes.values()].filter((note) => !note.spent);
   }
 
-  /** The state file's contents, format version 2. */
+  /** The state file's contents, format version 3. */
   toJson() {
     const tree = [...this.#tree].sort(([a], [b]) => compareBigint(a, b));
     const notes = [...this.notes.values()].sort((a, b) =>
@@ -304,7 +314,7 @@ export class Scanner {
     const state = isObject(data) ? data : {};
     const { account } = state;
     if (
-      state.version !== STATE_VERSION ||
+      (state.version !== 2 && state.version !== STATE_VERSION) ||
       (Number.isSafeInteger(account) ? BigInt(account as number) : account) !== keys.account ||
       state.owner_pk !== hex32(keys.ownerPk)
     ) {
@@ -340,6 +350,23 @@ export class Scanner {
       scanner.#record({ cm, epoch, index, value, rho, nullifier, spent, kind: kindOf(r.secret) });
     }
     scanner.scannedBlock = jsonInteger(state.scanned_block, "scanned_block");
+    // Before version 3, a scan let an epoch begin after one not seen full without reading
+    // receipts, so it could miss a payment in that epoch's last leaves for good. Such a state
+    // scans again from the deployment block. It keeps the rest: direct_issued alone records the
+    // numbers handed out but not yet paid, the watched secrets and direct_highest only grow as
+    // notes are found, and a note found again is not counted twice. The tree starts at epoch 0,
+    // where every pool starts, so a node that serves nothing of epoch 0 stops the rescan instead
+    // of letting it begin at a later epoch and miss the payment again.
+    const short = state.version === 2 ? shortClosedEpoch(scanner.#tree) : null;
+    if (short !== null) {
+      const seen = scanner.#tree.get(short) ?? 0n;
+      scanner.#tree.clear();
+      scanner.#tree.set(0n, 0n);
+      scanner.scannedBlock = scanner.leafBlock = -1n;
+      scanner.rescanReason =
+        `it shows epoch ${short} closed with ${seen} of ${TREE_CAPACITY} leaves, and the ` +
+        "earlier version that saved it could miss a payment in an epoch's last leaves";
+    }
     return scanner;
   }
 }
