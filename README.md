@@ -290,8 +290,8 @@ ahead.
 
 The `notes` commands under [Use](#use) give a wallet its address, its notes and
 its direct secrets. `scan` and `direct-secret` need the config of a
-`position-notes-v3` pool. No such deployment exists yet, and
-`core/deploy_config.json` records the v2 pool, which publishes no notes.
+`position-notes-v3` pool, such as the testnet deployment that
+`core/deploy_config.json` records.
 
 `scan` reads finalized blocks only and keeps its state in an owner-only file.
 It reads every shield and settlement apart, even several in one transaction. A

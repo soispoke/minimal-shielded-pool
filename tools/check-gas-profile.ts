@@ -188,8 +188,8 @@ export function checkGasProfile(root = ROOT): string {
     }
   }
 
-  // The deployment record describes a deployment of this profile, or still the previous one
-  // until this profile is deployed; the spend CLI refuses the latter.
+  // The deployment record describes a deployment of this profile, or the previous one between
+  // a profile change and its first deployment; the spend CLI refuses the latter.
   const record = parse(read("core/deploy_config.json"));
   const recorded = (key: string) => {
     check(isObject(record) && Object.hasOwn(record, key), `core/deploy_config.json has no ${key}`);
