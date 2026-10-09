@@ -34,5 +34,6 @@ src/frametx.ts derives from lambdaclass/ethrex's reference type-0x06
 frame-transaction encoder for the Hegotá devnet (scripts/hegota-devnet/frametx.py,
 hegota-devnet branch), through the earlier Python client's sdk/frametx.py, and
 has since been adapted to the current EIP-8141 envelope and ported to
-TypeScript. ethrex is Apache-2.0 / MIT dual-licensed. src/pool.ts and
+TypeScript. ethrex is Apache-2.0 / MIT dual-licensed. The pool client
+(src/spend.ts, src/deployment.ts, src/send.ts and src/cli/pool.ts) and
 evidence/REVIEW.md are original Apache-2.0 work.

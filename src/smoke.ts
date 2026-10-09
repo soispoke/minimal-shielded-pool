@@ -65,8 +65,8 @@ export async function generateSmoke(options: SmokeOptions, deps: fixtures.Genera
     }
     recipient = hexPadded(value, 40);
   }
-  // Python compared int(pool, 16) with the test pool before the domain checked the address's
-  // length, so a 0x pool of any length meets the refusals below first. Other text stops here.
+  // Any 0x hex reads as the pool here, so the refusals below, which protect live notes, come
+  // before parseAddress refuses a pool of the wrong length. Other text stops here.
   const pool = hexFromText(poolAddress);
   if (pool === null) throw new InputError("--pool-address must be 0x and 40 hex digits");
   // Anyone could rebuild notes made from the public seed and spend them, so it and the

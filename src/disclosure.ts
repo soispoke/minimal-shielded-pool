@@ -20,14 +20,21 @@ import {
   parseDec,
   parseHex,
 } from "./bytes.ts";
+import { checkDeployedProfile } from "./deployment.ts";
 import { InputError, ReceiptError, UserError } from "./errors.ts";
 import { readJson, writeNewPrivate } from "./files.ts";
 import { MODE } from "./frametx.ts";
 import { asList, asObject, isObject, stringify, type JsonObject } from "./json.ts";
 import { WalletKeys } from "./notes.ts";
-import { checkDeployedProfile, poolNode } from "./pool.ts";
 import * as protocol from "./protocol.ts";
-import { ChainError, RpcChain, type Chain, type ChainTransaction, type RawLog } from "./rpc.ts";
+import {
+  ChainError,
+  poolNode,
+  RpcChain,
+  type Chain,
+  type ChainTransaction,
+  type RawLog,
+} from "./rpc.ts";
 
 const RECEIPT = "minimal-shielded-pool/disclosure";
 const VERSION = 1;
@@ -212,7 +219,7 @@ async function verify(chain: Chain, receipt: unknown, poolCheck: PoolCheck) {
   if (r.receipt !== RECEIPT || r.version !== VERSION) {
     throw new ReceiptError("not a version 1 disclosure receipt");
   }
-  const [chainId, pool] = [integer(r.chainId, "chainId"), parseHex(r.pool, "the receipt's pool")];
+  const [chainId, pool] = [signedDec(r.chainId, "chainId"), parseHex(r.pool, "the receipt's pool")];
   if ((await chain.chainId()) !== chainId) {
     throw new ReceiptError(`the RPC is not chain ${chainId}`);
   }
@@ -237,7 +244,7 @@ async function verify(chain: Chain, receipt: unknown, poolCheck: PoolCheck) {
   for (const item of asList(r.notes, "notes")) {
     const n = asObject(item, "a note");
     const cm = parseHex(n.cm, "a note's cm");
-    const [epoch, index, value] = ["epoch", "index", "value"].map((k) => integer(n[k], k));
+    const [epoch, index, value] = ["epoch", "index", "value"].map((k) => signedDec(n[k], k));
     const label = `note ${(n.cm as string).slice(0, 18)}...`;
     const fail = (why: string) => new ReceiptError(`${label}: ${why}`);
     const position = at({ cm, epoch, index });
@@ -341,8 +348,8 @@ export async function exportCommand(options: {
   addressWide?: boolean;
   output?: string;
 }) {
-  // The config file is read first, but its shape is checked, as the other CLIs check it, only
-  // after the flags, so the refusals come in the oracle's order.
+  // The config is read first, so a missing or non-JSON file is reported as a file error rather
+  // than a rejected receipt; its shape is checked with the other refusals, after the flags.
   const parsed = readJson(options.config);
   return prefixed("receipt rejected: ", [ReceiptError, InputError, ChainError], async () => {
     const { fixture, output, addressWide } = options;
@@ -414,8 +421,11 @@ function lower(value: unknown, what: string): string {
   return value.toLowerCase();
 }
 
-// Signs pass, so that a negative index or value meets its range check.
-function integer(value: unknown, what: string): bigint {
+/**
+ * A decimal integer, as a JSON number or a string of digits, like parseDec except that a minus
+ * sign passes, so that a negative index or value meets its range check.
+ */
+function signedDec(value: unknown, what: string): bigint {
   if (typeof value === "bigint") return value;
   if (typeof value === "number" && Number.isSafeInteger(value)) return BigInt(value);
   if (typeof value === "string" && /^-?[0-9]+$/.test(value)) return BigInt(value);

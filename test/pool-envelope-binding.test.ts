@@ -21,6 +21,7 @@ import {
 } from "../src/frametx.ts";
 import { parse } from "../src/json.ts";
 import { InputError, PoolError } from "../src/errors.ts";
+import { recentRootTuple, sourceId } from "../src/protocol.ts";
 import {
   authorizerKey,
   entryProofBytes,
@@ -30,8 +31,7 @@ import {
   spendNonceKeys,
   spendTailFrame,
   type Action,
-} from "../src/pool.ts";
-import { recentRootTuple, sourceId } from "../src/protocol.ts";
+} from "../src/spend.ts";
 
 type Entry = Record<string, unknown>;
 const fixture = parse(
@@ -43,7 +43,7 @@ const hex = (bytes: Uint8Array) => toHex(bytes).slice(2);
 /** One fixture spend with root_slot 1, signed by the authorizer its proof selects. */
 function signed(key: string, action: Action | null = null, omit = false): FrameTx {
   const entry: Entry = { ...structuredClone(fixture[key] as Entry), root_slot: "1" };
-  const settle = settleCalldata(entry);
+  const settle = settleCalldata(entry, entry.root_slot);
   const source = sourceId(POOL, BigInt(entry.epoch as number));
   const recentRoot = recentRootTuple(source, 1n, BigInt(entry.root as string));
   const tail = spendTailFrame(POOL, settle, action, { omit });
@@ -234,7 +234,8 @@ test("refuses spend entry fields written in a loose form", () => {
     ["root_slot", -1, "root_slot must be a non-negative decimal integer"],
   ] as const) {
     const refused = (error: unknown) => error instanceof InputError && error.message.includes(text);
-    assert.throws(() => settleCalldata({ ...entry, [field]: value }), refused, `${field} ${value}`);
+    const changed: Entry = { ...entry, [field]: value };
+    assert.throws(() => settleCalldata(changed, changed.root_slot), refused, `${field} ${value}`);
   }
   // Proof rows are arrays; an object keyed "0" and "1" is not read as one.
   const [x, y] = (entry.proof as Entry).pA as string[];

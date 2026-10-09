@@ -16,13 +16,10 @@ import { test } from "node:test";
 import { concat, hex32, keccak, toBytes, toHex, word } from "../src/bytes.ts";
 import { PoolError } from "../src/errors.ts";
 import { RECENT_ROOT_TUPLE_BYTES } from "../src/gas.ts";
-import {
-  recentRootReference,
-  recentRootWindowError,
-  waitPublishedSlot,
-  type PoolNode,
-} from "../src/pool.ts";
+import { recentRootReference, recentRootWindowError } from "../src/deployment.ts";
 import { RECENT_ROOT_LENGTH, recentRootTuple, sourceId } from "../src/protocol.ts";
+import type { PoolNode } from "../src/rpc.ts";
+import { waitPublishedSlot } from "../src/send.ts";
 
 // Mirrors ethrex's FRAME_TX_RECENT_ROOT_USABLE_WINDOW: the node rejects when
 // `current_slot - slot` exceeds it.
@@ -91,8 +88,8 @@ test("the spend path refuses a root outside the window or not held at its slot",
       },
       simulate: async () => assert.fail("simulated"),
     };
-    const entry = { root_slot: String(slot), epoch: Number(epoch), root: hex32(root) };
-    const result = await recentRootReference(node, pool, entry).catch((error: unknown) => error);
+    const recent = { rootSlot: slot, epoch, root };
+    const result = await recentRootReference(node, pool, recent).catch((error: unknown) => error);
     return { result, reads };
   }
 

@@ -14,6 +14,7 @@ import type { AddressInfo } from "node:net";
 import { describe, test } from "node:test";
 
 import { concat, fromHex, keccak, toBytes, toHex, word } from "../src/bytes.ts";
+import { actionOptions } from "../src/cli/pool.ts";
 import { InputError, PoolError } from "../src/errors.ts";
 import {
   calldataFloorGas,
@@ -32,16 +33,10 @@ import {
 // The expected limits come from the wallet defaults in gas.ts, never from the client's frame
 // builder, so a limit the client overrides cannot follow itself into the expectation.
 import * as gas from "../src/gas.ts";
-import {
-  actionOptions,
-  buildAndSend,
-  checkTxResourceLimits,
-  poolNode,
-  spendTailFrame,
-  type Action,
-  type PoolNode,
-} from "../src/pool.ts";
 import { PRECOMPILES, UNCLAIMABLE_RECIPIENTS } from "../src/protocol.ts";
+import { poolNode, type PoolNode } from "../src/rpc.ts";
+import { buildAndSend, spendVerdict, type Simulation, type TailKind } from "../src/send.ts";
+import { checkTxResourceLimits, spendTailFrame, type Action } from "../src/spend.ts";
 
 const POOL = 0xbeefn;
 const ACCOUNT = 0xa11cen;
@@ -124,8 +119,12 @@ describe("action options", () => {
     const valueless = ["--action-target", ...argv.slice(2)];
     rejects(() => actionOptions(valueless), "--action-target requires a value");
     rejects(() => actionOptions(argv.slice(0, -1)), "--action-state-gas requires a value");
-    for (const call of ["0x0", "0xgg"]) {
+    for (const call of ["0x0", "0xgg", "0x0X12"]) {
       rejects(() => actionOptions(argv.with(3, call)), "invalid --action-call");
+    }
+    // Calldata is bare hex or hex after one 0x or 0X.
+    for (const call of ["1234", "0x1234", "0X1234"]) {
+      assert.deepEqual(actionOptions(argv.with(3, call))?.data, Uint8Array.of(0x12, 0x34), call);
     }
   });
 });
@@ -477,6 +476,75 @@ describe("send gates", () => {
       assert.equal(sent.length, 0);
     }
   });
+});
+
+// spendVerdict alone, for what the send gates cannot show: the progress lines it returns, and
+// an allowed claim failure in a simulation the node marks invalid.
+describe("the spend verdict", () => {
+  /** A simulation whose frame outcomes are written "+" for success and "-" for failure. */
+  const sim = (outcomes: string, valid = true, violation?: string): Simulation => ({
+    result: { valid, ...(violation && { violation }) },
+    valid,
+    frames: [...outcomes].map((c) => ({ gasUsed: null, succeeded: c === "+" })),
+    gasUsed: null,
+  });
+  const allowedInvalid =
+    "  simulate: valid=false violation=frame 3 reverted; settlement succeeded and failed claim " +
+    "is allowed";
+  const claimLeft =
+    "  simulate: settlement succeeded; claim frame failed (allowed); credit will remain for a " +
+    "later claim";
+  type Case = [
+    label: string,
+    simulation: Simulation,
+    tailKind: TailKind,
+    allowFailedClaim: boolean,
+    notes: string[],
+    refusal: string | null,
+  ];
+  const reverted = (outcomes: string) => sim(outcomes, false, "frame 3 reverted");
+  const cases: Case[] = [
+    ["a transfer whose frames all succeed", sim("+++"), null, false, [], null],
+    ["a withdrawal whose claim succeeds", sim("++++"), "claim", false, [], null],
+    ["an allowed claim failure", sim("+++-"), "claim", true, [claimLeft], null],
+    [
+      "an allowed claim failure the node marks invalid",
+      reverted("+++-"),
+      "claim",
+      true,
+      [allowedInvalid, claimLeft],
+      null,
+    ],
+    [
+      "an allowed claim failure the node marks invalid, beside another failed frame",
+      reverted("+-+-"),
+      "claim",
+      true,
+      [allowedInvalid],
+      "another frame failed",
+    ],
+    ["a claim failure not allowed", reverted("+++-"), "claim", false, [], "INVALID (frame 3"],
+    ["a failed action", reverted("+++-"), "action", true, [], "action frame would fail"],
+    ["an invalid transfer", reverted("+++"), null, false, [], "INVALID (frame 3 reverted)"],
+    [
+      "a consumed nullifier key",
+      sim("", false, "Nonce mismatch"),
+      null,
+      false,
+      [],
+      "a nullifier key is already consumed",
+    ],
+    ["a failed settlement", sim("++-+"), "claim", true, [], "frame 2 did not explicitly succeed"],
+  ];
+  for (const [label, simulation, tailKind, allow, notes, refusal] of cases) {
+    test(label, () => {
+      const frameCount = tailKind === null ? 3 : 4;
+      const verdict = spendVerdict(simulation, tailKind, allow, frameCount);
+      assert.deepEqual(verdict.notes, notes);
+      if (refusal === null) assert.equal(verdict.refusal, null);
+      else assert.ok(verdict.refusal?.includes(refusal), `${refusal} not in ${verdict.refusal}`);
+    });
+  }
 });
 
 describe("calls", () => {

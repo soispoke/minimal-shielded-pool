@@ -34,9 +34,18 @@ import { compareBigint, concat, fromHex, hex32, hexPadded, keccak, toHex } from 
 import { NotesError } from "../src/errors.ts";
 import { POOL_PROFILE, SHIELD_NOTE_BYTES, SPEND_NOTES_BYTES } from "../src/gas.ts";
 import { parse, stringify } from "../src/json.ts";
+import { directSecretCommand, scanCommand } from "../src/cli/notes.ts";
 import * as n from "../src/notes.ts";
 import { LEAF_APPENDED, NOTES, NOTE_SPENT, domainScalar, nullifier } from "../src/protocol.ts";
 import { seededRng } from "../src/random.ts";
+import {
+  Scanner,
+  decodeNotesData,
+  eventsFromLogs,
+  type Leaf,
+  type PoolEvent,
+  type ScannerOptions,
+} from "../src/scan.ts";
 
 const CHAIN = 8141n;
 const POOL = 0xcb83980f3cc99e258295814375b0a94fe0ac0e86n;
@@ -74,7 +83,7 @@ type AddOptions = { sizes?: readonly number[]; sameTx?: true; sameBlock?: boolea
  * its own block unless it shares the previous call's transaction or block.
  */
 class Chain {
-  events: n.PoolEvent[] = [];
+  events: PoolEvent[] = [];
   size = 0n;
   block = 100n;
 
@@ -153,19 +162,19 @@ function story(): Chain {
   return chain;
 }
 
-function recover(keys: n.WalletKeys, events: n.PoolEvent[], options?: n.ScannerOptions): n.Scanner {
-  const scanner = new n.Scanner(keys, CHAIN, POOL, options);
+function recover(keys: n.WalletKeys, events: PoolEvent[], options?: ScannerOptions): Scanner {
+  const scanner = new Scanner(keys, CHAIN, POOL, options);
   for (const event of events) scanner.scan(event);
   return scanner;
 }
 
-const values = (scanner: n.Scanner) => [...scanner.notes.values()].map((r) => r.value);
-const spentValues = (s: n.Scanner) =>
+const values = (scanner: Scanner) => [...scanner.notes.values()].map((r) => r.value);
+const spentValues = (s: Scanner) =>
   [...s.notes.values()].filter((r) => r.spent).map((r) => r.value);
 const sorted = (list: bigint[]) => [...list].sort(compareBigint);
 /** A scanner's state as it is written to the state file and read back. */
-const reloaded = (scanner: n.Scanner) =>
-  n.Scanner.fromJson(scanner.keys, parse(stringify(scanner.toJson(), 1)));
+const reloaded = (scanner: Scanner) =>
+  Scanner.fromJson(scanner.keys, parse(stringify(scanner.toJson(), 1)));
 
 test("primitives: a note opens only with its secret and index, and sizes are enforced", () => {
   const secret = RNG.bytes(32);
@@ -229,7 +238,7 @@ test("recovery: each wallet rebuilds its notes, spends and change channel from i
   assert.deepEqual(sorted(values(bob)), bobs);
   assert.deepEqual(sorted(values(carol)), [ETH / 3n, ETH]);
   // Every leaf has one owner.
-  const place = ({ cm, epoch, index }: n.Leaf) => `${cm},${epoch},${index}`;
+  const place = ({ cm, epoch, index }: Leaf) => `${cm},${epoch},${index}`;
   const leaves = chain.events.flatMap((e) => e.leaves.map(place));
   const found = [alice, bob, carol].flatMap((s) => [...s.notes.values()].map(place));
   assert.deepEqual(found.sort(), leaves.sort());
@@ -241,7 +250,7 @@ test("recovery: each wallet rebuilds its notes, spends and change channel from i
   // Any ciphertext decapsulates, to a pseudorandom key if it was meant for another wallet, so a
   // wallet watches only the keys its notes opened under: Alice's three paid channels, Carol's
   // payment to Bob, and none for Carol.
-  const kemChannels = (s: n.Scanner) => s.incoming.filter((i) => i.kind === "kem").length;
+  const kemChannels = (s: Scanner) => s.incoming.filter((i) => i.kind === "kem").length;
   assert.deepEqual([alice, bob, carol].map(kemChannels), [3, 1, 0]);
   // Each note's nullifier is the circuit's, for a later spend.
   for (const s of [alice, bob]) {
@@ -253,7 +262,7 @@ test("recovery: each wallet rebuilds its notes, spends and change channel from i
   const notes = n.spendNotes(late.note, late.note);
   const leaf = { cm: late.cm, epoch: 1n, index: 0n };
   const twice = { block: 1n, tx: 0n, call: 0, notes, leaves: [leaf], spent: [] };
-  const lateFound = new n.Scanner(ALICE, CHAIN, POOL).scan(twice);
+  const lateFound = new Scanner(ALICE, CHAIN, POOL).scan(twice);
   assert.equal(lateFound.length, 1);
   assert.equal(lateFound[0].nullifier, nullifierOf(ALICE, late.cm, 0n, 1n));
   // A direct secret past the gap stays hidden until the wallet looks further.
@@ -264,7 +273,7 @@ test("recovery: each wallet rebuilds its notes, spends and change channel from i
   const resumed = reloaded(recover(ALICE, chain.events.slice(0, 3)));
   for (const event of chain.events.slice(3)) resumed.scan(event);
   assert.deepEqual(resumed.toJson().notes, alice.toJson().notes);
-  raises(() => n.Scanner.fromJson(BOB, alice.toJson()), "another wallet");
+  raises(() => Scanner.fromJson(BOB, alice.toJson()), "another wallet");
   // A node that drops a transaction's logs is caught by the next leaf's index.
   const [e0, e1] = chain.events;
   raises(() => recover(ALICE, [e0, e1, ...chain.events.slice(3)]), "missing pool logs");
@@ -283,7 +292,7 @@ test("recovery: each wallet rebuilds its notes, spends and change channel from i
   raises(() => n.reserve(restored, 1n), "the recipient watches only");
 });
 
-type Call = Pick<n.PoolEvent, "notes" | "leaves" | "spent">;
+type Call = Pick<PoolEvent, "notes" | "leaves" | "spent">;
 
 /** One call's logs as the pool emits them: settlement's nullifiers, its leaves, then Notes. */
 function callLogs(event: Call) {
@@ -297,7 +306,7 @@ function callLogs(event: Call) {
   return entries.map(([topics, data]) => ({ address: hexPadded(POOL, 40), topics, data }));
 }
 
-const txOf = (e: n.PoolEvent) => `${e.block},${e.tx}`;
+const txOf = (e: PoolEvent) => `${e.block},${e.tx}`;
 
 /** The chain's events as eth_getLogs results, without the transactions of `hidden` events. */
 function rpcLogs(chain: Chain, hidden: readonly number[] = []) {
@@ -429,7 +438,7 @@ test("log decoding: every wallet reads a transaction's calls apart; bad logs are
   chain.add(n.shieldNotes(shield.note), [shield.cm], [], { ...SHIELD, sameTx: true });
   // eth_getLogs results become the same events.
   const logs = rpcLogs(chain);
-  const events = n.eventsFromLogs(logs);
+  const events = eventsFromLogs(logs);
   assert.deepEqual(events, chain.events);
   const [alice, bob, carol] = [ALICE, BOB, CAROL].map((keys) => recover(keys, events));
   for (const value of [7n * ETH, ETH / 4n, ETH / 8n]) assert.ok(values(alice).includes(value));
@@ -438,13 +447,13 @@ test("log decoding: every wallet reads a transaction's calls apart; bad logs are
   assert.deepEqual(spentValues(carol), [ETH]);
   // A call missing its Notes log, or one of its nullifiers, means the node left logs out.
   const lastNotes = logs.findLast((l) => l.topics[0] === NOTES);
-  raises(() => n.eventsFromLogs(logs.filter((l) => l !== lastNotes)), "has no Notes log");
+  raises(() => eventsFromLogs(logs.filter((l) => l !== lastNotes)), "has no Notes log");
   const firstSpent = logs.find((l) => l.topics[0] === NOTE_SPENT);
-  raises(() => n.eventsFromLogs(logs.filter((l) => l !== firstSpent)), "missing pool logs");
+  raises(() => eventsFromLogs(logs.filter((l) => l !== firstSpent)), "missing pool logs");
   // Notes data with another offset, or a length no call emits, is malformed.
   const word = (value: bigint) => hex32(value).slice(2);
   for (const data of [word(64n) + "00".repeat(64), word(32n) + word(97n) + "00".repeat(97)]) {
-    raises(() => n.decodeNotesData("0x" + data), "malformed Notes log");
+    raises(() => decodeNotesData("0x" + data), "malformed Notes log");
   }
 });
 
@@ -496,7 +505,7 @@ test("channels: one ciphertext per transaction, a bounded window, and late payme
   assert.ok(values(scanner).includes(ETH));
   // Direct numbers are issued only within GAP of the highest paid one, so a fresh scan
   // watches each before its payment lands, in whatever order they pay.
-  scanner = new n.Scanner(ALICE, CHAIN, POOL);
+  scanner = new Scanner(ALICE, CHAIN, POOL);
   const issue = () => Array.from({ length: n.GAP }, () => scanner.issueDirect());
   const firstNumbers = Array.from({ length: n.GAP }, (_, i) => BigInt(i));
   assert.deepEqual(issue(), firstNumbers);
@@ -637,14 +646,14 @@ test("CLI: scan and direct-secret keep owner-only state and hand out each number
     const lock = `${state}.lock.d`;
     mkdirSync(lock);
     const before = readFileSync(state, "utf8");
-    const waiting = n.directSecretCommand({ keys: ALICE, config, state });
+    const waiting = directSecretCommand({ keys: ALICE, config, state });
     await sleep(300);
     assert.equal(readFileSync(state, "utf8"), before);
     rmdirSync(lock);
     assert.equal(record(await waiting).number, 5);
     // A run saves nothing if the state file changed after it loaded it, as when another run
     // wrote it after the lock was removed. A scan has loaded the state when its call returns.
-    const scanning = n.scanCommand({ keys: ALICE, config, state });
+    const scanning = scanCommand({ keys: ALICE, config, state });
     const changed = readFileSync(state, "utf8") + "\n";
     writeFileSync(state, changed);
     await assert.rejects(scanning, /changed during this run/);
@@ -689,12 +698,12 @@ test("smoke fixture: the committed fixture's notes open for its wallets", () => 
     return keys;
   });
   const { transfer: t, withdraw_seed: ws, withdraw: wd } = fixture;
-  const event = (block: bigint, notes: string, leaves: n.Leaf[], spent: string[] = []) => {
+  const event = (block: bigint, notes: string, leaves: Leaf[], spent: string[] = []) => {
     const bytes = fromHex(notes, "notes");
     return { block, tx: 0n, call: 0, notes: bytes, leaves, spent: spent.map(BigInt) };
   };
   const leaf = (cm: string, index: bigint) => ({ cm: BigInt(cm), epoch: 0n, index });
-  const events: n.PoolEvent[] = [
+  const events: PoolEvent[] = [
     event(1n, fixture.shield_note, [leaf(fixture.cm_a, 0n)]),
     event(2n, t.notes, [leaf(t.out_cm1, 1n), leaf(t.out_cm2, 2n)], [t.nf1, t.nf2]),
     event(3n, wd.notes, [], [wd.nf1, wd.nf2]),
@@ -702,7 +711,7 @@ test("smoke fixture: the committed fixture's notes open for its wallets", () => 
   ];
   // Each note as "index value spent", in leaf order.
   const found = (keys: n.WalletKeys) => {
-    const scanner = new n.Scanner(keys, BigInt(fixture.chain_id), BigInt(fixture.pool_address));
+    const scanner = new Scanner(keys, BigInt(fixture.chain_id), BigInt(fixture.pool_address));
     for (const e of events) scanner.scan(e);
     return [...scanner.notes.values()].map((r) => `${r.index} ${r.value} ${r.spent}`).sort();
   };

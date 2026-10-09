@@ -20,10 +20,18 @@ import { rlpBytes, rlpInt, rlpList, sigHash } from "../../../src/frametx.ts";
 import { signHash, totalGasLimit, type Frame, type FrameTx } from "../../../src/frametx.ts";
 import * as gas from "../../../src/gas.ts";
 import { canonical, isObject, parse, stringify } from "../../../src/json.ts";
-import * as pool from "../../../src/pool.ts";
 import * as protocol from "../../../src/protocol.ts";
 import { prove, terminate, WASM, ZKEY } from "../../../src/prover.ts";
 import { seededRng, type Rng } from "../../../src/random.ts";
+import {
+  defaultClaimTail,
+  entryProofBytes,
+  settleCalldata,
+  shieldCalldata,
+  signTransaction,
+  spendFrames,
+  spendNonceKeys,
+} from "../../../src/spend.ts";
 import { buildWitness, dummyInput, newAuthorizer, newNote } from "../../../src/wallet.ts";
 import { RepeatedTree, Tree, type MerkleTree, type Witness } from "../../../src/wallet.ts";
 import { initcode } from "../../../tools/dispatcher.ts";
@@ -143,15 +151,15 @@ interface SpendOptions {
 function frameTx(entry: Entry, o: SpendOptions = {}): FrameTx {
   const source = protocol.sourceId(POOL, int(entry, "epoch"));
   const recentRoot = protocol.recentRootTuple(source, int(entry, "root_slot"), int(entry, "root"));
-  const settle = pool.settleCalldata(entry);
+  const settle = settleCalldata(entry, entry.root_slot);
   const withdraws = int(entry, "public_amount") !== 0n;
-  const tail = withdraws ? pool.defaultClaimTail(POOL, int(entry, "recipient")) : null;
-  const proof = pool.entryProofBytes(entry);
-  const frames = pool.spendFrames({ pool: POOL, recentRoot, proof, settle, tail });
+  const tail = withdraws ? defaultClaimTail(POOL, int(entry, "recipient")) : null;
+  const proof = entryProofBytes(entry);
+  const frames = spendFrames({ pool: POOL, recentRoot, proof, settle, tail });
   o.mutate?.(frames);
   const tx: FrameTx = {
     chainId: CHAIN,
-    nonceKeys: o.nonceKeys ?? pool.spendNonceKeys(settle),
+    nonceKeys: o.nonceKeys ?? spendNonceKeys(settle),
     nonceSeq: o.nonceSeq ?? 0n,
     sender: POOL,
     frames,
@@ -161,7 +169,7 @@ function frameTx(entry: Entry, o: SpendOptions = {}): FrameTx {
     maxBlobFee: 0n,
     blobHashes: [],
   };
-  return pool.signTransaction(tx, fromHex(entry.authorizer_private_key, "authorizer key"));
+  return signTransaction(tx, fromHex(entry.authorizer_private_key, "authorizer key"));
 }
 
 /** A DEFAULT frame that moves no value. */
@@ -238,7 +246,7 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
   const BASE = treeOf(NA.cm, NB.cm);
 
   const deposit = (name: string, n: Note, nonce: bigint, tree: Tree, slot = SLOT): Step => {
-    const shield = pool.shieldCalldata(hex32(n.inner), { note: toHex(TEST_NOTE) });
+    const shield = shieldCalldata(hex32(n.inner), { note: toHex(TEST_NOTE) });
     return save(name, ordinary(nonce, POOL, shield, n.value), {
       slot_number: slot,
       storage: atPool(slots(["21", tree.leaves.length], ["22", tree.root()])),
@@ -740,7 +748,7 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
   addCase("signature-rewrapped-as-explicit-message-rejected", [rewrapped]);
   // A signature by another key, here the attacker's own over another fourth frame, would let
   // anyone who sees a pending spend choose its tail and fees.
-  const other = pool.signTransaction(frameTx(initial, { mutate: setTail }), ATTACKER);
+  const other = signTransaction(frameTx(initial, { mutate: setTail }), ATTACKER);
   const otherKey = refused("signature-other-key", initial, undefined, { raw: rawTx(other) });
   addCase("signature-by-another-key-rejected", [otherKey]);
   // A DEFAULT settlement frame would run after approval, revert on its sender check and leave

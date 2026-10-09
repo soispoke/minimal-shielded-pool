@@ -12,9 +12,9 @@ import { InputError, NotesError, UserError } from "../src/errors.ts";
 import * as ft from "../src/frametx.ts";
 import * as gas from "../src/gas.ts";
 import * as notes from "../src/notes.ts";
-import * as pool from "../src/pool.ts";
 import { poseidon } from "../src/poseidon.ts";
 import * as pr from "../src/protocol.ts";
+import * as spend from "../src/spend.ts";
 import { RepeatedTree, Tree, buildWitness, type MerkleTree } from "../src/wallet.ts";
 
 type Json = any; // the vector files are untyped JSON
@@ -349,27 +349,27 @@ describe("frame transactions (frametx.json)", () => {
     const action = { ...bigs(limits), data: bytes(data) };
     each(s.cases, (c) => {
       const entry = { ...s.entries[c.entry], root_slot: s.rootSlot };
-      const settle = pool.settleCalldata(entry);
-      const proof = pool.entryProofBytes(entry);
+      const settle = spend.settleCalldata(entry, entry.root_slot);
+      const proof = spend.entryProofBytes(entry);
       const source = pr.sourceId(poolAddress, big(entry.epoch));
       const recentRoot = pr.recentRootTuple(source, big(s.rootSlot), big(entry.root));
-      const tail = pool.spendTailFrame(poolAddress, settle, c.action ? action : null, {
+      const tail = spend.spendTailFrame(poolAddress, settle, c.action ? action : null, {
         omit: c.omit,
       });
       const tx: ft.FrameTx = {
         chainId: big(s.chainId),
-        nonceKeys: pool.spendNonceKeys(settle),
+        nonceKeys: spend.spendNonceKeys(settle),
         nonceSeq: 0n,
         sender: poolAddress,
-        frames: pool.spendFrames({ pool: poolAddress, recentRoot, proof, settle, tail }),
+        frames: spend.spendFrames({ pool: poolAddress, recentRoot, proof, settle, tail }),
         signatures: [],
         maxPriorityFee: big(s.maxPriorityFee),
         maxFee: big(s.maxFee),
         maxBlobFee: 0n,
         blobHashes: [],
       };
-      const key = pool.authorizerKey(entry);
-      pool.signTransaction(tx, key);
+      const key = spend.authorizerKey(entry);
+      spend.signTransaction(tx, key);
       const raw = ft.rawTx(tx);
       const { signature } = tx.signatures[0];
       assert.equal(ft.recoverSigner(ft.sigHash(tx), signature), big(c.out.authorizer));
@@ -443,18 +443,18 @@ describe("pool calldata (abi.json)", () => {
         const entry = "base" in c ? { ...entries[c.base], ...c.set } : c.entry;
         for (const key of c.unset ?? []) delete entry[key];
         entries.push(entry);
-        return calldata(pool.settleCalldata(entry), c.out);
+        return calldata(spend.settleCalldata(entry, entry.root_slot), c.out);
       },
       UserError,
     ],
     shield: [
-      (c) => calldata(pool.shieldCalldata(c.inner, { note: hex(expand(c.entry.note)) }), c.out),
+      (c) => calldata(spend.shieldCalldata(c.inner, { note: hex(expand(c.entry.note)) }), c.out),
       UserError,
     ],
     publish: [(c) => pr.encodePublish(big(c.epoch)), InputError],
     domainCall: [(c) => pr.encodeDomainCall(big(c.epoch)), InputError],
     claim: [(c) => pr.encodeClaim(big(c.recipient)), InputError],
-    proofBytes: [(c) => pool.entryProofBytes(c.entry), InputError],
+    proofBytes: [(c) => spend.entryProofBytes(c.entry), InputError],
     // The compressed signals [beta, gamma, alpha], with the right gamma and one off by one.
     verifierCalls: [
       ({ transfer: t }) => {
