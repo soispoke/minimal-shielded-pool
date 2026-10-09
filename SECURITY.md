@@ -214,9 +214,9 @@ note shows as unspent, and spending it fails. Notes older than client history
 What the tests check is in the header of each TypeScript test file,
 [docs/design.md](docs/design.md#the-client-and-its-cross-checks) and
 [test/native/README.md](test/native/README.md). The September 2026 testnet
-runs are in the [README](README.md#deployment), and earlier dated runs are in
-`evidence/`. The tests and runs show compatibility with one testnet
-configuration, not production readiness.
+runs are in the [README](README.md#deployment), and earlier dated runs are
+under the [`evidence-archive`](https://github.com/soispoke/minimal-shielded-pool/tree/evidence-archive/evidence) tag. The tests and runs show compatibility
+with one testnet configuration, not production readiness.
 
 ## Reporting
 

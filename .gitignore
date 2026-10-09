@@ -18,8 +18,5 @@ __pycache__/
 /contracts/broadcast/
 /devnet/native_occurrence/
 
-# The archived profile's initcode is a deployment record, tracked like the live one.
-!evidence/vectors/*/build/
-!evidence/vectors/*/build/shielded_pool_dispatcher_init.hex
 # The formal verification repository, checked out here to run its checks.
 /formal/

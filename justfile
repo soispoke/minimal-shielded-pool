@@ -11,9 +11,7 @@ install:
 # What CI's test jobs run, in the same order.
 test: check-artifacts check test-ts test-contracts
 
-# The archive check compares with commit 6c5c77b, so it needs the full git
-# history.
-# Rebuild the circuit and dispatcher, and check them and the archived profile.
+# Rebuild the circuit and dispatcher, and check them against core/artifacts/.
 check-artifacts:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -26,8 +24,6 @@ check-artifacts:
     node tools/dispatcher.ts --artifact >/dev/null
     git diff --exit-code -- core/artifacts/shielded_pool_dispatcher_init.hex
     node tools/dispatcher.ts --initcode 0x0000000000000000000000000000000000000001 0x0000000000000000000000000000000000000002 >/dev/null
-    git diff --exit-code 6c5c77b171e08ad0987a06c44d0488ab385f36dd:devnet/vectors/2026-09-01-hegota-final-profile HEAD:evidence/vectors/2026-09-01-hegota-final-profile
-    git diff --exit-code HEAD -- evidence/vectors/2026-09-01-hegota-final-profile
 
 # Type-check and format-check the TypeScript, then the gas, activation and
 # compiler-settings checks.
