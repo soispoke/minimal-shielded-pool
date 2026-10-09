@@ -85,7 +85,7 @@ export interface CommandOptions {
 
 /**
  * `notes scan`: brings the state up to the finalized head (scanToFinalized), saves it, and
- * returns the unspent notes.
+ * returns the unspent notes. It says on stderr when it rescanned a state an earlier version saved.
  */
 export async function scanCommand(options: CommandOptions): Promise<string> {
   return withState("scan", options, async (config, scanner, save) => {
@@ -95,6 +95,12 @@ export async function scanCommand(options: CommandOptions): Promise<string> {
     if (typeof url !== "string") throw new NotesError("the config names no rpc URL; pass --rpc");
     await scanToFinalized(scanner, new RpcChain(url), deployment, options.chunk);
     save();
+    if (scanner.rescanReason !== null) {
+      process.stderr.write(
+        "notes: rescanned the state from the deployment block, keeping the direct numbers " +
+          `handed out, since ${scanner.rescanReason}\n`,
+      );
+    }
     const unspent = scanner.unspent();
     const balance = String(unspent.reduce((sum, note) => sum + note.value, 0n));
     const notes = unspent.map(({ cm, epoch, index, value }) => {
@@ -114,7 +120,12 @@ const DIRECT_NOTE = "give this to one sender only, over a post-quantum channel; 
 export async function directSecretCommand(options: CommandOptions): Promise<string> {
   return withState("direct-secret", options, async (_, scanner, save) => {
     if (scanner.scannedBlock < 0n) {
-      throw new NotesError("scan first, so that the wallet knows which numbers have been paid");
+      const { rescanReason } = scanner;
+      throw new NotesError(
+        rescanReason === null
+          ? "scan first, so that the wallet knows which numbers have been paid"
+          : `scan first, which rescans the state from the deployment block, since ${rescanReason}`,
+      );
     }
     let number = options.number;
     if (number === undefined) {

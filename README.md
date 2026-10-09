@@ -297,12 +297,13 @@ its direct secrets. `scan` and `direct-secret` need the config of a
 It reads every shield and settlement apart, even several in one transaction. A
 node may leave a call's logs out of `eth_getLogs`, as ethrex does for every log
 of a frame transaction whose fourth frame failed. Once a later leaf shows the
-gap, `scan` rebuilds the call from block receipts, and it stops if leaves are
-still missing rather than hide notes. `direct-secret` needs a state that has
-been scanned, and hands out numbers only within 20 of the highest one paid,
-which is how far a scan from the seed looks. History older than Ethereum's
-retention window (EIP-4444) comes from archives, as it already does for the
-tree leaves.
+gap, or begins a new epoch before the last one was seen full, `scan` rebuilds
+the call from block receipts, and it stops if leaves are still missing rather
+than hide notes ([one exception](SECURITY.md#note-delivery)). `direct-secret`
+needs a state that has been scanned, and hands out numbers only within 20 of
+the highest one paid, which is how far a scan from the seed looks. History
+older than Ethereum's retention window (EIP-4444) comes from archives, as it
+already does for the tree leaves.
 
 A normal spend grows by 96 bytes and about 4,000 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
@@ -322,8 +323,9 @@ under [Use](#use).
 
 Export discloses only the notes you name, and gives a nullifier key only for
 notes you spent. Notes paid to one address share its spend key, so their
-nullifier key shows when any of that address's notes in the epoch is spent;
-export refuses such a key unless you pass `--address-wide`. Export reads the
+nullifier key shows when any of that address's notes in the epoch is spent.
+Export cannot tell such a key from one a single note uses, so it refuses every
+nullifier key unless you pass `--address-wide`. Export reads the
 pool's logs from the node and matches them locally. When those logs show no
 spend of a note the fixture spends, or no transaction that created it, export
 reads that note's nullifier slot in the EIP-8250 nonce manager to catch a spend

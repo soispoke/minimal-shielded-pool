@@ -1,11 +1,12 @@
 /**
  * Note delivery: wallets find their notes and spends from their seed alone, through a public
  * address or a secret sent out of band, and senders cannot reuse an index or a ciphertext or
- * outrun the recipient's window. The chain is an in-memory list of what the pool emits, and the
- * notes CLI runs as a user runs it, against a local JSON-RPC server serving the same logs and
- * receipts.
+ * outrun the recipient's window. A state an earlier version saved is scanned again when it may
+ * have missed a payment, keeping the direct numbers handed out. The chain is an in-memory list of
+ * what the pool emits, and the notes CLI runs as a user runs it, against a local JSON-RPC server
+ * serving the same logs and receipts.
  *
- * Run: node --test test/notes.test.ts (about 3 s, most of it the 26 CLI runs). ML-KEM
+ * Run: node --test test/notes.test.ts (about 4 s, most of it the 30 CLI runs). ML-KEM
  * encapsulation draws fresh randomness, so ciphertexts differ between runs; every outcome
  * checked here does not depend on them.
  */
@@ -32,12 +33,21 @@ import { POOL_PROFILE, SHIELD_NOTE_BYTES, SPEND_NOTES_BYTES } from "../src/gas.t
 import { parse, stringify } from "../src/json.ts";
 import { directSecretCommand, scanCommand } from "../src/cli/notes.ts";
 import * as n from "../src/notes.ts";
-import { LEAF_APPENDED, NOTES, NOTE_SPENT, domainScalar, nullifier } from "../src/protocol.ts";
+import {
+  LEAF_APPENDED,
+  NOTES,
+  NOTE_SPENT,
+  TREE_CAPACITY,
+  domainScalar,
+  nullifier,
+} from "../src/protocol.ts";
 import { seededRng } from "../src/random.ts";
+import { RpcChain } from "../src/rpc.ts";
 import {
   Scanner,
   decodeNotesData,
   eventsFromLogs,
+  scanToFinalized,
   type Leaf,
   type PoolEvent,
   type ScannerOptions,
@@ -76,17 +86,22 @@ function raises(fn: () => unknown, expected: string): void {
 type AddOptions = { sizes?: readonly number[]; sameTx?: true; sameBlock?: boolean; skip?: bigint };
 
 /**
- * The pool's events, one per shield or settlement, and the leaves of epoch 0. Each call gets
- * its own block unless it shares the previous call's transaction or block.
+ * The pool's events, one per shield or settlement, and the leaves of its tree, which begins a
+ * new epoch when a call's leaves do not fit, as the pool does. Each call gets its own block
+ * unless it shares the previous call's transaction or block.
  */
 class Chain {
   events: PoolEvent[] = [];
+  epoch = 0n;
   size = 0n;
   block = 100n;
 
   add(notes: Uint8Array, outputs: bigint[], spent: bigint[] = [], options: AddOptions = {}) {
     assert.ok((options.sizes ?? SPEND_NOTES_BYTES).includes(notes.length), `${notes.length}`);
-    const leaves = outputs.map((cm) => ({ cm, epoch: 0n, index: this.size++ }));
+    if (BigInt(outputs.length) > TREE_CAPACITY - this.size) {
+      [this.epoch, this.size] = [this.epoch + 1n, 0n];
+    }
+    const leaves = outputs.map((cm) => ({ cm, epoch: this.epoch, index: this.size++ }));
     const last = this.events.at(-1)!;
     let block: bigint, tx: bigint, call: number;
     if (options.sameTx) [block, tx, call] = [last.block, last.tx, last.call + 1];
@@ -580,6 +595,213 @@ test("hidden calls: calls left out of eth_getLogs are rebuilt from receipts or c
   }
 });
 
+test("epoch rollover: a leaf that skips a whole epoch stops the scan", () => {
+  // Epoch 0 closed full, and the next leaf the node shows is in epoch 2: all of epoch 1 is
+  // missing from its logs.
+  const chain = new Chain();
+  chain.size = TREE_CAPACITY;
+  const deposit = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+  chain.add(n.shieldNotes(deposit.note), [deposit.cm], [], SHIELD);
+  const event = chain.events.at(-1)!;
+  const skipped = { ...event, leaves: event.leaves.map((leaf) => ({ ...leaf, epoch: 2n })) };
+  const state = { ...new Scanner(ALICE, CHAIN, POOL).toJson(), tree: { "0": TREE_CAPACITY } };
+  const scanner = Scanner.fromJson(ALICE, { ...state, scanned_block: 100n, leaf_block: 100n });
+  raises(() => scanner.scan(skipped), "missing pool logs");
+});
+
+test("epoch rollover: a call left out at an epoch's end is rebuilt from receipts or caught", async (t) => {
+  // The pool begins a new epoch only when a call's leaves do not fit, so an epoch closes full, or
+  // one leaf short before a two-leaf settlement. Each case resumes a scan that saw `start` leaves
+  // of epoch 0 through block 100, then the chain runs the steps in `run`, one block each. The scan
+  // reads `receipts` from block 100 when a leaf skips some or begins an epoch after one not seen
+  // full, and finds `found` notes of Alice's or gives `refusal`.
+  const full = TREE_CAPACITY;
+  const through102 = [100n, 101n, 102n];
+  const steps = {
+    // Bob pays Alice, with his change or none, or shields to himself.
+    pay: (chain: Chain, toAlice: n.Outgoing) => {
+      const payee = paid(ALICE.ownerPk, toAlice, ETH);
+      chain.add(n.spendNotes(payee.note, dummy()), [payee.cm], [1n, 2n]);
+    },
+    payWithChange: (chain: Chain, toAlice: n.Outgoing) => {
+      const payee = paid(ALICE.ownerPk, toAlice, ETH);
+      const change = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+      chain.add(n.spendNotes(payee.note, change.note), [payee.cm, change.cm], [3n, 4n]);
+    },
+    shield: (chain: Chain) => {
+      const deposit = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+      chain.add(n.shieldNotes(deposit.note), [deposit.cm], [], SHIELD);
+    },
+  };
+  const cases = [
+    // Alice's payment takes epoch 0's last leaf and is left out of the logs, and Bob's shield
+    // begins epoch 1.
+    { start: full - 1n, run: ["pay", "shield"], hidden: [0], receipts: through102, found: 1 },
+    // Left out of the receipts too: Bob's shield fitted in epoch 0, so the scan stops.
+    {
+      start: full - 1n,
+      run: ["pay", "shield"],
+      hidden: [0],
+      unreceipted: [0],
+      receipts: through102,
+      refusal: "which had room for its call",
+    },
+    // A two-leaf settlement begins epoch 1 after it, which the logs show as in the next case.
+    {
+      start: full - 1n,
+      run: ["pay", "payWithChange"],
+      hidden: [0],
+      receipts: through102,
+      found: 2,
+    },
+    // Nothing is left out: epoch 0 closes one leaf short, and its receipts add nothing.
+    { start: full - 1n, run: ["payWithChange"], receipts: [100n, 101n], found: 1 },
+    // Nothing is left out: epoch 0 closes full, and no receipt is read.
+    { start: full - 1n, run: ["shield", "pay"], receipts: [], found: 1 },
+    // Within one epoch, the next leaf shows the gap as before.
+    { start: full - 3n, run: ["pay", "shield"], hidden: [0], receipts: through102, found: 1 },
+  ];
+  for (const [number, c] of cases.entries()) {
+    await t.test(`case ${number}`, async () => {
+      const chain = new Chain();
+      chain.size = c.start;
+      const toAlice = n.directChannel(ALICE.ownerPk, ALICE.directSecret(0n));
+      for (const step of c.run) steps[step as keyof typeof steps](chain, toAlice);
+      const state = { ...new Scanner(ALICE, CHAIN, POOL).toJson(), tree: { "0": c.start } };
+      const scanner = Scanner.fromJson(ALICE, { ...state, scanned_block: 100n, leaf_block: 100n });
+      const node = await serve(chain, { block: chain.block }, c);
+      try {
+        const scan = scanToFinalized(scanner, new RpcChain(node.url), 0n);
+        if (c.refusal !== undefined) {
+          await assert.rejects(scan, (error: unknown) => {
+            assert.ok(error instanceof NotesError && error.message.includes(c.refusal), `${error}`);
+            assert.ok(error.message.includes("missing pool logs"), error.message);
+            return true;
+          });
+        } else {
+          await scan;
+          assert.equal(scanner.notes.size, c.found);
+        }
+        const read = node.requests.filter((call) => call.method === "eth_getBlockReceipts");
+        const blocks = read.map((call) => BigInt(call.params[0]));
+        assert.deepEqual(blocks, c.receipts);
+      } finally {
+        await node.close();
+      }
+    });
+  }
+});
+
+/** The value as it is written to a file and read back. */
+const json = (value: unknown) => record(stringify(value, 1));
+/** What loading a state that must be rescanned changes in it. */
+const RESCAN = { version: 3, tree: { "0": 0 }, scanned_block: -1, leaf_block: -1 };
+
+test("state upgrade: only an earlier version's state with an epoch closed short is rescanned", () => {
+  // Before state version 3, a scan let a new epoch begin after one not seen full without reading
+  // receipts. Each state was saved through block 300; `short` is part of the reason a rescan
+  // gives, and null where the state loads as it was saved.
+  const full = TREE_CAPACITY;
+  const cases = [
+    { version: 2, tree: { "0": 5n }, short: null },
+    { version: 2, tree: { "0": full, "1": full, "2": 3n }, short: null },
+    { version: 2, tree: { "0": full - 1n, "1": 2n }, short: "epoch 0 closed with 1048575 of" },
+    { version: 2, tree: { "0": full, "1": full - 3n, "2": 1n }, short: "epoch 1 closed with" },
+    { version: 2, tree: { "0": full, "2": 1n }, short: "epoch 1 closed with 0 of 1048576" },
+    // A scan of version 3 began epoch 1 only after reading receipts.
+    { version: 3, tree: { "0": full - 1n, "1": 2n }, short: null },
+  ];
+  const fresh = new Scanner(ALICE, CHAIN, POOL).toJson();
+  for (const { short, ...fields } of cases) {
+    const blocks = { scanned_block: 300n, leaf_block: 290n };
+    const state = json({ ...fresh, ...fields, ...blocks, direct_issued: 6n });
+    const scanner = Scanner.fromJson(ALICE, state);
+    const saved = json(scanner.toJson());
+    if (short === null) {
+      assert.equal(scanner.rescanReason, null, stringify(fields.tree));
+      assert.deepEqual(saved, { ...state, version: 3 });
+    } else {
+      assert.ok(scanner.rescanReason?.includes(short), `${scanner.rescanReason}`);
+      assert.deepEqual(saved, { ...state, ...RESCAN });
+    }
+  }
+  raises(() => Scanner.fromJson(ALICE, { ...fresh, version: 1 }), "another wallet");
+});
+
+test("state upgrade: a rescan finds the payment an earlier version missed and keeps its numbers", async () => {
+  // Alice's wallet scanned this chain with an earlier version and a node that left her payment
+  // in epoch 0's last leaf out of its logs. It found her change at leaf 7, missed the payment,
+  // and saw epoch 0 close one leaf short when Bob's shield began epoch 1. She had handed out
+  // direct numbers 0 to 4, and the payment is on number 0.
+  const chain = new Chain();
+  chain.size = TREE_CAPACITY - 1n;
+  const toAlice = n.directChannel(ALICE.ownerPk, ALICE.directSecret(0n));
+  const payment = paid(ALICE.ownerPk, toAlice, ETH);
+  chain.add(n.spendNotes(payment.note, dummy()), [payment.cm], [1n, 2n]);
+  const deposit = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+  chain.add(n.shieldNotes(deposit.note), [deposit.cm], [], SHIELD);
+  const rollover = chain.events[1].block;
+  // Epoch 0's other leaves are shields in block 100, too many to serve over RPC, so each scan
+  // reads them here, as scanToFinalized would from the deployment block.
+  const change = paid(ALICE.ownerPk, n.directChannel(ALICE.ownerPk, ALICE.selfSecret), 3n * ETH);
+  const others = n.shieldNotes(dummy());
+  const readEpoch0 = (scanner: Scanner) => {
+    for (let index = 0n; index < TREE_CAPACITY - 1n; index++) {
+      const [notes, cm] = index === 7n ? [n.shieldNotes(change.note), change.cm] : [others, 1n];
+      const leaves = [{ cm, epoch: 0n, index }];
+      scanner.scan({ block: 100n, tx: 0n, call: Number(index), notes, leaves, spent: [] });
+    }
+  };
+  const earlier = new Scanner(ALICE, CHAIN, POOL);
+  readEpoch0(earlier);
+  for (let i = 0; i < 5; i++) earlier.issueDirect();
+  const tree = { "0": TREE_CAPACITY - 1n, "1": 1n };
+  const checkpoint = { scanned_block: rollover, leaf_block: rollover };
+  const saved = json({ ...earlier.toJson(), version: 2, tree, ...checkpoint });
+  // Loading it keeps everything but the scan's place, which goes back to the deployment block.
+  const scanner = Scanner.fromJson(ALICE, saved);
+  assert.ok(scanner.rescanReason?.includes("epoch 0 closed with 1048575 of 1048576 leaves"));
+  assert.deepEqual(json(scanner.toJson()), { ...saved, ...RESCAN });
+  readEpoch0(scanner);
+  const node = await serve(chain, { block: rollover }, { hidden: [0] });
+  try {
+    await scanToFinalized(scanner, new RpcChain(node.url), 0n);
+    const read = node.requests.filter((call) => call.method === "eth_getBlockReceipts");
+    const blocks = read.map((call) => BigInt(call.params[0]));
+    assert.deepEqual(blocks, [100n, 101n, 102n]);
+  } finally {
+    await node.close();
+  }
+  // The payment is found and the change is not counted twice; no issued number comes back.
+  assert.deepEqual(sorted(values(scanner)), [ETH, 3n * ETH]);
+  assert.equal(scanner.directHighest, 0n);
+  assert.equal(scanner.issueDirect(), 5n);
+});
+
+test("state upgrade: a rescan through a node that serves nothing of epoch 0 stops", async () => {
+  // The earlier version missed Alice's payment in epoch 0's last leaf. This node serves nothing
+  // of epoch 0 but that payment's receipt, so the rescan's first leaf in logs is epoch 1's first.
+  // Accepting it would save the state as rescanned without the payment.
+  const chain = new Chain();
+  chain.size = TREE_CAPACITY - 1n;
+  const toAlice = n.directChannel(ALICE.ownerPk, ALICE.directSecret(0n));
+  const payment = paid(ALICE.ownerPk, toAlice, ETH);
+  chain.add(n.spendNotes(payment.note, dummy()), [payment.cm], [1n, 2n]);
+  const deposit = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+  chain.add(n.shieldNotes(deposit.note), [deposit.cm], [], SHIELD);
+  const rollover = chain.events[1].block;
+  const tree = { "0": TREE_CAPACITY - 1n, "1": 1n };
+  const checkpoint = { scanned_block: rollover, leaf_block: rollover };
+  const old = { ...new Scanner(ALICE, CHAIN, POOL).toJson(), version: 2, tree, ...checkpoint };
+  const node = await serve(chain, { block: rollover }, { hidden: [0] });
+  try {
+    const scanner = Scanner.fromJson(ALICE, json(old));
+    await assert.rejects(scanToFinalized(scanner, new RpcChain(node.url), 0n), /missing pool logs/);
+  } finally {
+    await node.close();
+  }
+});
+
 test("CLI: scan and direct-secret keep owner-only state and hand out each number once", async () => {
   const chain = story();
   const finalized = { block: chain.events[3].block };
@@ -665,6 +887,54 @@ test("CLI: scan and direct-secret keep owner-only state and hand out each number
     // A config naming another pool than the state file's is refused.
     const pool2 = writeConfig(dir, node.url, { pool: hexPadded(POOL + 1n, 40) });
     await cli(["scan", "--config", pool2, "--state", state, ...seedFile], "another chain or pool");
+  } finally {
+    await node.close();
+  }
+});
+
+test("CLI: an earlier version's state is rescanned before direct-secret issues a number", async () => {
+  // An earlier version saved this state after scanning the story to its end. Its tree shows epoch
+  // 0 closed one leaf short, and Alice had handed out direct numbers 0 to 9. The node serves only
+  // the story, since a full epoch is too large to serve, so this checks how the CLI runs the
+  // rescan; the state upgrade tests check what a rescan finds.
+  const chain = story();
+  const node = await serve(chain, { block: chain.block });
+  const dir = mkdtempSync(join(TMP, "upgrade-"));
+  try {
+    const state = join(dir, "state.json");
+    const old = {
+      ...new Scanner(ALICE, CHAIN, POOL).toJson(),
+      version: 2,
+      tree: { "0": TREE_CAPACITY - 1n, "1": 1n },
+      scanned_block: chain.block,
+      leaf_block: chain.block,
+      direct_issued: 9n,
+    };
+    writeFileSync(state, stringify(old, 1), { mode: 0o600 });
+    const saved = readFileSync(state, "utf8");
+    const args = ["--config", writeConfig(dir, node.url), "--state", state, "--seed-file", SEED];
+    const reason =
+      "since it shows epoch 0 closed with 1048575 of 1048576 leaves, and the earlier version " +
+      "that saved it could miss a payment in an epoch's last leaves";
+    // direct-secret issues nothing and saves nothing before the rescan.
+    const first = `scan first, which rescans the state from the deployment block, ${reason}`;
+    await cli(["direct-secret", ...args], first);
+    assert.equal(readFileSync(state, "utf8"), saved);
+    // The scan reads from the deployment block, finds the story's notes, and says why in one line.
+    const run = await runCli(process.execPath, [CLI, "scan", ...args], { cwd: TMP });
+    assert.equal(run.code, 0, run.stderr);
+    const line =
+      "notes: rescanned the state from the deployment block, keeping the direct numbers " +
+      `handed out, ${reason}\n`;
+    assert.equal(run.stderr, line);
+    assert.equal(node.ranges[0][0], 0n);
+    assert.equal(record(run.stdout).unspent, 5);
+    const { version, direct_issued, direct_highest } = record(readFileSync(state, "utf8"));
+    assert.deepEqual([version, direct_issued, direct_highest], [3, 9, 3]);
+    // A fresh state would issue 4, past the highest number paid; this one goes on from 9.
+    assert.equal(record(await cli(["direct-secret", ...args])).number, 10);
+    const again = await runCli(process.execPath, [CLI, "scan", ...args], { cwd: TMP });
+    assert.deepEqual([again.code, again.stderr], [0, ""]);
   } finally {
     await node.close();
   }

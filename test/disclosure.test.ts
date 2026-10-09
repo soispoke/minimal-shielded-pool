@@ -119,12 +119,13 @@ const byName = <T>(f: (k: Name) => T) =>
  * paid to one address (src/notes.ts) do. With aliceKey, her deposit uses that spend key. Every
  * call draws the same notes.
  */
-function story(sharedKey = false, aliceKey?: bigint) {
+function story(sharedKey = false, aliceKey?: bigint, dummyKey?: bigint) {
   const rng = seededRng(7n);
   const D = pr.domainScalar(CHAIN, POOL_HEX, 0n);
   const notes = byName(() => newNote(rng));
   if (aliceKey !== undefined) notes.a = [aliceKey, notes.a[1]];
   if (sharedKey) notes.c = [notes.a[0], notes.c[1]];
+  if (dummyKey !== undefined) notes.d1 = [dummyKey, notes.d1[1]];
   const values = { a: ETH, b: (6n * ETH) / 10n, c: (35n * ETH) / 100n, e: 5n * ETH };
   const valueOf = (k: Name) => (k in values ? values[k as keyof typeof values] : 0n);
   const cm = byName((k) => pr.commitment(notes[k][0], notes[k][1], valueOf(k)));
@@ -185,9 +186,10 @@ async function rejected(chain: ChainReader, receipt: unknown, expected: string):
   await assert.rejects(verify(chain, receipt), refusal(expected));
 }
 
+// Export cannot tell any nullifier key from an address's, so these disclose with consent.
 const { chain, fixture, notes, cm, nf, op } = story();
-const receipt = await exportFor(chain, fixture);
-const deposit = await exportFor(chain, fixture, [cm.a]);
+const receipt = await exportFor(chain, fixture, undefined, true);
+const deposit = await exportFor(chain, fixture, [cm.a], true);
 const outputsOnly = (k: Name) => ({ x: { epoch: 0, inputs: [], output_openings: [op(k)] } });
 
 /** The receipt note for `key`, at epoch 0. */
@@ -320,7 +322,7 @@ test("export fails on a consumed spend the node's logs miss and skips one never 
   await assert.rejects(exportFor(gap, fixture, [cm.a]), refusal("logs do not show"));
   // A spend the fixture holds but that was never sent consumed nothing: its dummy is left out.
   const unsent = { epoch: 0, inputs: [{ ...op("d1"), spend_key: hex32(1n) }] };
-  assert.deepEqual(await exportFor(chain, { ...fixture, unsent }), receipt);
+  assert.deepEqual(await exportFor(chain, { ...fixture, unsent }, undefined, true), receipt);
 });
 
 test("what a receipt shows about origins, completeness and positions", async () => {
@@ -487,8 +489,9 @@ test("a nullifier key shared by an address's notes needs consent and is marked",
   const shared = story(true);
   await assert.rejects(exportFor(shared.chain, shared.fixture), refusal("--address-wide"));
   const wide = await exportFor(shared.chain, shared.fixture, undefined, true);
+  // The two notes under that key, and the two dummies, whose keys export cannot tell from it.
   const scoped = wide.notes.filter((n) => n.keyScope === "address");
-  assert.equal(scoped.length, 2);
+  assert.equal(scoped.length, 4);
   assert.ok(scoped.every((n) => "nullifierKey" in n));
   await verify(shared.chain, wide);
   // A wallet's own key is its address's, even under the one note the fixture holds.
@@ -496,4 +499,62 @@ test("a nullifier key shared by an address's notes needs consent and is marked",
   const paid = story(false, new WalletKeys(seed).spendKey);
   const withWallet = { ...paid.fixture, wallets: { alice: { seed: toHex(seed) } } };
   await assert.rejects(exportFor(paid.chain, withWallet), refusal("--address-wide"));
+});
+
+test("a real note's key needs consent at any account", async () => {
+  // A seed has an address for every account number, so a lone note's key may be an address's
+  // whether the fixture names its wallet, with its account or without, or names none. Export
+  // refuses the key unless asked and then marks it, at account 1 as at account 0.
+  const seed = new Uint8Array(32).fill(1);
+  for (const account of [0n, 1n]) {
+    const paid = story(false, new WalletKeys(seed, account).spendKey);
+    const named = [{ seed: toHex(seed), account: Number(account) }, { seed: toHex(seed) }];
+    const fixtures = [
+      ...named.map((alice) => ({ ...paid.fixture, wallets: { alice } })),
+      paid.fixture,
+    ];
+    for (const fx of fixtures) {
+      await assert.rejects(exportFor(paid.chain, fx, [paid.cm.a]), refusal("--address-wide"));
+      const wide = await exportFor(paid.chain, fx, [paid.cm.a], true);
+      assert.deepEqual(
+        wide.notes.map((n) => [n.cm, n.keyScope, "nullifierKey" in n]),
+        [[hex32(paid.cm.a), "address", true]],
+      );
+      await verify(paid.chain, wide);
+    }
+  }
+});
+
+test("a dummy input's key needs consent too, and a receipt without a key does not", async () => {
+  // Zero value does not show that a dummy's key was drawn for its spend alone: a fixture can
+  // give a dummy any account's key, which covers that address's notes in the epoch. Export
+  // refuses every dummy's key unless asked, fresh ones too, and then marks it.
+  await assert.rejects(exportFor(chain, fixture, [cm.d1, cm.d2]), refusal("--address-wide"));
+  const dummies = await exportFor(chain, fixture, [cm.d1, cm.d2], true);
+  const shown = dummies.notes.map((n) => ["dummy" in n, n.keyScope, "nullifierKey" in n]);
+  assert.deepEqual(shown, [
+    [true, "address", true],
+    [true, "address", true],
+  ]);
+  await verify(chain, dummies);
+  const scopes = (["a", "c", "d1", "d2"] as const).map((k) => noteOf(receipt, k).keyScope);
+  assert.deepEqual(scopes, ["address", "address", "address", "address"]);
+  const seed = new Uint8Array(32).fill(1);
+  const D = pr.domainScalar(CHAIN, POOL, 0n);
+  for (const account of [0n, 1n]) {
+    const key = new WalletKeys(seed, account).spendKey;
+    const reused = story(false, undefined, key);
+    const alice = { seed: toHex(seed), account: Number(account) };
+    for (const fx of [{ ...reused.fixture, wallets: { alice } }, reused.fixture]) {
+      const only = [reused.cm.d1];
+      await assert.rejects(exportFor(reused.chain, fx, only), refusal("--address-wide"));
+      const [note] = (await exportFor(reused.chain, fx, only, true)).notes;
+      assert.equal(note.keyScope, "address");
+      assert.equal(note.nullifierKey, hex32(pr.nullifierKey(D, key)), "the address's key");
+    }
+  }
+  // A payment's output the fixture does not spend, such as Bob's, needs no consent.
+  const output = await exportFor(chain, fixture, [cm.b]);
+  const unkeyed = output.notes.map((n) => [n.cm, "keyScope" in n, "nullifierKey" in n]);
+  assert.deepEqual(unkeyed, [[hex32(cm.b), false, false]]);
 });

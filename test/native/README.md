@@ -23,13 +23,17 @@ Forge, in the default and `libsmall` profiles, and writes the vectors under
 `--skip-generate` reuses the vectors already there, and `--offline` passes
 `--offline` to Cargo when its dependencies are cached.
 
-Proofs are cached with the vectors, keyed by their witness, proving key and
-circuit WASM, so a run proves only what changed. With `--cache-only`,
-`generate-fixtures.ts` fails on a proof missing from the cache instead of
-proving it. `run.ts` does not pass it; it is for running the generator by hand
-after the Forge builds, followed by `run.ts --skip-generate`. No setup ceremony
-runs here, and the repository's proving key is test-only.
-Generated vectors and proof files are ignored by Git. The two reports,
+Each proof is cached beside the vectors as `fixtures/NAME-proof.json`, keyed by
+its witness, proving key and circuit WASM, so a run proves only what changed.
+Groth16 proving is randomized, so the cache is committed: only these proofs
+reproduce the committed transactions byte for byte. `run.ts --cache-only`
+passes `--cache-only` to `generate-fixtures.ts`, which then fails on a proof
+missing from the cache instead of proving it. The generator checks each cached
+proof against the committed verification key before using it and stops on one
+that does not verify, because a case that expects a rejection would otherwise
+pass on an invalid proof. `test/native-proofs.test.ts` checks every committed
+proof the same way. No setup ceremony runs here, and the repository's proving
+key is test-only. The vectors themselves are ignored by Git. The two reports,
 `native-report.json` and `policy-report.json`, are tracked, so a run changes
 them by design.
 
@@ -42,15 +46,21 @@ results. This suite, not Forge, bounds settlement gas, because it deploys the
 `libsmall` Poseidon builds a real pool uses, while the Forge suite runs the
 via-IR builds, about 10% cheaper per hash.
 
-The recorded reports come from a run on the TypeScript generator's fixtures.
-Regenerating them reproduces the hash of every transaction without a proof;
-a proof-carrying transaction matches only when the local proof cache still
-holds its proof, since Groth16 proving is randomized. CI proves from scratch,
-reruns the suite, and checks with `compare-reports.ts` that the fresh reports
-match the committed ones: every case, result and per-frame gas figure exactly,
-and a re-proved transaction's hash, total gas and fee only as far as its new
-proof bytes can move them (a multiple of 12 gas, the EIP-2028 price gap between
-a zero and a nonzero calldata byte, over at most 288 bytes).
+The recorded reports come from a run on the TypeScript generator's fixtures,
+built from the committed proofs. CI regenerates the fixtures with
+`run.ts --cache-only`, reruns both suites, and checks with `compare-reports.ts`
+that the fresh reports are identical to the committed ones, every transaction
+hash, fee, payer and gas figure included. A change to a spend's witness, the
+circuit or the proving key therefore fails CI until a run without
+`--cache-only` proves the affected spends again and their proofs are committed
+with the new reports.
+
+The native job never proves. Proving from scratch is tested by the TypeScript
+suites: `real-groth16-proof` in `test/circuit.test.ts` proves a witness, and
+the nonce-race run in `test/generators.test.ts` proves two transfers, each
+checked by `prove()` against the committed verification key. Those checks run
+in snarkjs; only committed proofs reach the EVM verifier, here and in the Forge
+tests.
 
 The scenarios cover both copies of identical funded deposits being withdrawn
 in one history, an identical private output and its original both being spent,

@@ -180,8 +180,16 @@ post-quantum channel and never show it in a public QR code.
 
 `notes scan` rebuilds calls that ethrex leaves out of `eth_getLogs`, but a full
 withdrawal that ethrex leaves out appends no leaf, so it leaves no gap: its
-note shows as unspent, and spending it fails. Notes older than client history
-(EIP-4444) need an archive, which nobody guarantees to keep.
+note shows as unspent, and spending it fails. A node that also leaves a call
+out of its receipts makes `scan` stop, except for a call in an epoch's last
+leaf when a two-leaf settlement began the next epoch: the pool also closes an
+epoch one leaf short before such a settlement, so nothing shows the gap.
+Earlier versions of `scan` read no receipts when a new epoch began, so a state
+file they saved can lack a payment in an epoch's last leaves. When such a file
+shows an epoch that closed short of full, the next `scan` rescans from the
+deployment block and keeps the direct numbers handed out, and `direct-secret`
+issues nothing until then. Notes older than client history (EIP-4444) need an
+archive, which nobody guarantees to keep.
 
 ## Assumptions
 
