@@ -5,7 +5,7 @@
  * without creating the outputs. Then how a shield or publish call is sized, refused and sent.
  * Runs in about 0.3 s.
  *
- *   node --test test/pool-gas-only-action.test.ts
+ *   node --test test/pool-send.test.ts
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";

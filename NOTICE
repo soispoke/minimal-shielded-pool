@@ -20,7 +20,15 @@ This project builds on:
   2026: tools/patch-verifier.ts gives its three precompile calls a fixed
   500,000 gas request instead of reading gas() and, since August 2026, adds
   checks that reject non-canonical proof coordinates and points at infinity.
-  src/prover.ts loads snarkjs from npm (not vendored) to prove and verify.
+  src/prover.ts imports snarkjs from npm (not vendored) to prove and verify
+  inside the calling Node process. The fixture generators src/cli/smoke.ts,
+  src/cli/nonce-race.ts and test/native/scripts/generate-fixtures.ts load it
+  through src/prover.ts, and test/circuit.test.ts imports it both directly
+  and through src/prover.ts. The rest of the client, including the pool,
+  notes and disclosure commands, does not load it. tools/setup.sh and
+  tools/check-activation.ts (with --ptau) run snarkjs as a separate command.
+  Anyone distributing a program that loads snarkjs should check the terms of
+  GPL-3.0.
 
 src/frametx.ts derives from lambdaclass/ethrex's reference type-0x06
 frame-transaction encoder for the Hegotá devnet (scripts/hegota-devnet/frametx.py,

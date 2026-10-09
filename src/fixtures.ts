@@ -1,9 +1,11 @@
 /**
  * What the fixture generators share: the spend entry each proof becomes, and the rules that keep
  * a fixture's secrets. A fixture holds the only openings of its notes and the one-time
- * authorizer keys of its spends, so it is written readable by its owner only, a live one goes
- * under the ignored artifacts/ and never into a tracked file, and no run writes over a fixture
- * made for another chain, whose notes may still be unspent.
+ * authorizer keys of its spends, so it is written readable by its owner only, and no run
+ * replaces a file at its output path unless that file is a fixture for the test chain, since
+ * any other may hold the only openings of unspent notes. By default a fixture goes under
+ * artifacts/, which git ignores, except that a smoke fixture for the test chain and pool
+ * replaces the committed one; --output can name any path, the committed fixture included.
  */
 import assert from "node:assert/strict";
 import { mkdirSync, readlinkSync } from "node:fs";

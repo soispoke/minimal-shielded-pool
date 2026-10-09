@@ -72,8 +72,8 @@ export function commitment(spendKey: bigint, rho: bigint, value: bigint): bigint
 }
 
 /**
- * The nullifier key K = p2(domain, spendKey). With a note's position, K finds when the note is
- * spent but cannot spend it, so disclosure receipts publish K and never the spend key.
+ * The nullifier key nk = p2(domain, spendKey). With a note's position, nk finds when the note is
+ * spent but cannot spend it, so disclosure receipts publish nk and never the spend key.
  */
 export function nullifierKey(domain: bigint, spendKey: bigint): bigint {
   return p2(domain, spendKey);

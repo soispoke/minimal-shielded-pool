@@ -7,6 +7,10 @@
   "engines": {
     "node": ">=24.7"
   },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "check": "tsc -p . && prettier --check ."
+  },
   "dependencies": {
     "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",

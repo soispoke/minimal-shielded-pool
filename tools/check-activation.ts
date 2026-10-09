@@ -1,5 +1,9 @@
 /**
- * Fail-closed artifact, ceremony and gas-profile activation gate.
+ * Fail-closed artifact, ceremony and gas-profile activation gate. A testbed manifest
+ * (production: false) passes only with --allow-testbed. A production manifest needs at least
+ * two phase-2 contributions, a count the proving key must record, independent_verification set
+ * to true, and --ptau naming the phase-1 file whose SHA-256 the manifest pins and against which
+ * snarkjs verifies the proving key.
  *
  *   node tools/check-activation.ts MANIFEST [--allow-testbed] [--ptau PATH]
  */
@@ -330,6 +334,9 @@ export function checkActivation(
     if (!options.allowTestbed) throw new CheckError("activation blocked: manifest is testbed-only");
   } else if (contributions < 2n || verified !== true) {
     throw new CheckError("activation blocked: production ceremony evidence is incomplete");
+  } else if (options.ptau === undefined) {
+    // Without the phase-1 file, nothing checks the key's IC and L points against the circuit.
+    throw new CheckError("activation blocked: production activation requires --ptau");
   }
 
   // "partial": A/B terms and verifier checked, the key's points not (see checkSetup).

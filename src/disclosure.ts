@@ -1,10 +1,10 @@
 /**
  * Disclosure receipts: which notes a spend consumed and created, without the spending key. A
- * nullifier is Poseidon3(4, K, Poseidon2(cm, index)) with K = Poseidon2(D, spend_key), so K and
- * a note's position find the spend that published its nullifier, and the proof ties that
+ * nullifier is Poseidon3(4, nk, Poseidon2(cm, index)) with nk = Poseidon2(D, spend_key), so nk
+ * and a note's position find the spend that published its nullifier, and the proof ties that
  * nullifier to exactly this note, yet only spend_key can spend. A receipt proves these links and
  * amounts, not who presents it or where the funds came from before the deposit. Notes paid to
- * one address share its spend key, so their K covers every note of that address in the epoch:
+ * one address share its spend key, so their nk covers every note of that address in the epoch:
  * export refuses such a key unless --address-wide accepts that, and marks those notes.
  */
 import { existsSync } from "node:fs";
@@ -51,10 +51,13 @@ const at = ({ cm, epoch, index }: Position) => `${cm},${epoch},${index}`;
 
 /**
  * A receipt for the chosen notes a generator fixture opens: `only` is a set of commitments, or
- * null for all. Logs are matched locally, so the RPC does not learn which notes are disclosed.
- * A receipt never holds spend_key or rho, and only notes the fixture spends get a nullifier key:
- * a payment's output may be someone else's note, whose later spend is theirs to disclose. A
- * chain that cannot answer stops the export with its ChainError.
+ * null for all. Logs are matched locally, but export reads a chosen note's nullifier slot in the
+ * EIP-8250 nonce manager, keccak256(pool, nullifier), when the fixture spends the note and the
+ * logs do not show that spend (also when the note is still unspent on this chain) or, for a real
+ * note, its creation. The RPC can match that slot to the nullifier once a spend publishes it, so
+ * use a node you control. A receipt never holds spend_key or rho, and only notes the fixture
+ * spends get a nullifier key: a payment's output may be someone else's note, whose later spend
+ * is theirs to disclose. A chain that cannot answer stops the export with its ChainError.
  */
 export async function exportReceipt(
   chain: Chain,

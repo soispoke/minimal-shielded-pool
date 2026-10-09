@@ -1,9 +1,14 @@
 /**
  * Files that hold secrets: wallet seeds and states, fixtures with note openings and
- * authorizer keys, and disclosure receipts. Only their owner may read them, a reader never
- * sees one half written, and none silently replaces a file another run just made. A file this
- * module refuses is an InputError; one that changed after it was checked is a FileChangedError,
- * which each caller words for its own users.
+ * authorizer keys, and disclosure receipts. Wallet states and fixtures are written by
+ * writePrivate, receipts by writeNewPrivate, both creating the file owner-only (mode 0600);
+ * seeds are only read. writePrivate moves a complete temporary file into place, so a reader
+ * never sees one half written, and refuses to write when the path no longer holds what its
+ * caller's check saw there; writeNewPrivate refuses any file already there. Only readPrivate,
+ * which reads seeds and wallet states, refuses a file its group or others have any permission
+ * on: fixtures and receipts are read without that check. A file this module refuses is an
+ * InputError; one that changed after it was checked is a FileChangedError, which each caller
+ * words for its own users.
  */
 import { randomBytes } from "node:crypto";
 import {

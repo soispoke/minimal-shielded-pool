@@ -113,7 +113,7 @@ tests are Solidity and the native harness is Rust. Because the client
 reimplements Poseidon, the tree, the statement and the transaction encoding, the
 tests check it against independent sources: Poseidon against circomlibjs vectors
 (`test/poseidon.test.ts`), witnesses and statements against the committed R1CS
-and a real proof (`test/occurrence.test.ts`), the smoke fixture's proof against
+and a real proof (`test/circuit.test.ts`), the smoke fixture's proof against
 the Solidity verifier in Forge, and the whole pool with real proofs and signed
 transactions in the pinned ethrex VM (`test/native/`).
 
@@ -160,5 +160,7 @@ A change to the tree or the statement touches all of these:
 - gas: re-measure the worst settlement in the native suite, then update the
   pins, `src/gas.ts` and `tools/check-gas-profile.ts`;
 - the activation manifest, the activation check's profiles, a new pool profile
-  and a fresh deployment. The formal proofs stop covering the changed files
-  until their pins are updated.
+  and a fresh deployment. The formal proofs cover commit `8835be7` and do not
+  cover a changed file until the proofs and their pins are updated;
+  `node tools/check-formal-pins.ts` lists the pinned files that already
+  differ, among them the dispatcher and the logic.
