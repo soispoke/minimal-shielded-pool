@@ -323,8 +323,9 @@ under [Use](#use).
 
 Export discloses only the notes you name, and gives a nullifier key only for
 notes you spent. Notes paid to one address share its spend key, so their
-nullifier key shows when any of that address's notes in the epoch is spent;
-export refuses such a key unless you pass `--address-wide`. Export reads the
+nullifier key shows when any of that address's notes in the epoch is spent.
+Export cannot tell such a key from one a single note uses, so it refuses every
+nullifier key unless you pass `--address-wide`. Export reads the
 pool's logs from the node and matches them locally. When those logs show no
 spend of a note the fixture spends, or no transaction that created it, export
 reads that note's nullifier slot in the EIP-8250 nonce manager to catch a spend

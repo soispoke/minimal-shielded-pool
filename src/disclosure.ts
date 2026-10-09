@@ -5,15 +5,14 @@
  * nullifier to exactly this note, yet only spend_key can spend. A receipt proves these links and
  * amounts, not who presents it or where the funds came from before the deposit. Notes paid to
  * one address share its spend key, so their nk covers every note of that address in the epoch.
- * Export cannot tell such a key from one a single note uses, so it refuses the key of every real
- * note unless --address-wide accepts that, and marks those notes.
+ * Export cannot tell such a key from one a single note uses, so it refuses every nullifier key
+ * unless --address-wide accepts that, and marks the notes that carry one.
  */
 import { existsSync } from "node:fs";
 
 import {
   compareBigint,
   equalBytes,
-  fromHex,
   hex32,
   hexPadded,
   parseAddress,
@@ -26,7 +25,6 @@ import { InputError, ReceiptError, UserError } from "./errors.ts";
 import { readJson, writeNewPrivate } from "./files.ts";
 import { MODE } from "./frametx.ts";
 import { asList, asObject, isObject, stringify, type JsonObject } from "./json.ts";
-import { WalletKeys } from "./notes.ts";
 import * as protocol from "./protocol.ts";
 import {
   ChainError,
@@ -86,17 +84,6 @@ export async function exportReceipt(
 
   const fx = asObject(fixture, "the fixture");
   const notes = openings(fx);
-  // Spend keys that other notes may share. Every real note src/notes.ts makes is an address's
-  // and carries its spend key, and a seed has an address for every account number, so export
-  // cannot rule out that a real note's key is an address's: it counts every one. A dummy input's
-  // key is drawn for that spend alone, unless a real note or the account-0 address of a wallet
-  // the fixture names has it too.
-  const shared = new Set<bigint>();
-  for (const wallet of Object.values(asObject(fx.wallets ?? {}, "the fixture's wallets"))) {
-    const seed = fromHex(asObject(wallet, "a wallet").seed, "a wallet's seed");
-    shared.add(new WalletKeys(seed).spendKey);
-  }
-  for (const note of notes.values()) if (note.value !== 0n) shared.add(note.sk);
 
   const out = [];
   // Real notes first, then dummies, each by commitment.
@@ -130,10 +117,11 @@ export async function exportReceipt(
         );
       }
       if (real ? created === undefined : spent === undefined) continue;
-      const wide = spent !== undefined && shared.has(note.sk);
-      if (wide && !addressWide) {
+      // Any key may be an address's: every real note src/notes.ts makes carries one, at any
+      // account number, and a zero-value dummy can carry one in a fixture made by hand.
+      if (spent !== undefined && !addressWide) {
         throw new ReceiptError(
-          `${label} shares its spend key with other notes, as notes paid to one address do: ` +
+          `${label} may share its spend key with other notes, as notes paid to one address do: ` +
             `its nullifier key would show when every note of that key in epoch ${epoch} is ` +
             "spent. Pass --address-wide to disclose that",
         );
@@ -145,8 +133,9 @@ export async function exportReceipt(
         inner: hex32(note.inner),
         value: String(note.value),
         ...(real ? { created: created! } : { dummy: true as const }),
-        ...(wide ? { keyScope: "address" as const } : {}),
-        ...(spent === undefined ? {} : { spent, nullifierKey: hex32(key) }),
+        ...(spent === undefined
+          ? {}
+          : { keyScope: "address" as const, spent, nullifierKey: hex32(key) }),
       });
     }
   }

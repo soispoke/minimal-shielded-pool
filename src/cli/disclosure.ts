@@ -25,7 +25,7 @@ const SPEC = {
     "--all": { kind: "flag", help: "export: disclose every note the fixture opens" },
     "--address-wide": {
       kind: "flag",
-      help: "export: allow nullifier keys shared by every note of an address in the epoch",
+      help: "export: allow nullifier keys, which may cover every note of an address in the epoch",
     },
     "--output": { kind: "string", help: "export: where to write the receipt" },
     "--receipt": { kind: "string", help: "verify: the receipt to check" },
