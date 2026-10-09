@@ -42,11 +42,8 @@ function hexLines(values: string[]): string {
     if (word < 0n || word >> 256n !== 0n) throw new RangeError(`constant ${x} exceeds 32 bytes`);
     return word.toString(16).padStart(64, "0");
   });
-  const lines = [];
-  for (let i = 0; i < words.length; i += 3) {
-    lines.push(`        hex"${words.slice(i, i + 3).join("")}"`);
-  }
-  return lines.join("\n");
+  const line = (i: number) => `        hex"${words.slice(3 * i, 3 * i + 3).join("")}"`;
+  return each(Math.ceil(words.length / 3), line);
 }
 
 /**

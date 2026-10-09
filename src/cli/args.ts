@@ -1,15 +1,16 @@
 /**
- * The command-line parser every CLI uses. An unknown or abbreviated flag stops the run with exit
- * status 2 before any file or RPC is touched (a mistyped --dry-run must not send a transaction),
- * --flag=value equals --flag value, and everything after "--" is positional.
+ * The command-line parser every CLI uses: node:util's parseArgs in strict mode, with named and
+ * checked positionals, integer options and help on top. An unknown or abbreviated flag stops the
+ * run with exit status 2 before any file or RPC is touched (a mistyped --dry-run must not send a
+ * transaction), --flag=value equals --flag value, and everything after "--" is positional.
  *
  * Any local user can read a process's arguments, and a parser error repeats what it rejects, so
  * every parser message has each run of 64 or more hex digits redacted: a key pasted anywhere on
  * the command line is refused without being echoed.
  */
-import { inspect } from "node:util";
+import { inspect, parseArgs as parseArgv, type ParseArgsOptionsConfig } from "node:util";
 
-import { parseDec, uintFromText } from "../bytes.ts";
+import { parseDec, parseUint } from "../bytes.ts";
 import { InputError, UserError } from "../errors.ts";
 
 /** The text with every run of 64 or more hex digits, which may be a key, redacted. */
@@ -25,8 +26,9 @@ export interface PositionalSpec {
 
 /**
  * An option: a flag (true when given), one value (the last one given wins), or a repeated value
- * collected in order. "int" reads 0x hex or decimal without leading zeros (010 could mean ten or
- * eight); "decimal" reads decimal digits only. Neither takes a sign.
+ * collected in order. "int" reads what parseUint reads from text: 0x hex or decimal without
+ * leading zeros, since 010 could mean ten or eight. "decimal" reads decimal digits only, as
+ * parseDec does. Neither takes a sign.
  */
 export interface OptionSpec {
   readonly kind: "flag" | "string" | "int" | "decimal" | "append";
@@ -93,102 +95,69 @@ export function parseArgs<const S extends CliSpec>(
   if (refusal && argv.length > refusal.index && !argv[refusal.index].startsWith("--")) {
     throw new InputError(refusal.message);
   }
-  const positionalSpecs = spec.positionals ?? [];
-  const optionSpecs: { readonly [flag: string]: OptionSpec | undefined } = spec.options ?? {};
-  const fail: Fail = (message) => {
+  const end = argv.indexOf("--");
+  if ((end < 0 ? argv : argv.slice(0, end)).some((arg) => arg === "-h" || arg === "--help")) {
+    throw new HelpRequested(spec);
+  }
+  const fail = (message: string): never => {
     throw new UsageError(spec, message);
   };
-  // No CLI takes a negative number, so anything but "-" that starts with "-" is an option.
-  const isPositional = (arg: string) => !arg.startsWith("-") || arg === "-";
-
-  const positionals: string[] = [];
-  const values = new Map<string, unknown>();
-  const unrecognized: string[] = [];
-  let onlyPositionals = false;
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--" && !onlyPositionals) {
-      onlyPositionals = true;
-    } else if (onlyPositionals || isPositional(arg)) {
-      const target = positionalSpecs[positionals.length];
-      if (target === undefined) unrecognized.push(arg);
-      else positionals.push(checkChoice(target.name, arg, fail, target.choices));
-    } else if (arg === "-h" || arg === "--help") {
-      throw new HelpRequested(spec);
-    } else {
-      const equals = arg.indexOf("=");
-      const flag = equals > 0 ? arg.slice(0, equals) : arg;
-      const option = Object.hasOwn(optionSpecs, flag) ? optionSpecs[flag] : undefined;
-      let value = equals > 0 ? arg.slice(equals + 1) : undefined;
-      if (option === undefined) {
-        unrecognized.push(arg);
-      } else if (option.kind === "flag") {
-        if (value !== undefined) {
-          fail(`argument ${flag}: ignored explicit argument ${quote(value)}`);
-        }
-        values.set(flag, true);
-      } else {
-        if (value === undefined) {
-          if (i + 1 === argv.length || !isPositional(argv[i + 1])) {
-            fail(`argument ${flag}: expected one argument`);
-          }
-          value = argv[++i];
-        }
-        if (option.kind === "append") {
-          values.set(flag, [...((values.get(flag) as string[] | undefined) ?? []), value]);
-        } else {
-          values.set(flag, readValue(flag, option.kind, value, fail));
-        }
-      }
+  const optionSpecs = Object.entries(spec.options ?? {});
+  const config: ParseArgsOptionsConfig = {};
+  for (const [flag, { kind }] of optionSpecs) {
+    config[flag.slice(2)] = {
+      type: kind === "flag" ? "boolean" : "string",
+      // An int or decimal option keeps every value given, so that a malformed one is refused
+      // even when a later one is valid.
+      multiple: kind !== "flag" && kind !== "string",
+    };
+  }
+  let parsed;
+  try {
+    // Strict mode refuses unknown flags, a value given to a flag, and a missing value. A value
+    // that starts with "-" must be written --flag=value, so a flag is never taken as a value.
+    parsed = parseArgv({ args: [...argv], options: config, allowPositionals: true, strict: true });
+  } catch (error) {
+    // Node's refusals of a command line carry an ERR_PARSE_ARGS_ code; anything else is a bug.
+    if (!String((error as { code?: unknown }).code).startsWith("ERR_PARSE_ARGS_")) throw error;
+    // Node ends an unknown-option refusal with a tip on passing a dash-led positional after
+    // "--"; for a mistyped flag that is the wrong remedy.
+    return fail((error as Error).message.split(". To specify a positional")[0]);
+  }
+  const { values, positionals } = parsed;
+  const positionalSpecs = spec.positionals ?? [];
+  const missing = [
+    ...positionalSpecs.slice(positionals.length).map((p) => p.name),
+    ...optionSpecs
+      .filter(([flag, option]) => option.required && values[flag.slice(2)] === undefined)
+      .map(([flag]) => flag),
+  ];
+  if (missing.length > 0) fail(`missing ${missing.join(", ")}`);
+  if (positionals.length > positionalSpecs.length) {
+    fail(`unexpected argument ${quote(positionals[positionalSpecs.length])}`);
+  }
+  positionalSpecs.forEach(({ name, choices }, i) => {
+    if (choices && !choices.includes(positionals[i])) {
+      fail(`${name} must be one of ${choices.join(", ")}, not ${quote(positionals[i])}`);
     }
-  }
+  });
 
-  const missing = positionalSpecs.slice(positionals.length).map((p) => p.name);
-  for (const [flag, option] of Object.entries(optionSpecs)) {
-    if (option?.required && !values.has(flag)) missing.push(flag);
-  }
-  if (missing.length > 0) fail(`the following arguments are required: ${missing.join(", ")}`);
-  if (unrecognized.length > 0) fail(`unrecognized arguments: ${unrecognized.join(" ")}`);
-
-  const options: Record<string, unknown> = {};
-  for (const [flag, option] of Object.entries(optionSpecs)) {
-    const value = values.get(flag);
-    options[flag] =
-      option?.kind === "flag" ? value === true : option?.kind === "append" ? (value ?? []) : value;
-  }
+  const options = optionSpecs.map(([flag, { kind }]) => {
+    const value = values[flag.slice(2)];
+    if (kind === "flag") return [flag, value === true];
+    if (kind === "append") return [flag, value ?? []];
+    if (kind === "string" || value === undefined) return [flag, value];
+    try {
+      const read = (raw: string) => (kind === "int" ? parseUint(raw, flag) : parseDec(raw, flag));
+      return [flag, (value as string[]).map(read).at(-1)];
+    } catch (error) {
+      return fail((error as Error).message);
+    }
+  });
   return {
     positionals: Object.fromEntries(positionalSpecs.map((p, i) => [p.name, positionals[i]])),
-    options,
+    options: Object.fromEntries(options),
   } as ParsedArgs<S>;
-}
-
-type Fail = (message: string) => never;
-
-function checkChoice(name: string, value: string, fail: Fail, choices?: readonly string[]): string {
-  if (choices && !choices.includes(value)) {
-    const listed = choices.map(quote).join(", ");
-    fail(`argument ${name}: invalid choice: ${quote(value)} (choose from ${listed})`);
-  }
-  return value;
-}
-
-// Integers are decimal or 0x hex only: signs, spaces, underscores and 0o/0b forms are refused,
-// and a negative epoch, slot or index fails here rather than later.
-function readValue(flag: string, kind: OptionSpec["kind"], raw: string, fail: Fail) {
-  if (kind === "string") return raw;
-  if (kind === "decimal") {
-    try {
-      return parseDec(raw, flag);
-    } catch {
-      return fail(`argument ${flag}: invalid int value: ${quote(raw)}`);
-    }
-  }
-  const value = uintFromText(raw);
-  if (value !== null) return value;
-  if (raw.startsWith("-") && uintFromText(raw.slice(1)) !== null) {
-    fail(`argument ${flag}: must be non-negative: ${raw}`);
-  }
-  return fail(`argument ${flag}: not an integer: ${raw}`);
 }
 
 // Quotes a rejected value so that spaces and control characters stay visible.
@@ -196,47 +165,36 @@ function quote(text: string): string {
   return JSON.stringify(text);
 }
 
-/** How help and usage show an argument: a choice list, the flag, or the flag and its value. */
-function invocation(name: string, choices?: readonly string[], option?: OptionSpec): string {
-  if (choices) return `{${choices.join(",")}}`;
-  if (option === undefined || option.kind === "flag") return name;
-  return `${name} ${name.slice(2).replaceAll("-", "_").toUpperCase()}`;
+/** How usage and help show an option: the flag, then a placeholder for its value. */
+function shown(flag: string, option: OptionSpec): string {
+  if (option.kind === "flag") return flag;
+  return `${flag} ${flag.slice(2).replaceAll("-", "_").toUpperCase()}`;
 }
 
 /** The usage line: the program, [options], then any required options and the positionals. */
 function usage(spec: CliSpec): string {
   const required = Object.entries(spec.options ?? {})
     .filter(([, option]) => option.required)
-    .map(([flag, option]) => invocation(flag, undefined, option));
-  const positionals = (spec.positionals ?? []).map((p) => invocation(p.name, p.choices));
+    .map(([flag, option]) => shown(flag, option));
+  const positionals = (spec.positionals ?? []).map((p) =>
+    p.choices ? `{${p.choices.join(",")}}` : p.name,
+  );
   return ["usage:", spec.prog, "[options]", ...required, ...positionals].join(" ");
 }
 
-type Row = [shown: string, text?: string];
-
 /** The usage line, the description, then one row per argument with its help beside it. */
 function help(spec: CliSpec): string {
-  const positionals = (spec.positionals ?? []).map((p): Row => {
-    return [p.name, p.help ?? (p.choices && `one of ${p.choices.join(", ")}`)];
-  });
-  const options: Row[] = [
-    ["-h, --help", "show this help message and exit"],
-    ...Object.entries(spec.options ?? {}).map(([flag, option]): Row => {
-      return [invocation(flag, undefined, option), option.help];
+  const rows = [
+    ...(spec.positionals ?? []).map((p) => {
+      return [p.name, p.help ?? (p.choices ? `one of ${p.choices.join(", ")}` : "")];
     }),
+    ...Object.entries(spec.options ?? {}).map(([flag, o]) => [shown(flag, o), o.help ?? ""]),
+    ["-h, --help", "show this help message and exit"],
   ];
-  const width = Math.max(...[...positionals, ...options].map(([shown]) => shown.length));
-  const section = (title: string, rows: Row[]) =>
-    rows.length === 0
-      ? []
-      : [
-          "",
-          title,
-          ...rows.map(([shown, text = ""]) => `  ${shown.padEnd(width)}  ${text}`.trimEnd()),
-        ];
-  const description = spec.description ? ["", spec.description] : [];
-  const sections = [...section("arguments:", positionals), ...section("options:", options)];
-  return [usage(spec), ...description, ...sections].join("\n") + "\n";
+  const width = Math.max(...rows.map(([left]) => left.length));
+  const lines = rows.map(([left, text]) => `  ${left.padEnd(width)}  ${text}`.trimEnd());
+  const description = spec.description ? [spec.description, ""] : [];
+  return [usage(spec), "", ...description, ...lines].join("\n") + "\n";
 }
 
 /**

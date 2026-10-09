@@ -50,22 +50,21 @@ function readHidden(stdin: ReadStream, prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const decoder = new StringDecoder("utf8");
     let line = "";
-    const restore = () => {
-      stdin.off("data", onData).off("end", onEnd).off("error", onError);
+    // Restores the terminal, then settles with the line or the stream's error.
+    const finish = (error?: Error) => {
+      stdin.off("data", onData).off("end", finish).off("error", finish);
       stdin.setRawMode(wasRaw);
       stdin.pause();
       // The Enter key was not echoed either.
       process.stderr.write("\n");
+      if (error) reject(error);
+      else resolve(line);
     };
     const onData = (chunk: Buffer) => {
       for (const key of decoder.write(chunk)) {
-        if (key === "\r" || key === "\n" || key === "\u0004") {
-          restore();
-          resolve(line);
-          return;
-        }
+        if (key === "\r" || key === "\n" || key === "\u0004") return finish();
         if (key === "\u0003") {
-          restore();
+          finish();
           process.exit(130);
         }
         if (key === "\u007f" || key === "\b") line = Array.from(line).slice(0, -1).join("");
@@ -73,15 +72,7 @@ function readHidden(stdin: ReadStream, prompt: string): Promise<string> {
         else if (key >= " ") line += key;
       }
     };
-    const onEnd = () => {
-      restore();
-      resolve(line);
-    };
-    const onError = (error: Error) => {
-      restore();
-      reject(error);
-    };
-    stdin.on("data", onData).once("end", onEnd).once("error", onError);
+    stdin.on("data", onData).once("end", finish).once("error", finish);
     stdin.resume();
   });
 }

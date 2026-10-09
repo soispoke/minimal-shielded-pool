@@ -1,7 +1,6 @@
 /**
- * Errors a user can act on: bad input, a refusal, a node that disagrees. Every
- * CLI prints a UserError's message and exits 1. Any other error is a bug and
- * keeps its stack trace.
+ * Errors a user can act on: bad input, a refusal, a node that disagrees. Every CLI prints a
+ * UserError's message and exits 1. Any other error is a bug and keeps its stack trace.
  */
 export class UserError extends Error {
   constructor(message: string, options?: ErrorOptions) {

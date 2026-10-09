@@ -40,7 +40,7 @@ import { LEAF_APPENDED, NOTES, NOTE_SPENT } from "./protocol.ts";
 import type { RpcChain } from "./rpc.ts";
 
 const STATE_VERSION = 2;
-export const POOL_TOPICS: readonly string[] = [LEAF_APPENDED, NOTE_SPENT, NOTES];
+const POOL_TOPICS: readonly string[] = [LEAF_APPENDED, NOTE_SPENT, NOTES];
 const EMPTY: Uint8Array = new Uint8Array();
 
 // ---- the scanner ----
@@ -60,10 +60,10 @@ export interface PoolEvent {
 type Kind = "self" | "direct" | "kem";
 
 /** A secret this wallet watches; `number` is a direct secret's number, -1 otherwise. */
-export type Incoming = { secret: Uint8Array; kind: Kind; nextIndex: bigint; number: bigint };
+type Incoming = { secret: Uint8Array; kind: Kind; nextIndex: bigint; number: bigint };
 
 /** A note this wallet owns. The state file writes `kind` under the key "secret". */
-export interface NoteRecord extends Leaf {
+interface NoteRecord extends Leaf {
   value: bigint;
   rho: bigint;
   nullifier: bigint;
@@ -71,7 +71,7 @@ export interface NoteRecord extends Leaf {
   kind: Kind;
 }
 
-export type ScannerOptions = { gap?: number; lookahead?: number };
+export type ScannerOptions = { gap?: number };
 
 // The 48-byte notes of an event's body after any ciphertext, and their tags as Map keys.
 const notesOf = (body: Uint8Array) =>
@@ -97,7 +97,6 @@ export class Scanner {
   scannedBlock = -1n;
   leafBlock = -1n; // the block of the last leaf seen
   readonly #gap: bigint;
-  readonly #lookahead: bigint;
   readonly #tags = new Map<string, [Incoming, bigint]>(); // tag hex -> secret, note index
   readonly #tree = new Map<bigint, bigint>(); // epoch -> next leaf index
   readonly #nullifiers = new Map<bigint, string>(); // nullifier -> placeOf its note
@@ -107,7 +106,6 @@ export class Scanner {
     this.chainId = chainId;
     this.pool = pool;
     this.#gap = BigInt(options.gap ?? GAP);
-    this.#lookahead = BigInt(options.lookahead ?? LOOKAHEAD);
     this.#add(keys.selfSecret, "self");
     for (let n = 0n; n < this.#gap; n++) this.#add(keys.directSecret(n), "direct", 0n, n);
   }
@@ -121,7 +119,7 @@ export class Scanner {
   // From index 0: a payment with an earlier index can land after a later one, including after
   // the state was saved and loaded again.
   #watch(incoming: Incoming): void {
-    for (let index = 0n; index < incoming.nextIndex + this.#lookahead; index++) {
+    for (let index = 0n; index < incoming.nextIndex + BigInt(LOOKAHEAD); index++) {
       this.#tags.set(tagOf(noteTag(incoming.secret, index)), [incoming, index]);
     }
   }
@@ -172,7 +170,7 @@ export class Scanner {
       // A foreign ciphertext decapsulates to a pseudorandom key, so a secret is adopted only if
       // a note carries a tag at an index a fresh channel would watch.
       const window = new Set<string>();
-      for (let i = 0n; i < this.#lookahead; i++) window.add(tagOf(noteTag(secret, i)));
+      for (let i = 0n; i < BigInt(LOOKAHEAD); i++) window.add(tagOf(noteTag(secret, i)));
       const known = this.incoming.some((i) => crypto.timingSafeEqual(i.secret, secret));
       if (!known && notesOf(body).some((note) => window.has(tagOf(note)))) this.#add(secret, "kem");
     } else if (![0, NOTE_BYTES, 2 * NOTE_BYTES].includes(body.length)) {
@@ -274,7 +272,7 @@ export class Scanner {
   }
 
   /** A scanner restored from its state file, refused unless it is this wallet's and account's. */
-  static fromJson(keys: WalletKeys, data: unknown, options: ScannerOptions = {}): Scanner {
+  static fromJson(keys: WalletKeys, data: unknown): Scanner {
     const state = isObject(data) ? data : {};
     const { account } = state;
     if (
@@ -286,7 +284,7 @@ export class Scanner {
     }
     const chainId = parseDec(state.chain_id, "the state's chain_id");
     const pool = parseAddress(state.pool, "the state's pool");
-    const scanner = new Scanner(keys, chainId, pool, options);
+    const scanner = new Scanner(keys, chainId, pool);
     // The file lists every watched secret, the self and direct ones included.
     scanner.incoming.length = 0;
     scanner.#tags.clear();
@@ -410,7 +408,7 @@ export function eventsFromLogs(logs: readonly unknown[]): PoolEvent[] {
 type Rpc = Pick<RpcChain, "call">;
 
 /** The pool's LeafAppended, NoteSpent and Notes logs in [from, to]. */
-export async function fetchLogs(chain: Rpc, pool: bigint, from: bigint, to: bigint, chunk = 2000) {
+async function fetchLogs(chain: Rpc, pool: bigint, from: bigint, to: bigint, chunk = 2000) {
   if (!(Number.isSafeInteger(chunk) && chunk >= 1)) {
     throw new NotesError("a chunk is at least one block");
   }
@@ -429,7 +427,7 @@ export async function fetchLogs(chain: Rpc, pool: bigint, from: bigint, to: bigi
  * of a frame transaction in which any frame failed, although the frames that succeeded,
  * settlement included, keep their effects.
  */
-export async function receiptLogs(chain: Rpc, pool: bigint, from: bigint, to: bigint) {
+async function receiptLogs(chain: Rpc, pool: bigint, from: bigint, to: bigint) {
   const logs: unknown[] = [];
   for (let block = from; block <= to; block++) {
     const receipts = await chain.call("eth_getBlockReceipts", [hexPadded(block, 1)]);

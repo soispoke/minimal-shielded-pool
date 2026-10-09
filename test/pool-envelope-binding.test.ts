@@ -229,8 +229,9 @@ test("refuses spend entry fields written in a loose form", () => {
   const entry: Entry = { ...(fixture.transfer as Entry), root_slot: "1" };
   for (const [field, value, text] of [
     ["root", "0x01", "root must be 32 bytes"],
-    ["fee", "0b1", "fee must be a non-negative integer"],
-    ["fee", " 5", "fee must be a non-negative integer"],
+    ["fee", "0b1", "fee must be 0x hex or decimal without leading zeros"],
+    ["fee", " 5", "fee must be 0x hex or decimal without leading zeros"],
+    ["fee", "05", "fee must be 0x hex or decimal without leading zeros"],
     ["root_slot", -1, "root_slot must be a non-negative decimal integer"],
   ] as const) {
     const refused = (error: unknown) => error instanceof InputError && error.message.includes(text);

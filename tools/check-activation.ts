@@ -37,7 +37,7 @@ const EXPECTED_PROFILE = {
 // Every active artifact must be pinned, or a manifest that omits one passes without its hash
 // being checked. check-forge-config.ts checks the settings forge resolves beyond foundry.toml.
 // The client is not an activation input; the gas constants it signs with are.
-export const REQUIRED_ARTIFACTS: readonly string[] = [
+const REQUIRED_ARTIFACTS = [
   "core/artifacts/spend.r1cs",
   "core/artifacts/spend_final.zkey",
   "core/artifacts/spend_js/spend.wasm",
@@ -76,7 +76,7 @@ export function sections(path: string, magic: string, ...needed: number[]) {
 }
 
 /** The phase-2 contribution count a snarkjs zkey records in section 10. */
-export function zkeyContributions(path: string): number {
+function zkeyContributions(path: string): number {
   const { u32, found } = sections(path, "zkey", 10);
   return u32(found.get(10)! + 64);
 }
@@ -277,8 +277,7 @@ export function checkActivation(
   checkSetup(resolve(root, R1CS), resolve(root, ZKEY), resolve(root, VERIFIER));
   const ceremony = () => field(manifest, "ceremony", "the manifest");
   if (options.ptau !== undefined) {
-    const pinned = get(ceremony(), "phase1_ptau_sha256", "ceremony");
-    verifyWithPtau(root, options.ptau, pinned);
+    verifyWithPtau(root, options.ptau, get(ceremony(), "phase1_ptau_sha256", "ceremony"));
   }
 
   const profile = object(field(manifest, "profile", "the manifest"), "profile");

@@ -153,8 +153,6 @@ export function checkGasProfile(root = ROOT): string {
     gas.SETTLE_FRAME_GAS +
     gas.SETTLE_FRAME_STATE_GAS;
   const declaredSingle = FROZEN_VERIFY_FRAME_GAS + FROZEN_SETTLE_FRAME_GAS;
-  // The two state dimensions, less what the proof frame's lower wallet default saves.
-  const extraOverFrozen = declaredSplit - declaredSingle;
   check(gas.EIP7825_TX_GAS_CAP === 16_777_216n, "EIP7825_TX_GAS_CAP is not 2^24");
 
   // The dispatcher must enforce the same settlement pins the wallet emits. Yul cannot import
@@ -244,7 +242,8 @@ export function checkGasProfile(root = ROOT): string {
     declared_total: {
       frozen_single_dimension: declaredSingle,
       spec_two_dimensions: declaredSplit,
-      extra_over_frozen: extraOverFrozen,
+      // The two state dimensions, less what the proof frame's lower wallet default saves.
+      extra_over_frozen: declaredSplit - declaredSingle,
     },
   });
 }

@@ -23,10 +23,8 @@ import {
   type FileIdentity,
 } from "./files.ts";
 import { isObject, stringify } from "./json.ts";
-import type { Encapsulate } from "./notes.ts";
 import * as protocol from "./protocol.ts";
 import type { ProofWords } from "./prover.ts";
-import type { Rng } from "./random.ts";
 import type { MerkleTree, SpendTerms, Witness } from "./wallet.ts";
 
 export const TEST_CHAIN_ID = 31337n;
@@ -50,16 +48,10 @@ export interface Proved {
   proof: ProofWords;
 }
 
-/** Everything a generator draws or prints, so tests can replay each source. */
+/** What a generator proves with and prints to. */
 export interface GeneratorDeps {
   prover: Prover;
   log(line: string): void;
-  /** Seeds, dummy inputs and authorizers. By default the fixed seed, or secureRng with --random. */
-  rng?: Rng;
-  /** ML-KEM-768 encapsulation for a payment to a public address. */
-  encapsulate?: Encapsulate;
-  /** The random bytes standing in for a withdrawal's payee note. */
-  dummyNote?: () => Uint8Array;
 }
 
 /**
@@ -114,10 +106,9 @@ export function defaultOutput(chainId: bigint, pool: bigint): string {
 }
 
 /**
- * Refuses to replace a fixture for any chain but the test chain, whatever mode the new run uses,
- * since it may hold the only openings of unspent notes. A file that is not a JSON object with
- * an integer chain_id counts as another chain's. Returns the identity of what is there, for
- * writeFixture to check again.
+ * Refuses to replace a fixture for any chain but the test chain, whatever mode the new run uses.
+ * A file that is not a JSON object with an integer chain_id counts as another chain's. Returns
+ * the identity of what is there, for writeFixture to check again.
  */
 export function refuseOverwrite(path: string): FileIdentity | null {
   const previous = fileIdentity(path);
@@ -162,7 +153,7 @@ export function writeFixture(path: string, fixture: object, previous: FileIdenti
 }
 
 /** A spend's public terms, its epoch and its one-time authorizer's private key. */
-export interface EntryTerms extends SpendTerms {
+interface EntryTerms extends SpendTerms {
   epoch: bigint;
   authorizerKey: Uint8Array;
 }
@@ -180,7 +171,7 @@ export function spendEntry(
   outputs: readonly protocol.Output[],
   terms: EntryTerms,
   { publics, proof }: Proved,
-  extra: Record<string, unknown> = {},
+  extra: Record<string, unknown>,
 ) {
   const { epoch, authorizer, publicAmount = 0n, fee = 0n, recipient = 0n } = terms;
   const root = tree.root();

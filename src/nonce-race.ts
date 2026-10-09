@@ -33,7 +33,7 @@ const NAMES = ["alice", "bob", "carol", "dave"] as const;
 
 type Reserved = ReturnType<typeof notes.reserve>;
 
-export interface NonceRaceOptions {
+interface NonceRaceOptions {
   /** Fresh seeds and secrets, required off the test chain or with rpc. */
   random: boolean;
   chainId: bigint;
@@ -109,7 +109,7 @@ export async function generateNonceRace(options: NonceRaceOptions, deps: fixture
         "another chain or a live tree",
     );
   }
-  const rng = deps.rng ?? (options.random ? secureRng : seededRng(SEED));
+  const rng = options.random ? secureRng : seededRng(SEED);
   const previous = fixtures.refuseOverwrite(output);
   const url = options.rpc;
   const call: Call = (method, params) => rpc(url!, method, params, { timeoutMs: 30_000 });
@@ -181,7 +181,7 @@ export async function generateNonceRace(options: NonceRaceOptions, deps: fixture
 
   // Transfer A pays Bob's public address; transfer C, against the same root, pays Dave with
   // the secret he handed Carol.
-  const toBob = notes.reserve(notes.openChannel(bob.address(), deps.encapsulate), vBob);
+  const toBob = notes.reserve(notes.openChannel(bob.address()), vBob);
   const changeA = notes.reserve(aliceSelf, vChange);
   const ea = await transfer(alice, a, idxA, bob, toBob, changeA, "race_a");
   const toDave = notes.reserve(notes.directChannel(dave.ownerPk, dave.directSecret(0n)), vBob);

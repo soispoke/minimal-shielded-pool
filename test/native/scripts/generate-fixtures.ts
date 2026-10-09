@@ -14,7 +14,7 @@ import { compareBigint, concat, fromHex, hex32, hexPadded, keccak } from "../../
 import { toBigint, toBytes, toHex, word } from "../../../src/bytes.ts";
 import { parseArgs, runCli } from "../../../src/cli/args.ts";
 import { GeneratorError } from "../../../src/errors.ts";
-import { spendEntry, type Proved, type Prover } from "../../../src/fixtures.ts";
+import { spendEntry, type Proved } from "../../../src/fixtures.ts";
 import { addressOf, APPROVE, ATOMIC_BATCH, MODE, rawTx } from "../../../src/frametx.ts";
 import { rlpBytes, rlpInt, rlpList, sigHash } from "../../../src/frametx.ts";
 import { signHash, totalGasLimit, type Frame, type FrameTx } from "../../../src/frametx.ts";
@@ -22,7 +22,7 @@ import * as gas from "../../../src/gas.ts";
 import { canonical, isObject, parse, stringify } from "../../../src/json.ts";
 import * as protocol from "../../../src/protocol.ts";
 import { prove, terminate, WASM, ZKEY } from "../../../src/prover.ts";
-import { seededRng, type Rng } from "../../../src/random.ts";
+import { seededRng } from "../../../src/random.ts";
 import {
   defaultClaimTail,
   entryProofBytes,
@@ -97,15 +97,15 @@ const keySlots = (entry: Entry, nf1: bigint, nf2 = nf1) =>
 const levels = (value: (level: number) => bigint) =>
   slots(...Array.from({ length: protocol.DEPTH + 1 }, (_, l): Pair => [String(l), value(l)]));
 const zeroLevels = () => levels(() => 0n);
-/** Pool storage after `count` identical deposits: filledSubtrees, nextIndex and the root. */
-function seedOf(tree: RepeatedTree): Slots {
-  const filled = levels((l) => (tree.count >= 1n << BigInt(l) ? tree.uniform[l] : 0n));
-  return update(filled, ["21", tree.count], ["22", tree.root()]);
-}
 const synthetic = (seed: Slots, balance?: bigint): Step => ({
   synthetic_storage: atPool(seed),
   ...(balance === undefined ? {} : { synthetic_balances: atPool(String(balance)) }),
 });
+/** The pool after `count` identical one-ether deposits: filledSubtrees, nextIndex, root, balance. */
+function seeded(tree: RepeatedTree): Step {
+  const filled = levels((l) => (tree.count >= 1n << BigInt(l) ? tree.uniform[l] : 0n));
+  return synthetic(update(filled, ["21", tree.count], ["22", tree.root()]), tree.count * ETH);
+}
 function treeOf(...cms: bigint[]): Tree {
   const tree = new Tree();
   for (const cm of cms) tree.append(cm);
@@ -197,21 +197,15 @@ function publishTail(epoch: bigint, stateLimit = gas.CLAIM_FRAME_STATE_GAS): Mut
   return (frames) => void frames.push(call(POOL, gas.CLAIM_FRAME_GAS, data, stateLimit));
 }
 
-export interface GenerateOptions {
-  /** The repository: core/contracts/out* are read and test/native/fixtures is written. */
-  root?: string;
-  /** The source of every secret the fixtures hold. */
-  rng?: Rng;
-  prove?: Prover["prove"];
-  /** Fail on a proof missing from the cache instead of proving it. */
-  cacheOnly?: boolean;
-  log?: (line: string) => void;
-}
-
-/** Writes every native fixture; see the module comment. */
-export async function generateFixtures(options: GenerateOptions = {}): Promise<void> {
-  const { rng = seededRng(20260921n), cacheOnly = false, log = console.log } = options;
-  const root = options.root ?? resolve(import.meta.dirname, "../../..");
+/**
+ * Writes every native fixture; see the module comment. With cacheOnly, a proof missing from the
+ * cache fails the run instead of being proved.
+ */
+async function generateFixtures(cacheOnly: boolean): Promise<void> {
+  // The source of every secret the fixtures hold.
+  const rng = seededRng(20260921n);
+  // The repository: core/contracts/out* are read and test/native/fixtures is written.
+  const root = resolve(import.meta.dirname, "../../..");
   const out = join(root, "test", "native", "fixtures");
   mkdirSync(out, { recursive: true });
   const write = (name: string, text: string) => writeFileSync(join(out, name), text + "\n");
@@ -276,8 +270,8 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
       return { publics, proof: cached.proof as Proved["proof"] };
     }
     if (cacheOnly) throw new GeneratorError(`proof cache miss for ${name}`);
-    log(`proving ${name}`);
-    const proved = await (options.prove ?? prove)(witness, name);
+    console.log(`proving ${name}`);
+    const proved = await prove(witness, name);
     const record = { witness_hash: digest, publics: proved.publics, proof: proved.proof };
     write(`${name}-proof.json`, stringify(record, 2));
     return proved;
@@ -465,7 +459,7 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
         ? slots(["21", added.length], ["22", next.root()], ["24", 1], finalRoot(large.root()))
         : slots(["21", filled], ["22", new RepeatedTree(NA.cm, count, added).root()], ["24", 0]);
     const steps = [
-      synthetic(seedOf(large), count * ETH),
+      seeded(large),
       publish(`publish-${label}`, NEXT, 0n, 101n),
       spend(`settle-${label}`, entry, { slot: 102n, failedClaim: retained, pool: changed }),
     ];
@@ -495,7 +489,7 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
   const oldBoundary = new RepeatedTree(NA.cm, carry);
   const oldSettlement = rawTx(frameTx(oldEntry, { mutate: set(2, { gasLimit: 1_400_000n }) }));
   const oldSteps = [
-    synthetic(seedOf(oldBoundary), carry * ETH),
+    seeded(oldBoundary),
     publish("publish-old-limit", NEXT, 0n, 101n),
     save("old-limit-settlement-failure", oldSettlement, {
       slot_number: 102n,
@@ -687,7 +681,7 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
   // epoch 1 makes them spendable from the next slot. Publishing epoch 0 still succeeds, with
   // epoch 0's final root, which lacks them; only a later publication of epoch 1 helps.
   const rolled = new RepeatedTree(NA.cm, rollover);
-  const rolledState = synthetic(seedOf(rolled), rollover * ETH);
+  const rolledState = seeded(rolled);
   const rolledRoot = finalRoot(rolled.root());
   const epochOne = slots(["21", 2], ["22", rolledOutputs.root()], ["24", 1], rolledRoot);
   const rolledSpend = { slot: 102n, ...tailRuns, pool: epochOne };
@@ -807,11 +801,8 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
   // when both go. A DEFAULT-mode frame 0 whose validation reverts would pass on its bytes alone
   // without both the mode and the status check, and a settlement frame to the attacker carrying
   // the pool's balance would pay out without both the target and the value check.
-  const defaultFrame0 = refused(
-    "forged-root-default-frame",
-    forged,
-    set(0, { mode: MODE.DEFAULT }),
-  );
+  const toDefault = set(0, { mode: MODE.DEFAULT });
+  const defaultFrame0 = refused("forged-root-default-frame", forged, toDefault);
   addCase("forged-root-in-failed-default-frame-rejected", [defaultFrame0]);
   const toAttacker = set(2, { target: addressOf(ATTACKER), value: eth(190n) });
   const drained = refused("settlement-to-another-account", initial, toAttacker);
@@ -823,7 +814,7 @@ export async function generateFixtures(options: GenerateOptions = {}): Promise<v
   const rejector = { address: addr(REJECTOR), balance: "0", code: "rejector-runtime.hex" };
   const chain = { chain_id: CHAIN, slot_number: SLOT, base_fee: 1, block_gas_limit: 60_000_000 };
   write("manifest.json", stringify({ ...chain, accounts: [deployer, rejector], setup, cases }, 2));
-  log(`generated ${cases.length} native cases, ${Object.keys(entries).length} real proofs`);
+  console.log(`generated ${cases.length} native cases, ${Object.keys(entries).length} real proofs`);
 }
 
 const SPEC = {
@@ -838,6 +829,6 @@ const SPEC = {
 if (import.meta.main) {
   await runCli(async () => {
     const { options } = parseArgs(SPEC, process.argv.slice(2));
-    await generateFixtures({ cacheOnly: options["--cache-only"] }).finally(terminate);
+    await generateFixtures(options["--cache-only"]).finally(terminate);
   });
 }

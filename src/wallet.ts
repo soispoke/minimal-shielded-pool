@@ -27,8 +27,7 @@ const SECP256K1_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0
 
 /** A fresh note's secrets (spendKey, rho): uniform field elements, drawn in that order. */
 export function newNote(rng: Rng): [spendKey: bigint, rho: bigint] {
-  const spendKey = rng.below(P);
-  return [spendKey, rng.below(P)];
+  return [rng.below(P), rng.below(P)];
 }
 
 /** A fresh one-time secp256k1 key, uniform in [1, n - 1], and its Ethereum address. */

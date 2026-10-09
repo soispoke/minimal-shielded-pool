@@ -16,15 +16,19 @@ import { join } from "node:path";
 
 import { parseArgs, runCli } from "../../src/cli/args.ts";
 import { CheckError } from "../../src/errors.ts";
+import { isObject } from "../../src/json.ts";
 
 const PROOF_BYTES = 288;
 const ZERO_BYTE_DISCOUNT = 12;
 
 type Json = unknown;
-const read = (dir: string, name: string): Json =>
-  JSON.parse(readFileSync(join(dir, name), "utf8")) as Json;
-const isObject = (value: Json): value is Record<string, Json> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+const read = (dir: string, name: string): Json => JSON.parse(readFileSync(join(dir, name), "utf8"));
+const cases = (report: Json): Json[] =>
+  isObject(report) && Array.isArray(report.cases) ? report.cases : [];
+const steps = (c: Json): Json[] => (isObject(c) && Array.isArray(c.steps) ? c.steps : []);
+/** Step j of case i in a report's case list, if there is one. */
+const stepOf = (list: Json[], i: number, j: number) =>
+  (list[i] as { steps?: Json[] } | undefined)?.steps?.[j];
 
 /** Every path at which `a` and `b` differ, as "a.b[3].c". */
 function differences(a: Json, b: Json, path = ""): string[] {
@@ -51,34 +55,28 @@ function costs(step: Record<string, Json>, where: string) {
   return gas;
 }
 
-export function compareNative(committed: Json, fresh: Json): string[] {
-  const problems: string[] = [];
-  const cases = (report: Json) =>
-    isObject(report) && Array.isArray(report.cases) ? report.cases : [];
-  const [before, after] = [cases(committed), cases(fresh)];
+function compareNative(committed: Json, fresh: Json): string[] {
   // Compare with the proof-dependent fields of re-proved transactions taken out.
   const strip = (report: Json, other: Json): Json => {
-    const copy = structuredClone(report) as Record<string, Json>;
+    const copy = structuredClone(report);
     const theirs = cases(other);
-    cases(copy).forEach((c, i) => {
-      if (!isObject(c) || !Array.isArray(c.steps)) return;
-      c.steps.forEach((step, j) => {
-        const twin = (theirs[i] as { steps?: Json[] } | undefined)?.steps?.[j];
+    cases(copy).forEach((c, i) =>
+      steps(c).forEach((step, j) => {
+        const twin = stepOf(theirs, i, j);
         if (!isObject(step) || !isObject(twin) || step.raw_hash === twin.raw_hash) return;
         delete step.raw_hash;
         delete step.paid_fee;
         if (isObject(step.execution)) delete step.execution.gas_spent;
-      });
-    });
+      }),
+    );
     return copy;
   };
-  problems.push(...differences(strip(committed, fresh), strip(fresh, committed)));
-  before.forEach((c, i) => {
+  const problems = differences(strip(committed, fresh), strip(fresh, committed));
+  const after = cases(fresh);
+  cases(committed).forEach((c, i) => {
     const name = isObject(c) ? String(c.name) : `case ${i}`;
-    const steps = isObject(c) && Array.isArray(c.steps) ? c.steps : [];
-    const twins = (after[i] as { steps?: Json[] } | undefined)?.steps ?? [];
-    steps.forEach((step, j) => {
-      const twin = twins[j];
+    steps(c).forEach((step, j) => {
+      const twin = stepOf(after, i, j);
       if (!isObject(step) || !isObject(twin)) return;
       const where = `${name} step ${j}`;
       const [a, b] = [costs(step, `${where} (committed)`), costs(twin, `${where} (fresh)`)];
@@ -93,7 +91,7 @@ export function compareNative(committed: Json, fresh: Json): string[] {
   return problems;
 }
 
-export function comparePolicy(committed: Json, fresh: Json): string[] {
+function comparePolicy(committed: Json, fresh: Json): string[] {
   // The two policy fixtures carry proofs, so their hashes change with every proving run.
   const strip = (report: Json): Json => {
     const copy = structuredClone(report) as Record<string, Json>;
@@ -113,7 +111,6 @@ const SPEC = {
     { name: "committed", help: "directory holding the committed reports" },
     { name: "fresh", help: "directory holding the fresh run's reports" },
   ],
-  options: {},
 } as const;
 
 if (import.meta.main) {
