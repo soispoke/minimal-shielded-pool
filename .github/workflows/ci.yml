@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or pull request cancels the runs it replaces.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   formal-pins:
     # Reports, never fails: the proofs in soispoke/verified-shielded-pool cover
@@ -16,11 +21,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The pin check imports no packages, so it needs no npm install.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
       - name: Report changes to formally verified files
         run: node tools/check-formal-pins.ts
 
@@ -80,6 +84,8 @@ jobs:
         with:
           version: v1.7.1
       - run: npm ci
+      # Building the contracts installs solc 0.8.30, which the dispatcher test compiles with.
+      - run: forge build --root core/contracts
       - name: TypeScript tests
         run: node --test test/*.test.ts
 
@@ -98,6 +104,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          cache: npm
       - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
         with:
           version: v1.7.1
@@ -105,7 +112,14 @@ jobs:
         run: |
           rustup toolchain install 1.93.0 --profile minimal
           npm ci
+      # run.ts rewrites the tracked reports, so keep the committed ones to compare against.
+      - name: Keep the committed reports
+        run: |
+          mkdir -p "$RUNNER_TEMP/committed"
+          cp test/native/native-report.json test/native/policy-report.json "$RUNNER_TEMP/committed/"
       - name: Test duplicate notes, reorgs, settlement gas and client policy
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
         run: node test/native/run.ts --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
+      - name: Check the run reproduces the committed reports
+        run: node test/native/compare-reports.ts "$RUNNER_TEMP/committed" test/native

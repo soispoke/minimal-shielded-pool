@@ -187,12 +187,12 @@ const spends: [
   ],
 ];
 
-for (const [name, build, tail, bound, pythonSigHash, pythonRawKeccak] of spends) {
+for (const [name, build, tail, bound, pinnedSigHash, pinnedRawKeccak] of spends) {
   test(`${name}, ${bound} bound fields`, () => {
     const tx = build();
     const original = sigHash(tx);
-    assert.equal(hex(original), pythonSigHash);
-    assert.equal(hex(keccak(rawTx(tx))), pythonRawKeccak);
+    assert.equal(hex(original), pinnedSigHash);
+    assert.equal(hex(keccak(rawTx(tx))), pinnedRawKeccak);
     const authorizer = tx.signatures[0].signer;
     const sig = tx.signatures[0].signature;
     assert.equal(recoverSigner(original, sig), authorizer);

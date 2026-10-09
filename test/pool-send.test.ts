@@ -9,8 +9,6 @@
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { describe, test } from "node:test";
 
 import { concat, fromHex, keccak, toBytes, toHex, word } from "../src/bytes.ts";
@@ -37,6 +35,7 @@ import { PRECOMPILES, UNCLAIMABLE_RECIPIENTS } from "../src/protocol.ts";
 import { poolNode, type PoolNode } from "../src/rpc.ts";
 import { buildAndSend, spendVerdict, type Simulation, type TailKind } from "../src/send.ts";
 import { checkTxResourceLimits, spendTailFrame, type Action } from "../src/spend.ts";
+import { rpcServer } from "./helpers.ts";
 
 const POOL = 0xbeefn;
 const ACCOUNT = 0xa11cen;
@@ -231,7 +230,7 @@ describe("transaction resource limits", () => {
     spendTx(spendTailFrame(POOL, settlement(), { ...ACTION, ...change }) as Frame);
 
   // Computed by the Python client (test_gas_only_action._spend_tx at commit 2386147).
-  test("a modest action fits, and encodes and prices as the Python client's did", () => {
+  test("a modest action fits, and its encoding and gas match the pinned values", () => {
     const tx = withAction();
     checkTxResourceLimits(tx);
     assert.equal(
@@ -606,22 +605,15 @@ describe("calls", () => {
 
   test("a missing simulate method means no simulation; any other node error refuses", async () => {
     // The local node answers each raw transaction with the error code it names.
-    const server = createServer(async (request, response) => {
-      let body = "";
-      for await (const chunk of request) body += chunk;
-      const { id, params } = JSON.parse(body);
-      const error = { code: Number(params[0]), message: "refused" };
-      response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ jsonrpc: "2.0", id, error }));
-    });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const server = await rpcServer(({ params }) => ({
+      error: { code: Number(params[0]), message: "refused" },
+    }));
     try {
-      const node = poolNode(`http://127.0.0.1:${(server.address() as AddressInfo).port}`);
+      const node = poolNode(server.url);
       assert.equal(await node.simulate("-32601"), null);
       refused(await node.simulate("-32000").catch((e: unknown) => e), "simulate RPC error");
     } finally {
-      server.closeAllConnections();
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await server.close();
     }
   });
 });

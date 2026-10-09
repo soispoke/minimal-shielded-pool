@@ -7,10 +7,7 @@
  * Run: node --test test/disclosure.test.ts (about 1 s, most of it the ten CLI runs).
  */
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,6 +29,7 @@ import * as pr from "../src/protocol.ts";
 import { seededRng } from "../src/random.ts";
 import { ChainError, RpcChain, type Chain as ChainReader, type RawLog } from "../src/rpc.ts";
 import { newNote } from "../src/wallet.ts";
+import { rpcServer, runCli } from "./helpers.ts";
 
 const CHAIN = 8141n;
 const POOL = 0xcb83980f3cc99e258295814375b0a94fe0ac0e86n;
@@ -383,42 +381,25 @@ test("the RPC reader finds a consumed nonce key at its EIP-8250 storage slot", a
   assert.equal(await reader.nonceUsed(POOL, nf.b), false);
 });
 
-function run(args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
-  return new Promise((resolve) => {
-    execFile(process.execPath, [CLI, ...args], { cwd: TMP }, (error, stdout, stderr) => {
-      resolve({ code: error === null ? 0 : Number(error.code), stdout, stderr });
-    });
-  });
-}
+const run = (args: string[]) => runCli(process.execPath, [CLI, ...args], { cwd: TMP });
 
 /**
  * A local node for the CLI. It answers eth_chainId, and eth_getLogs from `source`, the one call
  * an export of output notes makes. Any other call gets null, which the client reports as a
  * malformed answer, and a request to /moved is redirected to /.
  */
-async function node(source: Chain) {
-  const server = createServer(async (request, response) => {
-    let body = "";
-    for await (const chunk of request) body += chunk;
-    if (request.url === "/moved") return void response.writeHead(307, { location: "/" }).end();
-    const { id, method, params } = JSON.parse(body);
+function node(source: Chain) {
+  return rpcServer(({ method, params, path }) => {
+    if (path === "/moved") return { redirect: "/" };
     const found =
       method === "eth_getLogs" ? source.logs(BigInt(params[0].address), params[0].topics) : null;
     const logs = found?.map(({ tx, ...l }) => ({ ...l, transactionHash: tx })) ?? null;
-    const result = method === "eth_chainId" ? hexPadded(CHAIN, 1) : logs;
-    const text = JSON.stringify({ jsonrpc: "2.0", id, result });
-    response.writeHead(200, { "content-type": "application/json" }).end(text);
+    return { result: method === "eth_chainId" ? hexPadded(CHAIN, 1) : logs };
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const close = () => {
-    server.closeAllConnections();
-    return new Promise<void>((resolve) => server.close(() => resolve()));
-  };
-  return { rpc: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, close };
 }
 
 test("export discloses only notes named in full, owner-only and never through a link", async () => {
-  const { rpc, close } = await node(chain);
+  const { url: rpc, close } = await node(chain);
   try {
     const dir = mkdtempSync(join(TMP, "export-"));
     const outputs = join(dir, "fixture.json");
@@ -488,7 +469,7 @@ test("a CLI error about a file redacts a key pasted as its path", async () => {
 
 test("verify takes only a receipt for the config's pool", async () => {
   // Any deployment of the pool's profile would pass the profile check that follows.
-  const { rpc, close } = await node(chain);
+  const { url: rpc, close } = await node(chain);
   try {
     const foreign = join(TMP, "foreign.json");
     writeFileSync(foreign, stringify({ ...receipt, pool: "0x" + "11".repeat(20) }));

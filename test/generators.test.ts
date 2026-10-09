@@ -10,7 +10,7 @@
  * transfers).
  */
 import assert from "node:assert/strict";
-import { execFile, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   closeSync,
@@ -27,8 +27,6 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,6 +49,7 @@ import { NONCE_RACE_OUTPUT } from "../src/nonce-race.ts";
 import { commitment, domainScalar } from "../src/protocol.ts";
 import { generateSmoke } from "../src/smoke.ts";
 import { Tree, type Witness } from "../src/wallet.ts";
+import { rpcServer, runCli } from "./helpers.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SMOKE = join(ROOT, "src/cli/smoke.ts");
@@ -75,13 +74,8 @@ for (const path of [LIVE_FIXTURE, KEY_FIXTURE]) {
 const OVER_LIVE = `--output=${LIVE_FIXTURE}`;
 
 /** Runs a generator CLI from a directory of its own, so no run depends on the caller's. */
-function run(script: string, args: string[]): Promise<{ code: number; stderr: string }> {
-  return new Promise((resolve) => {
-    execFile(process.execPath, [script, ...args], { cwd: TMP }, (error, _stdout, stderr) => {
-      resolve({ code: error === null ? 0 : Number(error.code), stderr });
-    });
-  });
-}
+const run = (script: string, args: string[]) =>
+  runCli(process.execPath, [script, ...args], { cwd: TMP });
 
 async function refused(script: string, args: string[], expected: string, code = 1) {
   const result = await run(script, args);
@@ -276,18 +270,11 @@ test("a nonce-race fixture binds --epoch and records what recovery and the shiel
 
 test("with --rpc, the chain the node reads must be the one named", async () => {
   // Every answer is "0x1", so eth_chainId reads chain 1.
-  const server = createServer(async (request, response) => {
-    for await (const _ of request);
-    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x1" });
-    response.writeHead(200, { "content-type": "application/json" }).end(body);
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const node = await rpcServer(() => ({ result: "0x1" }));
   try {
-    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-    const args = ["--random", ...LIVE, `--rpc=${url}`, `--output=${join(TMP, "rpc.json")}`];
+    const args = ["--random", ...LIVE, `--rpc=${node.url}`, `--output=${join(TMP, "rpc.json")}`];
     await refused(NONCE_RACE, args, "does not match the chain");
   } finally {
-    server.closeAllConnections();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await node.close();
   }
 });
