@@ -5,24 +5,24 @@ out = "out"
 libs = []
 solc_version = "0.8.30"
 optimizer = true
-# 5000, not 200: at low runs the via-IR backend's code-size heuristic
-# rematerializes the Poseidon field-modulus constant through CODECOPY on
-# every in-loop use, roughly doubling hash3 (112k vs 56k gas). The heuristic
-# flips between runs 2000 and 5000; hash2 is unaffected.
+# 5000 runs, not the default 200. Via IR at 200 to 1,000 runs, this profile's PoseidonT3
+# and PoseidonT4 cost about 42,000 and 63,000 gas per hash; from 2,000 runs up they cost
+# 32,000 and 44,000 (solc 0.8.30, including the library call). The Forge tests run these
+# builds, while the deployed libraries come from the libsmall profile below. The setting
+# also applies to ShieldedPoolLogic and the verifier, which deploy from this profile.
 optimizer_runs = 5000
 via_ir = true
+# The Forge tests read the Poseidon vectors and the smoke fixture.
 fs_permissions = [
     { access = "read", path = "../../test/vectors" },
     { access = "read", path = "../../test/fixtures" },
-    { access = "read", path = "../artifacts" },
 ]
-# ../artifacts holds the immutable dispatcher artifact.
 
-# Legacy-codegen profile for the split Poseidon libraries (PoseidonT3/T4):
-# via-IR emits ~3KB of dispatch glue per library, which pushes PoseidonT4 past
-# the hegota devnet's 2^24 per-tx gas cap (EIP-8037 code deposit is ~1,545
-# gas per runtime byte there). run_live.sh deploys the two halves with
-# FOUNDRY_PROFILE=libsmall; everything else keeps the default via-IR profile.
+# Legacy codegen for PoseidonT3 and PoseidonT4, which tools/run_live_dispatcher.sh deploys
+# from this profile; everything else uses the default profile. PoseidonT4's runtime,
+# metadata included, is 11,440 bytes via IR and 9,262 bytes here. At the hegota devnet's
+# EIP-8037 code deposit cost of about 1,545 gas per byte, only the smaller fits its 2^24
+# per-transaction gas cap.
 [profile.libsmall]
 src = "src"
 out = "out-libsmall"

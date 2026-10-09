@@ -11,7 +11,7 @@ It has no ERC-20 support, admin, governance or external paymaster.
 
 ## Where to look
 
-The code that guards the pool's funds is about 1,600 lines in `core/`:
+The code that guards the pool's funds is about 1,700 lines in `core/`:
 
 - `core/circuits/spend.circom`: the relation every spend proves. The spender
   owns its input notes, each input with value is in the tree, the nullifiers
@@ -493,13 +493,14 @@ not networking, other clients or FOCIL.
 A Lean formal verification of the `position-notes-v2` pool at `8835be7` lives
 in [verified-shielded-pool](https://github.com/soispoke/verified-shielded-pool),
 with its own CI. Its SPEC.md says which claims are proved and which are still
-open, and pins twelve files by hash. Of those, the circuit, its R1CS, the
-proving and verification keys, the verifier and the Poseidon libraries still
-match. The dispatcher and the logic do not: for note delivery, the dispatcher
-admits settlement frame data of 484 or 1,572 bytes instead of exactly 388, and
-shield and settlement check the length of the notes they carry and emit them.
-The dispatcher initcode, `foundry.toml` and the activation manifest differ too.
-The proofs do not cover these changes. The formal repository is checked out as
+open, and pins twelve files by hash. Of those, the circuit's R1CS, the proving
+and verification keys, the verifier and the Poseidon libraries still match. The
+circuit source differs only in its comments. The dispatcher and the logic differ
+in what they do: for note delivery, the dispatcher admits settlement frame data
+of 484 or 1,572 bytes instead of exactly 388, and shield and settlement check
+the length of the notes they carry and emit them. The dispatcher initcode,
+`foundry.toml` and the activation manifest differ too. The proofs do not cover
+these changes. The formal repository is checked out as
 `formal/` inside a pool checkout, which git ignores here. CI's `formal-pins`
 job lists every pinned file that differs, as warnings that do not fail the
 build (`node tools/check-formal-pins.ts`, or `just formal-pins`).
