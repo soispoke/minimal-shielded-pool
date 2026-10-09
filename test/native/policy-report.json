@@ -8,7 +8,7 @@
   "ethrex_revision": "247e2dd2c4d4c526dcc64ac1c025bd2319e7a10e",
   "first": "policy-first.hex",
   "fixture_keccak256": {
-    "deploy-logic.hex": "0xfeed2e8eb546362a5e86d14fca0072a8d9366cf8fab7acd1eb0d5a02cc0e0211",
+    "deploy-logic.hex": "0xd320ebaa8aeb02921624a3914a0e963de4260967dbb39784f8f017daeb4c01b2",
     "deploy-pool.hex": "0xfd7a923e20dd17d5507421a12ad1baf9de4eb7c5d6cca85559d2b0f6cefd6da7",
     "deploy-poseidon3.hex": "0x22cd9c557847e26caca99b3bf9af2b1494819dd4e9ea80437157069b0297dcd5",
     "deploy-poseidon4.hex": "0xdcc1e6b8c328e532fe2dabc48179a6eaa11277a9592fe31c2240c89a46cfc07b",

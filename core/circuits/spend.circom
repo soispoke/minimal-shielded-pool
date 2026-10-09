@@ -1,87 +1,87 @@
 pragma circom 2.0.8;
 
-// Shielded-pool JOIN-SPLIT spend circuit, BN254 edition (Groth16 / circom).
+// The spend relation of the minimal shielded pool: a join-split over native ETH
+// with two input notes, two output notes, a public withdrawal amount and a fee,
+// all in wei. There are no tokens. The pool is the sender and payer of every
+// spend: the fee leaves the notes and stays in the pool, which pays the gas.
 //
-// Native-ETH-only, arbitrary-value notes: every value, public amount, and fee
-// is denominated in wei. A spend consumes up to two input notes and creates
-// up to two output notes, with a public ETH withdrawal amount and a public ETH fee.
-// The circuit has no token address or ERC-20 semantics. It is built to
-// exercise two envelope features end to end:
+// Notes. The first input of each three-input hash is a tag (1 owner key,
+// 2 commitment, 4 nullifier) that keeps the three hashes apart:
+//     owner_pk = Poseidon(1, spend_key, 0)
+//     inner    = Poseidon(owner_pk, rho)     what a recipient gives a sender
+//     cm       = Poseidon(2, inner, value)   shield hashes msg.value in on chain
+//     index    = sum(bits[i] * 2^i)          the note's leaf in its epoch's tree
+//     nf       = Poseidon(4, Poseidon(domain, spend_key), Poseidon(cm, index))
+// The spender proves it knows each input's spend_key, rho, value and Merkle
+// path (siblings, and the index bits, low bit first). The domain is
+// keccak256(DOMAIN_TAG || chain_id || pool || epoch) mod p, and the pool
+// requires the epoch whose root the spend proves against. Each epoch has its
+// own depth-20 tree, and the pool starts the next epoch when a tree lacks
+// room. Each leaf is therefore a separate note with exactly one nullifier,
+// even when two leaves hold the same commitment. A circuit with another
+// nullifier formula needs a fresh pool: under an existing one, its spent notes
+// would get new nullifiers and could be spent again.
 //
-//   - EIP-8250 MULTI-KEY nonces: the two nullifiers are consumed as ONE
-//     keyed-nonce set (shared nonce_seq = 0, atomic, per-sender domain), the
-//     `nonce_keys` list shape bounded by MAX_NONCE_KEYS = 16;
-//   - native-ETH fee binding: `fee` is in the statement and the pool self-pays;
-//   - complete intent authorization: the proof chooses a fresh one-time
-//     secp256k1 signer. EIP-8141 verifies that signer over the complete frame
-//     transaction after the proof has been generated.
-//
-// What it proves (hiding keys, secrets, values, and both Merkle paths):
-//
-//     I own the input notes committed in the pool's tree at the anchored
-//     root (or they are zero-value dummies), their value equals the output
-//     notes' value plus the public amount plus the fee, every value is a
-//     128-bit integer, and my statement is exactly the two nullifiers, two
-//     output commitments, root, domain, public amount, fee, recipient, and
-//     one-time authorizer, which the pool checks through three compressed
-//     public signals. The root source, slot, epoch, frame grammar, gas, and
-//     fee fields are bound by that author's canonical EIP-8141 signature.
-//
-// Note structure (value-carrying):
-//     owner_pk = Poseidon(TAG_PK,   spend_key, 0)
-//     inner    = Poseidon2(owner_pk, rho)          # what a recipient reveals
-//     cm       = Poseidon(TAG_LEAF, inner, value)  # shield hashes value in
-//                                                  # ON-CHAIN from msg.value
-//     domain   = keccak256(DOMAIN_TAG || chain_id || pool_address || epoch) mod Fr
-//     index    = sum(bits[i] * 2^i)
-//     nf       = Poseidon(4, Poseidon2(domain, spend_key), Poseidon2(cm, index))
-// This is a fresh-deployment prototype; old spent-note identities MUST NOT
-// be migrated by replacing the verifier under an existing pool.
-//
-// A zero-valued output is one of two position-specific canonical sinks. The
-// settlement contract recognises those commitments and does not insert them.
-// This gives every note a capacity-free exit without a second circuit.
-//
-// The statement is ten values, in this order:
+// Statement. Ten values, in this order:
 //     [nf1, nf2, out_cm1, out_cm2, root, domain, public_amount, fee,
 //      recipient, authorizer]
-// They are private here but public in the settlement calldata. Hybrid
-// compression (eprint 2025/1500, as in ark-hybrid-compression) exposes three
-// public signals instead of ten, saving seven scalar multiplications:
-//     alpha = keccak256(the ten values as 32-byte words) mod p, computed
-//             by the pool and passed in as a public input;
-//     beta  = Poseidon(the ten values), computed here;
-//     gamma = x[0] + x[1]*s + ... + x[9]*s^9 at s = alpha + beta, computed
-//             here and recomputed by the pool from its own copy of the values.
+// They are private signals here and public in the settlement calldata. Hybrid
+// compression (eprint 2025/1500) exposes three public signals instead of ten,
+// which saves the verifier seven scalar multiplications:
+//     alpha = keccak256(the ten values as 32-byte words) mod p, computed by
+//             the pool and passed in as the one public input;
+//     beta  = Poseidon(the ten values), an output;
+//     gamma = x[0] + x[1]*s + ... + x[9]*s^9 at s = alpha + beta, an output
+//             that the pool recomputes from its own copy of the values.
 // circom puts outputs first, so the verifier's order is [beta, gamma, alpha].
-// The pool range-checks every value itself, since the verifier no longer
-// sees them.
+// The verifier never sees the ten values, so the pool range-checks each one
+// itself (see verifyProof in the dispatcher). The client (src/protocol.ts),
+// the dispatcher and this circuit must agree on the order and encoding of the
+// values, and a mismatch shows up only as an invalid proof.
 //
-// Soundness, beyond the fixed-denomination edition's five properties:
-//   6. Value conservation: v_in1 + v_in2 === v_out1 + v_out2 + public_amount
-//      + fee, over range-checked values, so a spend can neither mint nor
-//      overflow (six 128-bit range checks; the sum is < 2^131 << p).
-//   7. Dummy inputs: an input's Merkle check is enforced through
-//      (computed_root - root) * v_in === 0, so a nonzero-value input MUST be
-//      in the tree while a zero-value input (needed to spend a single note
-//      through the 2-input circuit) may be fabricated: it contributes zero
-//      value. Reproducing a real note's nullifier still requires its secret;
-//      in any case a zero-value collision cannot destroy value.
-//   8. Same-note-twice is refused in-circuit by nf1 != nf2. The EIP-8250
-//      duplicate-key rule remains defense in depth.
-//   9. Domain separation: the contract binds the public domain to this chain
-//      immutable pool address and authenticated input epoch before verifying.
+// The rules, beyond each nullifier following from its note:
+//   - An input with value must open at root. A zero-value input is not
+//     checked, so a single note can be spent beside a fabricated dummy, which
+//     adds no value.
+//   - Every amount is below 2^128, and value is conserved.
+//   - At least one input carries value.
+//   - nf1 != nf2, so one note cannot be both inputs. EIP-8250 refuses a
+//     repeated nonce key too, as defense in depth.
+//   - A zero-value output k must use inner k + 1, which makes its commitment
+//     Poseidon(2, k + 1, 0), ShieldedPoolLogic's SINK_k. Settlement does not
+//     insert sinks, so a spend can leave an output empty without using tree
+//     capacity, and a full tree never blocks a full withdrawal. A positive
+//     output may use neither sink inner, so sink inners only ever carry zero.
+//   - out_cm1 != out_cm2. Settlement refuses two equal outputs, and a sink
+//     in the other position. The dispatcher checks neither before approving,
+//     so the proof must, or an approved spend would fail in settlement and
+//     burn its inputs.
+//   - recipient and authorizer are addresses, the authorizer is nonzero, and
+//     a recipient is named exactly when public_amount is positive. The
+//     dispatcher and settlement require the same.
 //
-// The four contract-side VERIFY bindings still apply, with the key-set
-// binding generalised: the consumed nonce-key set must be exactly
-// {nf1, nf2} at nonce_seq == 0, no extras. See ../devnet/REVIEW.md.
+// The proof does not cover the rest of the transaction. Instead it names a
+// fresh one-time secp256k1 authorizer, and the dispatcher
+// (core/dispatcher/ShieldedPoolDispatcher.yul) requires the transaction's only
+// signature to come from it. That signature covers the whole frame
+// transaction, including the recent-root tuple, the gas and fee fields and any
+// fourth frame. The dispatcher also binds the domain and the root to that
+// tuple, checks the fee against the transaction's maximum cost, and requires
+// the transaction's EIP-8250 nonce keys to be exactly {nf1, nf2} at sequence
+// zero, so the protocol refuses a second spend of either note.
+//
+// A change to the relation needs new artifacts, a new verifier and a fresh
+// pool; docs/design.md lists everything else it touches. A change to comments
+// alone must keep every line of code on its line: circom builds line numbers
+// into spend.wasm, which check-artifacts in the justfile rebuilds and compares
+// byte for byte with core/artifacts/.
 
-// resolved via -l tooling/node_modules (see tooling/setup.sh)
+// circomlib, found through circom2's -l node_modules.
 include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/bitify.circom";
 include "circomlib/circuits/comparators.circom";
 
-// One input note: derive nf, walk the path, gate membership on value != 0.
+// One input note: its nullifier, and its membership at root when it has value.
 template InputNote(DEPTH) {
     signal input root;
     signal input domain;
@@ -116,19 +116,19 @@ template InputNote(DEPTH) {
     signal cur[DEPTH + 1];
     cur[0] <== leaf.out;
     for (var i = 0; i < DEPTH; i++) {
-        left[i] <== cur[i] + bits[i] * (siblings[i] - cur[i]);
+        left[i] <== cur[i] + bits[i] * (siblings[i] - cur[i]);  // bits[i] = 1: sibling on the left
         right[i] <== siblings[i] + bits[i] * (cur[i] - siblings[i]);
         node[i] = Poseidon(2);
         node[i].inputs[0] <== left[i];
         node[i].inputs[1] <== right[i];
         cur[i + 1] <== node[i].out;
     }
-    // membership, gated: a nonzero-value note must open at the anchored root
+    // Membership only for a note with value: a zero-value input may be a dummy.
     (cur[DEPTH] - root) * value === 0;
 
-    // The authenticated epoch and Merkle position identify a funded occurrence.
-    // Keep cm: dummy inputs have arbitrary path bits but must not reproduce a
-    // funded note's nullifier using the same key and index with value zero.
+    // The domain carries the input's epoch and the index its leaf, so each funded
+    // leaf has one nullifier. cm stays in so that a zero-value dummy, whose path is
+    // not checked, cannot copy a funded note's nullifier with its key and index.
     component domainKey = Poseidon(2);
     domainKey.inputs[0] <== domain;
     domainKey.inputs[1] <== spend_key;
@@ -150,12 +150,12 @@ template Spend(DEPTH) {
     signal input in_value[2];
     signal input in_siblings[2][DEPTH];
     signal input in_bits[2][DEPTH];
-    signal input out_inner[2];   // recipients reveal inner, never their secrets
+    signal input out_inner[2];   // a recipient reveals inner, never its secrets
     signal input out_value[2];
-    signal input public_amount;  // leaves the pool to the ctx recipient
-    signal input fee;            // fixed note debit that covers pool-paid gas
-    signal input recipient;      // zero for transfer, address for withdrawal
-    signal input authorizer;     // fresh secp256k1 address for this exact spend
+    signal input public_amount;  // credited to recipient as a withdrawal
+    signal input fee;            // kept by the pool, which pays the gas
+    signal input recipient;      // zero for a transfer, the withdrawal address otherwise
+    signal input authorizer;     // the fresh secp256k1 address that signs this spend
     signal output nf1;
     signal output nf2;
     signal output out_cm1;
@@ -176,9 +176,9 @@ template Spend(DEPTH) {
         }
     }
 
-    // outputs (cm = Poseidon(TAG_LEAF, inner, value), as shield computes it).
-    // Zero outputs use fixed position-specific inner values. A positive output
-    // may not use either reserved inner, and the two commitments are distinct.
+    // outputs: cm = Poseidon(2, inner, value), as shield computes it. A zero-value
+    // output k is SINK_k (inner k + 1), a positive output uses neither sink inner, and
+    // the two commitments differ (the header says why).
     var SINK_INNER_0 = 1;
     var SINK_INNER_1 = 2;
     component outCm[2];
@@ -208,7 +208,7 @@ template Spend(DEPTH) {
         outEqSink1[k].out * (1 - outIsZero[k].out) === 0;
     }
 
-    // 6. every value is a 128-bit integer, and value is conserved
+    // Amounts below 2^128 keep both sides below 2^130, so the sum cannot wrap mod p.
     component rc[6];
     var vals[6] = [in_value[0], in_value[1], out_value[0], out_value[1], public_amount, fee];
     for (var k = 0; k < 6; k++) {
@@ -217,15 +217,15 @@ template Spend(DEPTH) {
     }
     in_value[0] + in_value[1] === out_value[0] + out_value[1] + public_amount + fee;
 
-    // A spend must consume private value. Dummy-only proofs cannot fill trees
-    // or consume protocol nonce slots even on a zero-base-fee test chain.
+    // A spend must consume value. Two fabricated zero-value inputs would otherwise make
+    // a valid spend that stores two new nonce keys, free on a chain with zero base fee.
     component noRealInput = IsZero();
     noRealInput.in <== in_value[0] + in_value[1];
     noRealInput.out === 0;
 
-    // The recipient and proof-selected authorizer are canonical addresses.
-    // The authorizer's protocol signature binds the complete FrameTx,
-    // including the EIP-8272 source, slot, root, epoch, gas and fee fields.
+    // recipient and authorizer are addresses and the authorizer is nonzero. A
+    // recipient is named exactly when public_amount is positive, as the dispatcher
+    // and settlement also require.
     component recipientBits = Num2Bits(160);
     recipientBits.in <== recipient;
     component authorizerBits = Num2Bits(160);
@@ -241,13 +241,13 @@ template Spend(DEPTH) {
 
     nf1 <== note[0].nf;
     nf2 <== note[1].nf;
-    component sameNullifier = IsEqual();
+    component sameNullifier = IsEqual();  // one note cannot be both inputs
     sameNullifier.in[0] <== nf1;
     sameNullifier.in[1] <== nf2;
     sameNullifier.out === 0;
     out_cm1 <== outCm[0].out;
     out_cm2 <== outCm[1].out;
-    component sameOutput = IsEqual();
+    component sameOutput = IsEqual();  // settlement refuses equal outputs
     sameOutput.in[0] <== out_cm1;
     sameOutput.in[1] <== out_cm2;
     sameOutput.out === 0;
