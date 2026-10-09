@@ -1,6 +1,8 @@
 /Cargo.toml
 /policy/Cargo.toml
-/fixtures/
+/fixtures/*
+# Proving is randomized, so the proof cache is tracked and CI builds the fixtures from it.
+!/fixtures/*-proof.json
 /proof-work/
 /target/
 /policy/target/

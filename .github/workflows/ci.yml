@@ -115,9 +115,11 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/committed"
           cp test/native/native-report.json test/native/policy-report.json "$RUNNER_TEMP/committed/"
+      # --cache-only builds every fixture from the committed proofs, so the run is byte for
+      # byte reproducible, and a changed witness fails here until its new proof is committed.
       - name: Test duplicate notes, reorgs, settlement gas and client policy
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/msp-occurrence-target
-        run: node test/native/run.ts --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
+        run: node test/native/run.ts --cache-only --ethrex-source "$GITHUB_WORKSPACE/.native-ethrex"
       - name: Check the run reproduces the committed reports
         run: node test/native/compare-reports.ts "$RUNNER_TEMP/committed" test/native

@@ -21,7 +21,7 @@ import { signHash, totalGasLimit, type Frame, type FrameTx } from "../../../src/
 import * as gas from "../../../src/gas.ts";
 import { canonical, isObject, parse, stringify } from "../../../src/json.ts";
 import * as protocol from "../../../src/protocol.ts";
-import { prove, terminate, WASM, ZKEY } from "../../../src/prover.ts";
+import { prove, terminate, verify, WASM, ZKEY } from "../../../src/prover.ts";
 import { seededRng } from "../../../src/random.ts";
 import {
   defaultClaimTail,
@@ -198,6 +198,30 @@ function publishTail(epoch: bigint, stateLimit = gas.CLAIM_FRAME_STATE_GAS): Mut
 }
 
 /**
+ * The proof cached in dir as NAME-proof.json for this witness digest, or undefined if there is
+ * none. A hit must verify against the committed verification key: CI builds the fixtures from
+ * committed proofs without proving, and a case that expects a rejection would still pass on an
+ * invalid proof, since the harness cannot tell it from the pool's own check refusing the spend.
+ */
+export async function readCachedProof(
+  dir: string,
+  name: string,
+  digest: string,
+): Promise<Proved | undefined> {
+  const cache = join(dir, `${name}-proof.json`);
+  const cached = existsSync(cache) ? parse(readFileSync(cache, "utf8")) : {};
+  // A damaged cache file stops the run instead of being silently proved over.
+  if (!isObject(cached)) throw new GeneratorError(`proof cache ${cache} is not a JSON object`);
+  if (cached.witness_hash !== digest) return undefined;
+  const publics = (cached.publics as bigint[]).map(BigInt);
+  const proof = cached.proof as Proved["proof"];
+  if (!(await verify(publics, proof))) {
+    throw new GeneratorError(`the cached proof of ${name} does not verify`);
+  }
+  return { publics, proof };
+}
+
+/**
  * Writes every native fixture; see the module comment. With cacheOnly, a proof missing from the
  * cache fails the run instead of being proved.
  */
@@ -257,18 +281,12 @@ async function generateFixtures(cacheOnly: boolean): Promise<void> {
   const sha256 = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
   const ARTIFACT_HASHES = sha256(ZKEY) + sha256(WASM);
 
-  /** The cached proof of a witness, or a new one. A hit is trusted without verifying. */
+  /** The cached proof of a witness, or a new one. */
   async function cachedProof(name: string, witness: Witness): Promise<Proved> {
-    const cache = join(out, `${name}-proof.json`);
     // Keyed on the witness's canonical form, which earlier caches used, so they still hit.
     const digest = toHex(keccak(utf8(canonical(witness) + ARTIFACT_HASHES))).slice(2);
-    const cached = existsSync(cache) ? parse(readFileSync(cache, "utf8")) : {};
-    // A damaged cache file stops the run instead of being silently proved over.
-    if (!isObject(cached)) throw new GeneratorError(`proof cache ${cache} is not a JSON object`);
-    if (cached.witness_hash === digest) {
-      const publics = (cached.publics as bigint[]).map(BigInt);
-      return { publics, proof: cached.proof as Proved["proof"] };
-    }
+    const cached = await readCachedProof(out, name, digest);
+    if (cached) return cached;
     if (cacheOnly) throw new GeneratorError(`proof cache miss for ${name}`);
     console.log(`proving ${name}`);
     const proved = await prove(witness, name);

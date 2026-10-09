@@ -1,7 +1,8 @@
 /**
  * Rebuilds the native vectors and runs the native occurrence evidence suite against a pinned
  * ethrex source snapshot. Both cargo suites rewrite their tracked reports, native-report.json
- * and policy-report.json.
+ * and policy-report.json. CI passes --cache-only, so every proof comes from the committed
+ * cache and a changed witness fails the run until its new proof is committed.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -49,6 +50,7 @@ const SPEC = {
       help: "ethrex 247e2dd2 source snapshot (or set ETHREX_SOURCE)",
     },
     "--offline": { kind: "flag", help: "pass --offline to cargo" },
+    "--cache-only": { kind: "flag", help: "pass --cache-only to the fixture generator" },
     "--skip-generate": { kind: "flag", help: "reuse locally generated vectors" },
   },
 } as const;
@@ -71,7 +73,8 @@ function main(argv: readonly string[]): void {
     const forge = ["forge", "build", "--root", "core/contracts", "--force"];
     run(forge);
     run(forge, { ...process.env, FOUNDRY_PROFILE: "libsmall" });
-    run([process.execPath, join(HERE, "scripts", "generate-fixtures.ts")]);
+    const cacheOnly = options["--cache-only"] ? ["--cache-only"] : [];
+    run([process.execPath, join(HERE, "scripts", "generate-fixtures.ts"), ...cacheOnly]);
   }
   // Each cargo suite runs with its Cargo.toml pointed at the snapshot.
   const offline = options["--offline"] ? ["--offline"] : [];
