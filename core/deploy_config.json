@@ -1,14 +1,14 @@
 {
  "rpc": "https://rpc1.privacy.ethrex.xyz",
- "pool": "0xcb83980f3cc99e258295814375b0a94fe0ac0e86",
- "verifier": "0x7c62A2f21b08b2cD0A1923df8F3b98030e7EA08a",
- "poseidonT3": "0x1f71596B65A71A1f083427148E03DF81E51F9085",
- "poseidonT4": "0x07da2FB0E46Ec7B63921EbEaeF858981e78D95A4",
- "logic": "0x29030447011d11Aa49431574cb740F7bC8eB0D78",
- "sourceIdEpoch0": "0x03a26b408e8b519608c9c22557ad1c2e6995ec50031bc8327cabe47e4f7b54f3",
- "domain": "0x10fd35b358869f1e10483910240fc5488777de42911ffc614553d64b3cbb5845",
+ "pool": "0x5ec4723ba24043065b30aef3c3b71a6030b3de09",
+ "verifier": "0xaADD63Ed5d34cBF4e82cFBA223c2b39F2B9dC2Ab",
+ "poseidonT3": "0x67b1391B9ccAC61bE82403EB0bC88efBAE86dddc",
+ "poseidonT4": "0xBe994f9859cb112a8CcB9b00977122f1396d0aD9",
+ "logic": "0x43De4053c1CbE027648B170d4C6BDC19CEc4b222",
+ "sourceIdEpoch0": "0xc4b3229008752666bb4186051e37bab0572eea8e094cbfdde1541d9af312c135",
+ "domain": "0x054dcb5be237438406d10563d29d3af50b0d580427f62324be7fed8892bac4ba",
  "chainId": 8141,
- "profile": "position-notes-v2",
+ "profile": "position-notes-v3",
  "verifyGas": 225000,
  "settleGas": 2000000,
  "testbedProvingKey": true,
@@ -17,6 +17,6 @@
  "recentRootGas": 8000,
  "claimGas": 100000,
  "claimStateGas": 183600,
- "revision": "08bb03412e90c3ef79145bc6627d739aaea34dc3",
- "deploymentBlock": 143402
+ "revision": "6af7a9b9aa84a1a9db1957b15fb78c64257f16bd",
+ "deploymentBlock": 332781
 }

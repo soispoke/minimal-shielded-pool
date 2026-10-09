@@ -93,11 +93,13 @@ pool transaction unless it binds the intended context, and the tail does not
 make a spend atomic, so an account that needs settlement to have succeeded
 must check it.
 
-The native suite pins ethrex `247e2dd2`, and the live testnet runs `bdfc5d8f`.
-Both panic when a top-level frame calls a precompile after an earlier frame
-emitted logs, as settlement always does, so one such pending transaction from
-any wallet stops a node from producing blocks until it leaves the mempool. The
-CLI refuses precompile targets, but the fix belongs in ethrex.
+The native suite pins ethrex `247e2dd2`, and the testnet's RPC node runs
+`64b8fc09`, which is `bdfc5d8f` with eight testnet fixes. `247e2dd2` panics
+when a top-level frame calls a precompile after an earlier frame emitted logs,
+as settlement always does, so one such pending transaction from any wallet
+stops a node from producing blocks until it leaves the mempool. `64b8fc09`
+carries the fix (`bf42186d`). The CLI still refuses precompile targets, since
+other nodes may lack it.
 
 ## Liveness
 
@@ -113,7 +115,7 @@ else's.
 
 Both revisions recheck every pending spend, its pairing check included, on each
 forkchoiceUpdated. A recheck takes an estimated 1.1 to 1.3 ms on fast hardware,
-from a measurement not recorded in this repository, so on `bdfc5d8f`, which has
+from a measurement not recorded in this repository, so on `64b8fc09`, which has
 no width budget, about 6,000 to 7,000 pending spends, fewer on slower nodes,
 would exceed the Engine API's 8-second limit. Raising a pending spend's fee
 past its proof's fee needs a new proof with the same dummy input: a new dummy
@@ -178,12 +180,13 @@ who learns it, including from a recorded channel that is broken later, sees
 which outputs paid the recipient on it and their amounts. Send it over a
 post-quantum channel and never show it in a public QR code.
 
-`notes scan` rebuilds calls that ethrex leaves out of `eth_getLogs`, but a full
-withdrawal that ethrex leaves out appends no leaf, so it leaves no gap: its
-note shows as unspent, and spending it fails. A node that also leaves a call
-out of its receipts makes `scan` stop, except for a call in an epoch's last
-leaf when a two-leaf settlement began the next epoch: the pool also closes an
-epoch one leaf short before such a settlement, so nothing shows the gap.
+`notes scan` rebuilds calls that ethrex `247e2dd2` leaves out of `eth_getLogs`
+(`64b8fc09` returns them), but a full withdrawal that such a node leaves out
+appends no leaf, so it leaves no gap: its note shows as unspent, and spending
+it fails. A node that also leaves a call out of its receipts makes `scan` stop,
+except for a call in an epoch's last leaf when a two-leaf settlement began the
+next epoch: the pool also closes an epoch one leaf short before such a
+settlement, so nothing shows the gap.
 Earlier versions of `scan` read no receipts when a new epoch began, so a state
 file they saved can lack a payment in an epoch's last leaves. When such a file
 shows an epoch that closed short of full, the next `scan` rescans from the

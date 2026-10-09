@@ -151,7 +151,7 @@ have been reached by deposits.
 The settlement limits are in the README's
 [frame table](../../README.md#transactions). `run.ts` refuses an ethrex source
 that does not match the pinned `247e2dd2` hashes. To run the same fixtures on
-another revision, such as the live client `bdfc5d8f`, generate them with
+another revision, such as `bdfc5d8f`, generate them with
 `run.ts`, then run `cargo test` with a
 `Cargo.toml` made from `Cargo.toml.in` whose `@ETHREX@` names that source and
 with `ETHREX_SOURCE` set to it. The report names the revision it ran on, with
