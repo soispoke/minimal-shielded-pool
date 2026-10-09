@@ -41,7 +41,7 @@
     "core/contracts/src/ShieldedPoolLogic.sol": "e5c7a4d5d2b213a7f2617ca32d18780f7744d94b1aa26f4e90def06fb1fb551f",
     "core/dispatcher/ShieldedPoolDispatcher.yul": "1f0440484c0d722d7d6131d2faa7b15ccbaa4e2fe91678fa123c98b3a10d57fa",
     "core/artifacts/shielded_pool_dispatcher_init.hex": "a506c59cc30fda7c700943c181dd39419f99d2a5c6908d668d9aa52daa1a5820",
-    "src/gas.ts": "47270d469aa6fdfef1cda0f85456da72f0e8612d456dc8b0343e95e295cc80a7"
+    "src/gas.ts": "63a5c244509eeb30ceeb8dad98cb8858f6ff5778abc8b025090cdc1502e43083"
   },
   "compiler": {
     "default": {
