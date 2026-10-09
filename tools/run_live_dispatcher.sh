@@ -153,8 +153,14 @@ echo "==> immutable dispatcher/pool"
 # The pinned initcode, not a fresh compile, linked to the verified logic and verifier.
 DISP_ARGS=$(cast abi-encode 'f(address,address)' "$LOGIC" "$VERIFIER")
 DISP_INIT="$(cat ../core/artifacts/shielded_pool_dispatcher_init.hex)${DISP_ARGS#0x}"
-POOL=$(cast send --rpc-url "$RPC" "${PRICE[@]}" --gas-limit 4000000 \
-  --create "$DISP_INIT" --json | addr_of)
+# The creation receipt gives the pool's address and its deployment block, from which
+# note scans and disclosure exports start reading logs.
+POOL_RECEIPT=$(cast send --rpc-url "$RPC" "${PRICE[@]}" --gas-limit 4000000 \
+  --create "$DISP_INIT" --json)
+POOL=$(printf '%s' "$POOL_RECEIPT" | addr_of)
+POOL_BLOCK=$(cast_uint "$(printf '%s' "$POOL_RECEIPT" | jq -er '.blockNumber')") || {
+  echo "the pool's creation receipt has no block number" >&2; exit 1;
+}
 verify_created_runtime "$POOL" "$DISP_INIT" || {
   echo "dispatcher runtime mismatch" >&2; exit 1;
 }
@@ -202,11 +208,13 @@ echo "==> publish authenticated post-shield root"
 ROOT_SLOT_DEC=$(publish_root) || exit 1
 [[ -n $ROOT_SLOT_DEC ]] || { echo "publishEpochRoot did not emit ROOT_SLOT" >&2; exit 1; }
 
-MANIFEST_PATH=$MANIFEST node - "$RPC" "$POOL" "$VERIFIER" "$T3" "$T4" "$LOGIC" "$SOURCE0" "$DOMAIN" "$ROOT_SLOT_DEC" <<'JS'
+REVISION=$(git rev-parse HEAD)
+MANIFEST_PATH=$MANIFEST node - "$RPC" "$POOL" "$VERIFIER" "$T3" "$T4" "$LOGIC" "$SOURCE0" "$DOMAIN" "$ROOT_SLOT_DEC" "$REVISION" "$POOL_BLOCK" <<'JS'
 const fs = require("node:fs");
 const keys = ["rpc", "pool", "verifier", "poseidonT3", "poseidonT4", "logic",
   "sourceIdEpoch0", "domain", "_slot_transfer"];
 const cfg = Object.fromEntries(keys.map((key, i) => [key, process.argv[i + 2]]));
+const [revision, deploymentBlock] = process.argv.slice(keys.length + 2);
 // The gas figures come from the manifest this deployment was actually gated on, not
 // from literals. A deployment of the updated dispatcher that wrote the frozen profile's
 // 2,000,000 single budget would hand the spend wallet budgets belonging to a contract it
@@ -224,7 +232,9 @@ Object.assign(cfg, { chainId: need("chain_id"), profile: need("wire_profile"),
   recentRootGas: need("recent_root_frame_gas"),
   claimGas: need("claim_frame_gas"),
   claimStateGas: need("claim_frame_state_gas") });
-fs.writeFileSync("../core/deploy_config.json", JSON.stringify(cfg, null, 1));
+// The commit the deployment was built from, and the block note scans start from.
+Object.assign(cfg, { revision, deploymentBlock: Number(deploymentBlock) });
+fs.writeFileSync("../core/deploy_config.json", JSON.stringify(cfg, null, 1) + "\n");
 console.log("wrote ../core/deploy_config.json");
 JS
 

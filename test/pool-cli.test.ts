@@ -129,9 +129,8 @@ const noKey = async (): Promise<Uint8Array> => assert.fail("the funded key was r
 
 test("this tree spends position-notes-v3, with the recorded deployment's formulas", () => {
   assert.equal(POOL_PROFILE, "position-notes-v3");
-  // Until this profile is deployed the record names the previous one, which the spend CLI
-  // refuses. Both profiles share the formulas checked here.
-  assert.ok([POOL_PROFILE, PREVIOUS_POOL_PROFILE].includes(DEPLOYED.profile as string));
+  // The record names this profile's testnet deployment.
+  assert.equal(DEPLOYED.profile, POOL_PROFILE);
   assert.equal(domainScalar(CHAIN, POOL), BigInt(DEPLOYED.domain as string));
   // keccak(pool || epoch 0), written out rather than read from the client.
   const source = toHex(keccak(concat(toBytes(POOL, 20), new Uint8Array(32))));

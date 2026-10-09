@@ -417,17 +417,23 @@ byte for byte, with the earlier devnet runs and reviews, under the
 
 Each profile needs its own deployment, because a deployed pool cannot be
 upgraded. A `position-notes-v2` pool rejects this profile's settlement and
-shield calldata, which carry notes. This profile has no deployment yet:
-`core/deploy_config.json` still records the `position-notes-v2` testnet
-deployment on chain 8141 (pool `0xcb83…0e86`, commit `08bb034`, deployed at
-block 143402). On September 25, 2026 it completed a shield, two root
-publications, a transfer, a withdrawal whose fourth-frame claim failed and left
-its credit, and a withdrawal whose claim paid the recipient both credits. The
-earlier `position-notes-v1` pool (`0xac01…b100`, commit `c26b8e4`) stays on
-chain too. On September 22, 2026 it completed a shield, a transfer, a root
-refresh, a withdrawal and claim, a fourth-frame claim and call, a deliberate
-tail revert whose credit was claimed later, and a rejected replay. The CLI
-refuses to shield into or spend from either pool.
+shield calldata, which carry notes. `core/deploy_config.json` records this
+profile's testnet deployment on chain 8141: pool `0x5ec4…de09`, built from
+commit `6af7a9b` and deployed at block 332781. On October 9, 2026 it completed
+a shield, two root publications, a transfer, a withdrawal whose fourth-frame
+claim failed and left its credit, and a withdrawal whose claim paid the
+recipient both credits. A replay of the spent transfer was refused before it
+was sent, both wallets' scans found every note from their seeds alone, one of
+them received over note delivery's ML-KEM channel, and a disclosure receipt of
+all six notes verified against the chain.
+
+The earlier pools stay on chain: `position-notes-v2` (`0xcb83…0e86`, commit
+`08bb034`, deployed at block 143402), which on September 25, 2026 completed the
+same sequence without note delivery, and `position-notes-v1` (`0xac01…b100`,
+commit `c26b8e4`), which on September 22, 2026 completed a shield, a transfer,
+a root refresh, a withdrawal and claim, a fourth-frame claim and call, a
+deliberate tail revert whose credit was claimed later, and a rejected replay.
+The CLI refuses to shield into or spend from either.
 
 Before shielding or spending, the CLI requires the config to name this profile
 and checks the pool itself: the RPC must be on the configured chain, the pool's
