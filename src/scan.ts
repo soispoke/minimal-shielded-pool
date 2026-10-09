@@ -36,7 +36,7 @@ import {
   type WalletKeys,
 } from "./notes.ts";
 import * as protocol from "./protocol.ts";
-import { LEAF_APPENDED, NOTES, NOTE_SPENT } from "./protocol.ts";
+import { LEAF_APPENDED, NOTES, NOTE_SPENT, TREE_CAPACITY } from "./protocol.ts";
 import type { RpcChain } from "./rpc.ts";
 
 const STATE_VERSION = 2;
@@ -82,9 +82,22 @@ const tagOf = (note: Uint8Array) => toHex(note.subarray(0, TAG_BYTES));
 const placeOf = (leaf: Leaf) => `${leaf.epoch},${leaf.index}`;
 
 /**
+ * When a leaf in `epoch` would begin a later epoch than the latest one in `tree`, the number of
+ * leaves seen in the epoch before it, 0 if that epoch was never seen; otherwise null.
+ */
+function closedLeaves(tree: ReadonlyMap<bigint, bigint>, epoch: bigint): bigint | null {
+  const latest = [...tree.keys()].reduce(maxBigint, -1n);
+  if (latest < 0n || epoch <= latest) return null;
+  return epoch === latest + 1n ? tree.get(latest)! : 0n;
+}
+
+/**
  * Finds a wallet's notes and their spends in the pool's finalized events, from its seed. Each
- * epoch's leaves must arrive without gaps, so a node that left a payment's logs out stops the
- * scan instead of hiding the payment.
+ * epoch's leaves must arrive without gaps, and the next epoch may begin only with a call whose
+ * leaves did not fit, so a node that left a payment's logs out stops the scan instead of hiding
+ * the payment. The exception is a payment in an epoch's last leaf when a two-leaf call begins the
+ * next epoch, since such a call also begins one after an epoch one leaf short of full;
+ * scanToFinalized reads receipts there.
  */
 export class Scanner {
   readonly keys: WalletKeys;
@@ -124,11 +137,19 @@ export class Scanner {
     }
   }
 
-  /** Whether this event's leaves skip some that were never seen. */
+  /**
+   * Whether this event's leaves skip some that were never seen, or may. The pool begins a new
+   * epoch only when a call's leaves do not fit, so an epoch closes full, or one leaf short before
+   * a two-leaf call. An epoch seen one leaf short may instead have lost its last leaf, so only one
+   * seen full rules a skip out.
+   */
   skipsLeaves(event: PoolEvent): boolean {
     const expected = new Map(this.#tree);
     for (const { epoch, index } of event.leaves) {
-      if (index !== (expected.get(epoch) ?? 0n)) return true;
+      const closed = closedLeaves(expected, epoch);
+      if (index !== (expected.get(epoch) ?? 0n) || (closed !== null && closed < TREE_CAPACITY)) {
+        return true;
+      }
       expected.set(epoch, index + 1n);
     }
     return false;
@@ -154,6 +175,13 @@ export class Scanner {
         throw new NotesError(
           `leaf ${index} of epoch ${epoch} arrived where ${expected} was expected; this node ` +
             "is missing pool logs, so notes may be hidden",
+        );
+      }
+      const closed = closedLeaves(this.#tree, epoch);
+      if (closed !== null && closed + BigInt(event.leaves.length) <= TREE_CAPACITY) {
+        throw new NotesError(
+          `leaf ${index} of epoch ${epoch} arrived after ${closed} leaves of epoch ${epoch - 1n}, ` +
+            "which had room for its call; this node is missing pool logs, so notes may be hidden",
         );
       }
       this.#tree.set(epoch, index + 1n);
@@ -466,8 +494,9 @@ async function receiptLogs(chain: Rpc, pool: bigint, from: bigint, to: bigint) {
 /**
  * Scans the pool's finalized logs from where the scanner stopped, or the deployment block, to the
  * finalized head, refused if the node is on another chain. An event whose leaves skip some never
- * seen first brings in the calls the node's eth_getLogs left out, rebuilt from block receipts. It
- * never asks about single nullifiers, which would link notes to their spends.
+ * seen, or begin an epoch after one not seen full, first brings in the calls the node's
+ * eth_getLogs left out, rebuilt from block receipts. It never asks about single nullifiers, which
+ * would link notes to their spends.
  */
 export async function scanToFinalized(
   scanner: Scanner,

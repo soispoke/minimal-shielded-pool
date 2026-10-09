@@ -32,12 +32,21 @@ import { POOL_PROFILE, SHIELD_NOTE_BYTES, SPEND_NOTES_BYTES } from "../src/gas.t
 import { parse, stringify } from "../src/json.ts";
 import { directSecretCommand, scanCommand } from "../src/cli/notes.ts";
 import * as n from "../src/notes.ts";
-import { LEAF_APPENDED, NOTES, NOTE_SPENT, domainScalar, nullifier } from "../src/protocol.ts";
+import {
+  LEAF_APPENDED,
+  NOTES,
+  NOTE_SPENT,
+  TREE_CAPACITY,
+  domainScalar,
+  nullifier,
+} from "../src/protocol.ts";
 import { seededRng } from "../src/random.ts";
+import { RpcChain } from "../src/rpc.ts";
 import {
   Scanner,
   decodeNotesData,
   eventsFromLogs,
+  scanToFinalized,
   type Leaf,
   type PoolEvent,
   type ScannerOptions,
@@ -76,17 +85,22 @@ function raises(fn: () => unknown, expected: string): void {
 type AddOptions = { sizes?: readonly number[]; sameTx?: true; sameBlock?: boolean; skip?: bigint };
 
 /**
- * The pool's events, one per shield or settlement, and the leaves of epoch 0. Each call gets
- * its own block unless it shares the previous call's transaction or block.
+ * The pool's events, one per shield or settlement, and the leaves of its tree, which begins a
+ * new epoch when a call's leaves do not fit, as the pool does. Each call gets its own block
+ * unless it shares the previous call's transaction or block.
  */
 class Chain {
   events: PoolEvent[] = [];
+  epoch = 0n;
   size = 0n;
   block = 100n;
 
   add(notes: Uint8Array, outputs: bigint[], spent: bigint[] = [], options: AddOptions = {}) {
     assert.ok((options.sizes ?? SPEND_NOTES_BYTES).includes(notes.length), `${notes.length}`);
-    const leaves = outputs.map((cm) => ({ cm, epoch: 0n, index: this.size++ }));
+    if (BigInt(outputs.length) > TREE_CAPACITY - this.size) {
+      [this.epoch, this.size] = [this.epoch + 1n, 0n];
+    }
+    const leaves = outputs.map((cm) => ({ cm, epoch: this.epoch, index: this.size++ }));
     const last = this.events.at(-1)!;
     let block: bigint, tx: bigint, call: number;
     if (options.sameTx) [block, tx, call] = [last.block, last.tx, last.call + 1];
@@ -575,6 +589,103 @@ test("hidden calls: calls left out of eth_getLogs are rebuilt from receipts or c
         const saved = record(readFileSync(state, "utf8")).notes as Record<string, unknown>[];
         const spentByValue = new Map(saved.map((r) => [BigInt(r.value as bigint), r.spent]));
         assert.deepEqual(spentByValue, c.outcome);
+      }
+    });
+  }
+});
+
+test("epoch rollover: a leaf that skips a whole epoch stops the scan", () => {
+  // Epoch 0 closed full, and the next leaf the node shows is in epoch 2: all of epoch 1 is
+  // missing from its logs.
+  const chain = new Chain();
+  chain.size = TREE_CAPACITY;
+  const deposit = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+  chain.add(n.shieldNotes(deposit.note), [deposit.cm], [], SHIELD);
+  const event = chain.events.at(-1)!;
+  const skipped = { ...event, leaves: event.leaves.map((leaf) => ({ ...leaf, epoch: 2n })) };
+  const state = { ...new Scanner(ALICE, CHAIN, POOL).toJson(), tree: { "0": TREE_CAPACITY } };
+  const scanner = Scanner.fromJson(ALICE, { ...state, scanned_block: 100n, leaf_block: 100n });
+  raises(() => scanner.scan(skipped), "missing pool logs");
+});
+
+test("epoch rollover: a call left out at an epoch's end is rebuilt from receipts or caught", async (t) => {
+  // The pool begins a new epoch only when a call's leaves do not fit, so an epoch closes full, or
+  // one leaf short before a two-leaf settlement. Each case resumes a scan that saw `start` leaves
+  // of epoch 0 through block 100, then the chain runs the steps in `run`, one block each. The scan
+  // reads `receipts` from block 100 when a leaf skips some or begins an epoch after one not seen
+  // full, and finds `found` notes of Alice's or gives `refusal`.
+  const full = TREE_CAPACITY;
+  const through102 = [100n, 101n, 102n];
+  const steps = {
+    // Bob pays Alice, with his change or none, or shields to himself.
+    pay: (chain: Chain, toAlice: n.Outgoing) => {
+      const payee = paid(ALICE.ownerPk, toAlice, ETH);
+      chain.add(n.spendNotes(payee.note, dummy()), [payee.cm], [1n, 2n]);
+    },
+    payWithChange: (chain: Chain, toAlice: n.Outgoing) => {
+      const payee = paid(ALICE.ownerPk, toAlice, ETH);
+      const change = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+      chain.add(n.spendNotes(payee.note, change.note), [payee.cm, change.cm], [3n, 4n]);
+    },
+    shield: (chain: Chain) => {
+      const deposit = paid(BOB.ownerPk, n.directChannel(BOB.ownerPk, BOB.selfSecret), ETH);
+      chain.add(n.shieldNotes(deposit.note), [deposit.cm], [], SHIELD);
+    },
+  };
+  const cases = [
+    // Alice's payment takes epoch 0's last leaf and is left out of the logs, and Bob's shield
+    // begins epoch 1.
+    { start: full - 1n, run: ["pay", "shield"], hidden: [0], receipts: through102, found: 1 },
+    // Left out of the receipts too: Bob's shield fitted in epoch 0, so the scan stops.
+    {
+      start: full - 1n,
+      run: ["pay", "shield"],
+      hidden: [0],
+      unreceipted: [0],
+      receipts: through102,
+      refusal: "which had room for its call",
+    },
+    // A two-leaf settlement begins epoch 1 after it, which the logs show as in the next case.
+    {
+      start: full - 1n,
+      run: ["pay", "payWithChange"],
+      hidden: [0],
+      receipts: through102,
+      found: 2,
+    },
+    // Nothing is left out: epoch 0 closes one leaf short, and its receipts add nothing.
+    { start: full - 1n, run: ["payWithChange"], receipts: [100n, 101n], found: 1 },
+    // Nothing is left out: epoch 0 closes full, and no receipt is read.
+    { start: full - 1n, run: ["shield", "pay"], receipts: [], found: 1 },
+    // Within one epoch, the next leaf shows the gap as before.
+    { start: full - 3n, run: ["pay", "shield"], hidden: [0], receipts: through102, found: 1 },
+  ];
+  for (const [number, c] of cases.entries()) {
+    await t.test(`case ${number}`, async () => {
+      const chain = new Chain();
+      chain.size = c.start;
+      const toAlice = n.directChannel(ALICE.ownerPk, ALICE.directSecret(0n));
+      for (const step of c.run) steps[step as keyof typeof steps](chain, toAlice);
+      const state = { ...new Scanner(ALICE, CHAIN, POOL).toJson(), tree: { "0": c.start } };
+      const scanner = Scanner.fromJson(ALICE, { ...state, scanned_block: 100n, leaf_block: 100n });
+      const node = await serve(chain, { block: chain.block }, c);
+      try {
+        const scan = scanToFinalized(scanner, new RpcChain(node.url), 0n);
+        if (c.refusal !== undefined) {
+          await assert.rejects(scan, (error: unknown) => {
+            assert.ok(error instanceof NotesError && error.message.includes(c.refusal), `${error}`);
+            assert.ok(error.message.includes("missing pool logs"), error.message);
+            return true;
+          });
+        } else {
+          await scan;
+          assert.equal(scanner.notes.size, c.found);
+        }
+        const read = node.requests.filter((call) => call.method === "eth_getBlockReceipts");
+        const blocks = read.map((call) => BigInt(call.params[0]));
+        assert.deepEqual(blocks, c.receipts);
+      } finally {
+        await node.close();
       }
     });
   }

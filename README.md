@@ -297,12 +297,13 @@ its direct secrets. `scan` and `direct-secret` need the config of a
 It reads every shield and settlement apart, even several in one transaction. A
 node may leave a call's logs out of `eth_getLogs`, as ethrex does for every log
 of a frame transaction whose fourth frame failed. Once a later leaf shows the
-gap, `scan` rebuilds the call from block receipts, and it stops if leaves are
-still missing rather than hide notes. `direct-secret` needs a state that has
-been scanned, and hands out numbers only within 20 of the highest one paid,
-which is how far a scan from the seed looks. History older than Ethereum's
-retention window (EIP-4444) comes from archives, as it already does for the
-tree leaves.
+gap, or begins a new epoch before the last one was seen full, `scan` rebuilds
+the call from block receipts, and it stops if leaves are still missing rather
+than hide notes ([one exception](SECURITY.md#note-delivery)). `direct-secret`
+needs a state that has been scanned, and hands out numbers only within 20 of
+the highest one paid, which is how far a scan from the seed looks. History
+older than Ethereum's retention window (EIP-4444) comes from archives, as it
+already does for the tree leaves.
 
 A normal spend grows by 96 bytes and about 4,000 gas, and an inclusion list
 still holds four spends. A first payment to a public address grows by
