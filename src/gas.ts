@@ -24,8 +24,8 @@ export const RECENT_ROOT_TUPLE_BYTES = 72;
 // position-notes-v3 appends notes to settle(Spend) and adds one to shield, so its
 // transactions are not wire compatible with position-notes-v2.
 export const POOL_PROFILE = "position-notes-v3";
-// The last deployed profile. The deployment record keeps naming it until this profile is
-// deployed, and the CLI refuses to spend against it.
+// The previous profile. Between a profile change and its first deployment the deployment
+// record still names it, and the CLI refuses to spend against it.
 export const PREVIOUS_POOL_PROFILE = "position-notes-v2";
 // A note is a 16-byte tag, a 16-byte encrypted amount and a 16-byte authentication tag
 // (src/notes.ts). Settlement calldata is settle(Spend) followed by two notes, and a
