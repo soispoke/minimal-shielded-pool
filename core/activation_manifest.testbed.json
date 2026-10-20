@@ -3,11 +3,11 @@
   "ceremony": {
     "phase2_contributions": 1,
     "independent_verification": null,
-    "label": "local test-only setup, one phase-2 contribution, owner-set prototype"
+    "label": "local test-only setup, one phase-2 contribution, owner-set skew-MMR prototype"
   },
   "profile": {
-    "wire_profile": "owner-set-v1",
-    "pool_profile": "owner-set-v1",
+    "wire_profile": "skew-mmr-v1",
+    "pool_profile": "skew-mmr-v1",
     "eip_8250_merge": "f3079a09e8c606afcb0e5e1a309ff228b88dc067",
     "eip_8272_carrier": "canonical-verifier-frame",
     "eip_8272_pin": "824cbc0b0e",
@@ -19,7 +19,7 @@
     "spend_signatures": 2,
     "required_verify_budget": 238600,
     "pre_pr_12279_max_observed_verify_execution_gas": 294401,
-    "post_pr_12279_max_observed_verify_execution_gas": 210776,
+    "post_pr_12279_max_observed_verify_execution_gas": 218706,
     "max_observed_recent_root_frame_gas": 5579,
     "eip_8141_public_mempool_budget": 100000,
     "hegota_profile_2_budget": 1048576,
@@ -27,22 +27,22 @@
     "settle_frame_state_gas": 550000,
     "claim_frame_gas": 100000,
     "claim_frame_state_gas": 183600,
-    "conservative_settle_bound": 1868576,
+    "conservative_settle_bound": 386407,
     "conservative_settle_state_bound": 489600
   },
   "artifacts": {
-    "core/artifacts/spend.r1cs": "07979d55d2b2c074e735e2a0eabb60ad726f9af9a79b465280b3f14ff14cc99b",
-    "core/artifacts/spend_final.zkey": "67c1eecb1199ff05e6b816d99a46dd4d43ba4a2e8c2f8ba33867d5fc4dc830d7",
-    "core/artifacts/spend_js/spend.wasm": "612c2a4b15be8db215fdc0de5e54890aefaf77aff309cfafc33a36a26b97063c",
-    "core/circuits/spend.circom": "fd9c62bf68dc47c9dd8e23f0ec11fdcf01f79fa54ae1602f3445efc9e132a101",
-    "core/contracts/foundry.toml": "f3b177b748daee7de924f3f0839b326cf9cc3544c9e4f6c64da6becadd0772d1",
-    "core/contracts/src/Groth16Verifier.sol": "7d3316678b3f60a43a102f292d5ae43b769efe7d1e637f7d97a0020b4357c5f0",
+    "core/artifacts/spend.r1cs": "694ccef58f8267c3d5a748f674591982e730ff76446f1e2601025c825e37431e",
+    "core/artifacts/spend_final.zkey": "824d9815aaada302007c146717d54a0979bb147341eb82d89b5d5c58b7f8adf2",
+    "core/artifacts/spend_js/spend.wasm": "2be57ff00f9c70fc81c1ffdfa461978d61b89669ceccd5312995f4a036793fcf",
+    "core/circuits/spend.circom": "db9b0bfe9949ab23d950b256fb8fa568f290048e639b41bb0c6574bb281e0238",
+    "core/contracts/foundry.toml": "587431be879eb9b9d79e92ca228f2e5babd56435d0065841201fc9a59e505109",
+    "core/contracts/src/Groth16Verifier.sol": "f74681364261b45441efb1674d06ae407e933f34726bef14359a5f83eacfc534",
     "core/contracts/src/PoseidonT3.sol": "f353af63ac124e51a37e78dc5278bcb2e93c19e44aa8dd13a4ecb4c54212720b",
     "core/contracts/src/PoseidonT4.sol": "2384b8f71a2ed09f3b16c6b0d135bedcd293cb1c862e8a3c893d0ac79eae0960",
-    "core/contracts/src/ShieldedPoolLogic.sol": "e5c7a4d5d2b213a7f2617ca32d18780f7744d94b1aa26f4e90def06fb1fb551f",
-    "core/dispatcher/ShieldedPoolDispatcher.yul": "ca88f6d4c21a1d3d4cf48aba682f1012a6b88158685d942f328f712b7db1f2b5",
-    "core/artifacts/shielded_pool_dispatcher_init.hex": "3e896d2ac55a89338df1affbeb9afcfc369e8529fdbf6ddfa873419f13f60a47",
-    "src/gas.ts": "9dc5e86353bf9cbf5173a02686ff6a9ffa6885955eaaea81fcb7487cad2afc12"
+    "core/contracts/src/ShieldedPoolLogic.sol": "659f4d58c04b930d9cc1bbff8f8fd680cd71e7049ac32bef73560e06218c9723",
+    "core/dispatcher/ShieldedPoolDispatcher.yul": "24c1a85460645123b5410b87e3ae0a93f41220b3c49eb660f2121b9073a721ec",
+    "core/artifacts/shielded_pool_dispatcher_init.hex": "3a8626c39ee9260b9d6cbf849fea1ed9ed263e5212a592bdee3177eddfed22da",
+    "src/gas.ts": "09b3dceedc7b27eda283c5967f2d77fd2975a5aaed76ae83cb6296e98f176de2"
   },
   "compiler": {
     "default": {
@@ -57,7 +57,9 @@
       "use_literal_content": false,
       "revert_strings": null,
       "libraries": [],
-      "remappings": [],
+      "remappings": [
+        "skew-mmr/=../../node_modules/@skew-mmr/contracts/src/"
+      ],
       "compilation_restrictions": [],
       "additional_compiler_profiles": []
     },
@@ -73,7 +75,9 @@
       "use_literal_content": false,
       "revert_strings": null,
       "libraries": [],
-      "remappings": [],
+      "remappings": [
+        "skew-mmr/=../../node_modules/@skew-mmr/contracts/src/"
+      ],
       "compilation_restrictions": [],
       "additional_compiler_profiles": []
     }

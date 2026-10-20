@@ -321,9 +321,21 @@ test("recovery: each wallet rebuilds its notes, spends and change channel from i
   // its notes. A scanner that has seen epoch 0 full takes the leaf.
   raises(() => new Scanner(ALICE, CHAIN, POOL).scan(twice), "missing pool logs");
   const fullEpoch0 = { ...new Scanner(ALICE, CHAIN, POOL).toJson(), tree: { "0": TREE_CAPACITY } };
-  const lateFound = Scanner.fromJson(ALICE, parse(stringify(fullEpoch0))).scan(twice);
+  const lateScanner = Scanner.fromJson(ALICE, parse(stringify(fullEpoch0)));
+  const lateFound = lateScanner.scan(twice);
   assert.equal(lateFound.length, 1);
   assert.equal(lateFound[0].nullifier, nullifierOf(ALICE, late.cm, 0n, 1n));
+  // A later copy of that commitment is a separate note: spending one leaves the other.
+  const copy = { ...twice, block: 2n, leaves: [{ ...leaf, index: 1n }] };
+  const copyFound = lateScanner.scan(copy);
+  assert.equal(copyFound.length, 1);
+  assert.equal(copyFound[0].nullifier, nullifierOf(ALICE, late.cm, 1n, 1n));
+  const spendLate = { block: 3n, tx: 0n, call: 0, notes: new Uint8Array(), leaves: [] };
+  lateScanner.scan({ ...spendLate, spent: [lateFound[0].nullifier] });
+  assert.deepEqual(
+    lateScanner.unspent().map((r) => r.index),
+    [1n],
+  );
   // A direct secret past the gap stays hidden until the wallet looks further.
   const near = recover(ALICE, chain.events, { gap: 3 });
   assert.ok(!values(near).includes(ETH / 5n));
@@ -886,9 +898,9 @@ test("state upgrade: only an earlier version's state with an epoch closed short 
   const cases = [
     { version: 2, tree: { "0": 5n }, short: null },
     { version: 2, tree: { "0": full, "1": full, "2": 3n }, short: null },
-    { version: 2, tree: { "0": full - 1n, "1": 2n }, short: "epoch 0 closed with 1048575 of" },
+    { version: 2, tree: { "0": full - 1n, "1": 2n }, short: `epoch 0 closed with ${full - 1n} of` },
     { version: 2, tree: { "0": full, "1": full - 3n, "2": 1n }, short: "epoch 1 closed with" },
-    { version: 2, tree: { "0": full, "2": 1n }, short: "epoch 1 closed with 0 of 1048576" },
+    { version: 2, tree: { "0": full, "2": 1n }, short: `epoch 1 closed with 0 of ${full}` },
     // A scan of version 3 began epoch 1 only after reading receipts.
     { version: 3, tree: { "0": full - 1n, "1": 2n }, short: null },
   ];
@@ -941,7 +953,8 @@ test("state upgrade: a rescan finds the payment an earlier version missed and ke
   const saved = json({ ...earlier.toJson(), version: 2, tree, ...checkpoint });
   // Loading it keeps everything but the scan's place, which goes back to the deployment block.
   const scanner = Scanner.fromJson(ALICE, saved);
-  assert.ok(scanner.rescanReason?.includes("epoch 0 closed with 1048575 of 1048576 leaves"));
+  const short = `epoch 0 closed with ${TREE_CAPACITY - 1n} of ${TREE_CAPACITY} leaves`;
+  assert.ok(scanner.rescanReason?.includes(short));
   assert.deepEqual(json(scanner.toJson()), { ...saved, ...RESCAN });
   readEpoch0(scanner);
   const node = await serve(chain, { block: rollover }, { hidden: [0] });
@@ -1317,7 +1330,8 @@ test("CLI: an earlier version's state is rescanned before direct-secret issues a
     const saved = readFileSync(state, "utf8");
     const args = ["--config", writeConfig(dir, node.url), "--state", state, ...WALLET];
     const reason =
-      "since it shows epoch 0 closed with 1048575 of 1048576 leaves, and the earlier version " +
+      `since it shows epoch 0 closed with ${TREE_CAPACITY - 1n} of ${TREE_CAPACITY} leaves, ` +
+      "and the earlier version " +
       "that saved it could miss a payment in an epoch's last leaves";
     // direct-secret issues nothing and saves nothing before the rescan.
     const first = `scan first, which rescans the state from the deployment block, ${reason}`;

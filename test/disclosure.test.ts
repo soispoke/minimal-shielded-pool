@@ -98,13 +98,16 @@ function frame(logs: RawLog[], data: Uint8Array = new Uint8Array(), mode = 2n, s
 }
 
 // The words of settle(Spend), in the order of ShieldedPoolLogic.Spend, written out so the decoder
-// is checked against the contract's layout rather than against its own field list.
+// is checked against the contract's layout rather than against its own field list. The
+// frontier's roots follow them.
 const SETTLE_WORDS =
-  "root rootSlot epoch domain nf1 nf2 outCm1 outCm2 publicAmount fee recipient authorizer";
+  "root rootSlot epoch domain nf1 nf2 outCm1 outCm2 publicAmount fee recipient authorizer " +
+  "count packedRanks depth";
 
 /** A settlement frame: settle(Spend) followed by the spend's notes. */
 function settle(spend: pr.Spend, logs: RawLog[]): Frame {
-  const words = SETTLE_WORDS.split(" ").map((field) => word(spend[field as keyof pr.Spend]));
+  const fields = SETTLE_WORDS.split(" ") as (keyof Omit<pr.Spend, "frontier">)[];
+  const words = [...fields.map((field) => spend[field]), ...spend.frontier].map(word);
   return frame(logs, concat(pr.SETTLE_SELECTOR, ...words, new Uint8Array(96)));
 }
 
@@ -136,6 +139,12 @@ function story(sharedKey = false, aliceKey?: bigint, dummyKey?: bigint) {
   const at: Partial<Record<Name, bigint>> = { b: 1n, c: 2n };
   const nf = byName((k) => pr.nullifier(D, notes[k][0], cm[k], at[k] ?? 0n));
   const base = { root: 1n, rootSlot: 5n, epoch: 0n, domain: D, authorizer: 0xaaaan };
+  const frontier = {
+    count: 1n,
+    packedRanks: 0n,
+    depth: 1n,
+    frontier: Array(pr.MAX_TREES).fill(0n),
+  };
   const [sink1, sink2] = pr.sinkCommitments();
   const spend = (i1: Name, i2: Name, outs: bigint[], publicAmount: bigint, recipient: bigint) => {
     const [outCm1, outCm2] = outs.length === 0 ? [sink1, sink2] : outs;
@@ -143,7 +152,7 @@ function story(sharedKey = false, aliceKey?: bigint, dummyKey?: bigint) {
     // Only the transfer has outputs, at leaves 1 and 2 after the deposit.
     const leaves = outs.map((out, i) => leaf(out, 0n, BigInt(i + 1)));
     const fields = { nf1: nf[i1], nf2: nf[i2], outCm1, outCm2, publicAmount, recipient };
-    return settle({ ...base, ...fields, fee: ETH / 20n }, [...spent, ...leaves]);
+    return settle({ ...base, ...frontier, ...fields, fee: ETH / 20n }, [...spent, ...leaves]);
   };
   const chain = new Chain();
   chain.add("0xdep0", ALICE, [frame([leaf(cm.a, 0n, 0n)])]);
@@ -250,7 +259,7 @@ test("an altered note is rejected", async (t) => {
     ["a", { index: 3n, created: "0xdep3", nullifierKey: keyA }, "not one 0xtransfer spent"],
     ["d1", { value: "1" }, "opening does not match"],
     ["d1", {}, "a dummy input has value 0 and a spend", "spent"],
-    // A dummy's index is not in the tree, so index + P would alias its nullifier.
+    // A dummy's index is not in the tree, but it must still be one the tree could hold.
     ["d1", { index: noteOf(receipt, "d1").index + pr.P }, "outside the tree"],
   ];
   for (const [key, change, expected, drop] of cases) {

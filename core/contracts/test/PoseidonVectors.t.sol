@@ -80,7 +80,7 @@ contract PoseidonVectorsTest {
         uint256 domainKey = PoseidonBN254.hash2(domain, nk);
         uint256 nf = PoseidonBN254.hash3(4, domainKey, PoseidonBN254.hash2(cm, index));
         require(nf == _u(json, ".pool_chain.nf"), "nf mismatch");
-        uint256 nf2 = PoseidonBN254.hash3(4, domainKey, PoseidonBN254.hash2(PoseidonBN254.hash3(2, inner, 0), index));
+        uint256 nf2 = PoseidonBN254.hash3(4, domainKey, PoseidonBN254.hash2(PoseidonBN254.hash3(2, inner, 0), 0));
         require(nf2 == _u(json, ".pool_chain.nf2"), "dummy nf mismatch");
 
         uint256 outCm1 = PoseidonBN254.hash3(2, _u(json, ".pool_chain.out_inner1"), _u(json, ".pool_chain.out_value1"));
